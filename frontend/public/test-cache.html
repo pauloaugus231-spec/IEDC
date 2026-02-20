@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Test Cache Clear</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2563EB; margin-top: 0; }
+        .success { color: #10B981; font-size: 48px; }
+        button {
+            background: #2563EB;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #1D4ED8; }
+        .info {
+            background: #EFF6FF;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2563EB;
+        }
+        .timestamp {
+            color: #6B7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="success">✅</div>
+        <h1>Servidor Vite Funcionando Corretamente!</h1>
+        
+        <div class="info">
+            <strong>Projeto:</strong> Dias da Cruz<br>
+            <strong>Porta:</strong> 5173<br>
+            <strong>Timestamp:</strong> <span class="timestamp" id="time"></span>
+        </div>
+
+        <h2>Próximos Passos:</h2>
+        <ol>
+            <li><strong>Feche TODOS os navegadores completamente</strong></li>
+            <li><strong>Aguarde 5 segundos</strong></li>
+            <li><strong>Abra o navegador novamente</strong></li>
+            <li><strong>Acesse:</strong> <a href="http://localhost:5173/conferencia-rma">http://localhost:5173/conferencia-rma</a></li>
+        </ol>
+
+        <h3>Ou use os botões abaixo:</h3>
+        <button onclick="clearAndGo()">🗑️ Limpar Cache e Ir para Conferência RMA</button>
+        <button onclick="window.location.href='/conferencia-rma'">📊 Ir para Conferência RMA</button>
+        <button onclick="window.location.href='/'">🏠 Ir para Home</button>
+
+        <div class="info" style="margin-top: 20px;">
+            <strong>⚠️ IMPORTANTE:</strong> Se ainda aparecer "Página em desenvolvimento", 
+            você estava acessando o servidor ERRADO. Sempre use <strong>http://localhost:5173</strong>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString('pt-BR');
+        
+        function clearAndGo() {
+            // Limpa todos os caches
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Limpa cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            // Vai para a página
+            setTimeout(() => {
+                window.location.href = '/conferencia-rma';
+            }, 500);
+        }
+
+        // Log no console
+        console.log('%c✅ SERVIDOR CORRETO CARREGADO!', 'color: #10B981; font-size: 20px; font-weight: bold;');
+        console.log('%cDias da Cruz - Frontend', 'color: #2563EB; font-size: 16px;');
+        console.log('%cPorta: 5173', 'color: #6B7280; font-size: 14px;');
+        console.log('%cTimestamp:', new Date().toISOString(), 'color: #6B7280; font-size: 14px;');
+    </script>
+</body>
+</html>

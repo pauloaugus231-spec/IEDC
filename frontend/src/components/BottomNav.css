@@ -1,0 +1,225 @@
+/* ========================================
+   FLOATING NAV - Menu Retrátil Moderno
+   ======================================== */
+
+.floating-nav {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ========== ESTADO FECHADO ========== */
+.floating-nav.collapsed {
+  width: auto;
+}
+
+.floating-nav.collapsed .nav-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 
+    0 4px 12px rgba(16, 185, 129, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-nav.collapsed .nav-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 6px 20px rgba(16, 185, 129, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.floating-nav.collapsed .nav-menu {
+  display: none;
+}
+
+.nav-toggle {
+  display: none;
+}
+
+.toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.active-indicator {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ========== ESTADO EXPANDIDO ========== */
+.floating-nav.expanded {
+  width: 220px;
+}
+
+.floating-nav.expanded .nav-toggle {
+  display: none;
+}
+
+.floating-nav.expanded .nav-menu {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.15),
+    0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-menu {
+  display: none;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ========== HEADER DO MENU ========== */
+.nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+}
+
+.nav-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pin-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.pin-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.pin-btn.active {
+  background: white;
+  transform: rotate(45deg);
+}
+
+/* ========== LISTA DE ITENS ========== */
+.floating-nav .nav-items {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.floating-nav .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  color: #4B5563;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.floating-nav .nav-item:hover {
+  background: #F3F4F6;
+  color: #111827;
+}
+
+.floating-nav .nav-item.active {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  color: #059669;
+  font-weight: 600;
+}
+
+.floating-nav .nav-item .active-dot {
+  position: absolute;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  background: #10B981;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.floating-nav .nav-label {
+  flex: 1;
+}
+
+/* ========== ESTADO FIXADO ========== */
+.floating-nav.pinned .nav-menu {
+  border: 2px solid #10B981;
+}
+
+/* ========== RESPONSIVO ========== */
+
+/* Mobile - Nav na parte inferior esquerda */
+@media (max-width: 768px) {
+  .floating-nav {
+    bottom: 16px;
+    left: 16px;
+    right: auto;
+  }
+  
+  .floating-nav.expanded {
+    width: calc(100vw - 32px);
+    max-width: 280px;
+  }
+  
+  .floating-nav .nav-item {
+    padding: 14px 16px;
+  }
+}
+
+/* Desktop grande - Nav maior */
+@media (min-width: 1200px) {
+  .floating-nav {
+    bottom: 24px;
+    right: 24px;
+  }
+  
+  .floating-nav.expanded {
+    width: 240px;
+  }
+}
