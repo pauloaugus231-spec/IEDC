@@ -1,9 +1,7 @@
-// 🎯 VERSÃO ROBUSTA E COMPLETA - 2026-02-05-16:00 🎯
 import React, { useState, useCallback } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, XCircle, Download } from '../components/Icons';
-import { apiFetch } from '../api';
+import { apiFetch, withAuthHeaders } from '../api';
 import { useNavigate } from 'react-router-dom';
-import { mockConferirRMA } from '../mocks/rma.mock';
 
 interface Estatisticas {
   totalGesuas: number;
@@ -53,7 +51,6 @@ export default function ConferenciaRMAPage() {
   const [progresso, setProgresso] = useState(0);
   const [etapaAtual, setEtapaAtual] = useState('');
   const [avisos, setAvisos] = useState<string[]>([]);
-  const [modoTeste, setModoTeste] = useState(false); // 🧪 Modo de teste com mock
 
   // Validação avançada de arquivo
   const validarArquivo = useCallback((file: File): { valido: boolean; erro?: string; avisos?: string[] } => {
@@ -61,10 +58,10 @@ export default function ConferenciaRMAPage() {
     const avisosTemp: string[] = [];
     
     // Validação de formato
-    if (ext !== 'xls' && ext !== 'xlsx') {
+    if (ext !== 'xlsx') {
       return { 
         valido: false, 
-        erro: '📄 Formato inválido. Apenas arquivos Excel (.xls ou .xlsx) são aceitos.' 
+        erro: 'Formato inválido. Apenas arquivos Excel .xlsx são aceitos.'
       };
     }
     
@@ -72,7 +69,7 @@ export default function ConferenciaRMAPage() {
     if (file.size > 5 * 1024 * 1024) {
       return { 
         valido: false, 
-        erro: '💾 Arquivo muito grande. Tamanho máximo permitido: 5MB' 
+        erro: 'Arquivo muito grande. Tamanho máximo permitido: 5MB'
       };
     }
     
@@ -178,9 +175,8 @@ export default function ConferenciaRMAPage() {
   };
 
   const handleProcessar = async () => {
-    // Validação de arquivo (apenas em modo real)
-    if (!modoTeste && !arquivo) {
-      setErro('📎 Selecione um arquivo para continuar');
+    if (!arquivo) {
+      setErro('Selecione um arquivo para continuar');
       return;
     }
     
@@ -196,37 +192,6 @@ export default function ConferenciaRMAPage() {
     setProgresso(0);
 
     try {
-      // 🧪 MODO TESTE: Usar mock
-      if (modoTeste) {
-        setEtapaAtual('🧪 Modo teste: simulando processamento...');
-        setProgresso(20);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setProgresso(40);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setProgresso(60);
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setProgresso(80);
-        
-        // Escolher cenário baseado na data
-        const dias = Math.floor((new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / (1000 * 60 * 60 * 24));
-        const cenario = dias > 200 ? 'alta' : dias > 100 ? 'media' : 'baixa';
-        
-        const response = await mockConferirRMA(cenario);
-        
-        setProgresso(100);
-        setEtapaAtual('✅ Teste concluído!');
-        setResultado(response as any);
-        
-        setTimeout(() => {
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }, 100);
-        return;
-      }
-      
-      // 🌐 MODO REAL: Usar API
       setEtapaAtual('Enviando arquivo...');
       setProgresso(10);
 
@@ -290,8 +255,9 @@ export default function ConferenciaRMAPage() {
     if (!resultado) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/rma/exportar/${resultado.id}`, {
+      const response = await fetch(`/api/rma/exportar/${resultado.id}`, {
         method: 'GET',
+        headers: withAuthHeaders(),
       });
 
       if (!response.ok) throw new Error('Erro ao exportar');
@@ -389,35 +355,6 @@ export default function ConferenciaRMAPage() {
               </p>
             </div>
           </div>
-          
-          {/* Botão Modo Teste */}
-          <button
-            onClick={() => setModoTeste(!modoTeste)}
-            style={{
-              backgroundColor: modoTeste ? '#F0FDF4' : '#F9FAFB',
-              color: modoTeste ? '#10B981' : '#6B7280',
-              border: `2px solid ${modoTeste ? '#10B981' : '#E5E7EB'}`,
-              borderRadius: '10px',
-              padding: '10px 16px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-              boxShadow: modoTeste ? '0 2px 4px rgba(16, 185, 129, 0.2)' : 'none'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>{modoTeste ? '🧪' : '🔧'}</span>
-            <span>{modoTeste ? 'Modo Teste Ativo' : 'Ativar Modo Teste'}</span>
-          </button>
         </div>
       </div>
 
@@ -434,53 +371,6 @@ export default function ConferenciaRMAPage() {
           {/* FORMULÁRIO DE UPLOAD */}
           {!resultado && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* Banner Modo Teste */}
-              {modoTeste && (
-                <div style={{
-                  backgroundColor: '#F0FDF4',
-                  border: '2px solid #10B981',
-                  borderRadius: '12px',
-                  padding: '16px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  animation: 'slideIn 0.3s ease-out'
-                }}>
-                  <span style={{ fontSize: '24px' }}>🧪</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '15px', fontWeight: '600', color: '#065F46', margin: '0 0 4px 0' }}>
-                      Modo Teste Ativo
-                    </p>
-                    <p style={{ fontSize: '13px', color: '#059669', margin: 0 }}>
-                      Usando dados simulados (mock). Não é necessário selecionar arquivo. 
-                      Os resultados variam baseado no período selecionado.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setModoTeste(false)}
-                    style={{
-                      backgroundColor: '#10B981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 16px',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#059669';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#10B981';
-                    }}
-                  >
-                    Desativar
-                  </button>
-                </div>
-              )}
               
               {/* Card de Upload */}
               <div style={{
@@ -532,7 +422,7 @@ export default function ConferenciaRMAPage() {
                   <input
                     type="file"
                     id="file-upload"
-                    accept=".xls,.xlsx"
+                    accept=".xlsx"
                     onChange={handleArquivoChange}
                     style={{ display: 'none' }}
                   />
@@ -580,11 +470,11 @@ export default function ConferenciaRMAPage() {
                           fontSize: '14px',
                           color: '#6B7280'
                         }}>
-                          <span>📊 {(arquivo.size / 1024).toFixed(1)} KB</span>
+                          <span>{(arquivo.size / 1024).toFixed(1)} KB</span>
                           <span>•</span>
                           <span>✓ Arquivo válido</span>
                           <span>•</span>
-                          <span>📅 {new Date(arquivo.lastModified).toLocaleDateString('pt-BR')}</span>
+                          <span>{new Date(arquivo.lastModified).toLocaleDateString('pt-BR')}</span>
                         </div>
                         <div style={{
                           display: 'inline-flex',
@@ -609,7 +499,7 @@ export default function ConferenciaRMAPage() {
                           e.currentTarget.style.color = '#2563EB';
                         }}
                         >
-                          🔄 Trocar Arquivo
+                          Trocar arquivo
                         </div>
                       </div>
                     ) : (
@@ -621,10 +511,10 @@ export default function ConferenciaRMAPage() {
                           marginBottom: '8px',
                           transition: 'color 0.2s'
                         }}>
-                          {isDragging ? '📥 Solte o arquivo aqui' : '📎 Clique ou arraste o arquivo'}
+                          {isDragging ? 'Solte o arquivo aqui' : 'Clique ou arraste o arquivo'}
                         </p>
                         <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '16px' }}>
-                          Formatos aceitos: .xls, .xlsx • Tamanho máximo: 5MB
+                          Formato aceito: .xlsx • Tamanho máximo: 5MB
                         </p>
                         <div style={{
                           display: 'inline-block',
@@ -851,34 +741,34 @@ export default function ConferenciaRMAPage() {
               {/* Botão Processar */}
               <button
                 onClick={handleProcessar}
-                disabled={loading || (!modoTeste && !arquivo) || !dataInicio || !dataFim}
+                disabled={loading || !arquivo || !dataInicio || !dataFim}
                 style={{
                   width: '100%',
-                  backgroundColor: (loading || (!modoTeste && !arquivo) || !dataInicio || !dataFim) ? '#D1D5DB' : modoTeste ? '#10B981' : '#2563EB',
+                  backgroundColor: (loading || !arquivo || !dataInicio || !dataFim) ? '#D1D5DB' : '#2563EB',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
                   padding: '16px',
                   fontSize: '16px',
                   fontWeight: '600',
-                  cursor: (loading || (!modoTeste && !arquivo) || !dataInicio || !dataFim) ? 'not-allowed' : 'pointer',
+                  cursor: (loading || !arquivo || !dataInicio || !dataFim) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '10px',
-                  boxShadow: (loading || (!modoTeste && !arquivo) || !dataInicio || !dataFim) ? 'none' : modoTeste ? '0 4px 6px -1px rgba(16, 185, 129, 0.3)' : '0 4px 6px -1px rgba(37, 99, 235, 0.3)',
+                  boxShadow: (loading || !arquivo || !dataInicio || !dataFim) ? 'none' : '0 4px 6px -1px rgba(37, 99, 235, 0.3)',
                   transition: 'all 0.2s',
                   transform: loading ? 'none' : 'scale(1)'
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading && (modoTeste || arquivo) && dataInicio && dataFim) {
-                    e.currentTarget.style.backgroundColor = modoTeste ? '#059669' : '#1D4ED8';
+                  if (!loading && arquivo && dataInicio && dataFim) {
+                    e.currentTarget.style.backgroundColor = '#1D4ED8';
                     e.currentTarget.style.transform = 'scale(1.02)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!loading && (modoTeste || arquivo) && dataInicio && dataFim) {
-                    e.currentTarget.style.backgroundColor = modoTeste ? '#10B981' : '#2563EB';
+                  if (!loading && arquivo && dataInicio && dataFim) {
+                    e.currentTarget.style.backgroundColor = '#2563EB';
                     e.currentTarget.style.transform = 'scale(1)';
                   }
                 }}
@@ -897,8 +787,8 @@ export default function ConferenciaRMAPage() {
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize: '20px' }}>{modoTeste ? '🧪' : '✓'}</span>
-                    {modoTeste ? 'Testar Conferência (Mock)' : 'Processar Conferência'}
+                    <span style={{ fontSize: '20px' }}>✓</span>
+                    Processar Conferência
                   </>
                 )}
               </button>

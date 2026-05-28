@@ -68,6 +68,59 @@ export class DashboardService {
     };
   }
 
+  async getOcupacaoHistorico(periodo?: string) {
+    const periodosPermitidos = [7, 30, 90, 180, 365];
+    const periodoNumerico = Number(periodo);
+    const dias = periodosPermitidos.includes(periodoNumerico) ? periodoNumerico : 30;
+    const capacidade = await this.camaRepo.count();
+
+    return this.estadiaRepo.query(
+      `
+        WITH dias AS (
+          SELECT generate_series(
+            (CURRENT_DATE - (($1::int - 1) * INTERVAL '1 day'))::date,
+            CURRENT_DATE,
+            INTERVAL '1 day'
+          )::date AS data
+        )
+        SELECT
+          to_char(d.data, 'YYYY-MM-DD') AS data,
+          ocupacao.ocupadas::int AS ocupadas,
+          $2::int AS total,
+          COALESCE(ROUND(100.0 * ocupacao.ocupadas / NULLIF($2::int, 0))::int, 0) AS percentual,
+          ingressos.ingressos::int AS ingressos
+        FROM dias d
+        LEFT JOIN LATERAL (
+          SELECT COUNT(e.id)::int AS ocupadas
+          FROM estadias e
+          WHERE e.data_checkin::date <= d.data
+            AND e.status <> 'cancelada'
+            AND (
+                 (d.data = CURRENT_DATE AND e.status = 'ativa')
+                 OR (
+                   d.data < CURRENT_DATE
+                   AND COALESCE(
+                     e.data_checkout::date,
+                     CASE
+                       WHEN e.status = 'ativa' THEN CURRENT_DATE
+                       ELSE e.updated_at::date
+                     END
+                   ) >= d.data
+                 )
+               )
+        ) ocupacao ON true
+        LEFT JOIN LATERAL (
+          SELECT COUNT(i.id)::int AS ingressos
+          FROM estadias i
+          WHERE i.data_checkin::date = d.data
+            AND i.status <> 'cancelada'
+        ) ingressos ON true
+        ORDER BY d.data
+      `,
+      [dias, capacidade],
+    );
+  }
+
   async getRelatoriosSociais(inicio?: string, fim?: string) {
     const dataInicio = inicio ? new Date(inicio) : new Date('2023-01-01');
     const dataFim = fim ? new Date(fim) : new Date();

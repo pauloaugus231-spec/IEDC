@@ -7,7 +7,32 @@ interface UseWebSocketOptions {
   onClose?: () => void;
 }
 
-export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
+type SocketEventHandlers = Record<string, (data?: any) => void>;
+
+function normalizeOptions(
+  optionsOrNamespace: UseWebSocketOptions | string = {},
+  eventHandlers?: SocketEventHandlers,
+): UseWebSocketOptions {
+  if (typeof optionsOrNamespace !== 'string') {
+    return optionsOrNamespace;
+  }
+
+  return {
+    onMessage: (data: any) => {
+      const eventName = data?.event ?? data?.type ?? data?.name;
+      if (eventName && eventHandlers?.[eventName]) {
+        eventHandlers[eventName](data?.payload ?? data);
+      }
+    },
+  };
+}
+
+export function useWebSocket(
+  url: string,
+  optionsOrNamespace: UseWebSocketOptions | string = {},
+  eventHandlers?: SocketEventHandlers,
+) {
+  const options = normalizeOptions(optionsOrNamespace, eventHandlers);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 

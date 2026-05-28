@@ -1,36 +1,37 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getPessoaById, getEstadiasByPessoaId, getOcorrenciasByPessoaId, createOcorrencia, updatePessoa, apiFetch } from '../api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { apiFetch, createOcorrencia, getEstadiasByPessoaId, getOcorrenciasByPessoaId, getPessoaById, updatePessoa } from '../api';
+import CheckinModal from '../components/CheckinModal';
 import EditarPessoaModal from '../components/EditarPessoaModal';
 import FotoPreview from '../components/FotoPreview';
-import CheckinModal from '../components/CheckinModal';
 import { getNomePrincipal } from '../utils';
 import './PessoaProfilePage.css';
 
-// Tipos
-interface Pessoa { 
-  id: string; 
-  nome: string; 
-  nome_social?: string; 
+interface Pessoa {
+  id: string;
+  nome: string;
+  nome_social?: string;
   cpf?: string;
   rg?: string;
-  foto_url?: string; 
-  status_cadastro: string; 
-  lgbt?: boolean; 
-  data_nascimento?: string; 
-  telefone?: string; 
-  endereco?: string; 
-  cidade?: string; 
-  uf?: string; 
+  nis?: string;
+  foto_url?: string;
+  status_cadastro: string;
+  tipo_vaga?: string;
+  lgbt?: boolean;
+  data_nascimento?: string;
+  telefone?: string;
+  endereco?: string;
+  cidade?: string;
+  uf?: string;
   cep?: string;
   naturalidade?: string;
   nome_mae?: string;
   nome_pai?: string;
   contato_emergencia?: string;
   telefone_emergencia?: string;
-  alergias?: string; 
-  condicoes_cronicas?: string; 
-  medicamentos_uso_continuo?: string; 
+  alergias?: string;
+  condicoes_cronicas?: string;
+  medicamentos_uso_continuo?: string;
   liberacao_antecipada?: boolean;
   observacoes?: string;
   genero?: string;
@@ -39,11 +40,11 @@ interface Pessoa {
   sexualidade?: string;
 }
 
-interface Estadia { 
-  id: string; 
-  data_checkin: string; 
-  data_checkout?: string; 
-  data_limite: string; 
+interface Estadia {
+  id: string;
+  data_checkin: string;
+  data_checkout?: string;
+  data_limite: string;
   status: string;
   prorrogada?: boolean;
   dias_prorrogacao?: number;
@@ -53,15 +54,15 @@ interface Estadia {
   observacoes_checkout?: string;
   funcionario_checkin?: string;
   funcionario_checkout?: string;
-  cama?: { numero: string; casa: string };
+  cama?: { numero: string | number; casa: string };
 }
 
-interface Ocorrencia { 
-  id: string; 
-  tipo: string; 
-  titulo?: string; 
-  descricao: string; 
-  severidade: 'baixa' | 'media' | 'alta'; 
+interface Ocorrencia {
+  id: string;
+  tipo: string;
+  titulo?: string;
+  descricao: string;
+  severidade: 'baixa' | 'media' | 'alta';
   data_ocorrencia: string;
   criado_por?: string;
 }
@@ -82,140 +83,258 @@ interface Bloqueio {
   liberado_por?: string;
 }
 
+type ActiveTab = 'geral' | 'ocorrencias' | 'historico';
+
+const CASA_LABELS: Record<string, string> = {
+  MASCULINA: 'Quarto Masculino',
+  MISTA_MULHERES: 'Quarto Feminino',
+  IDOSOS: 'Quarto de Idosos',
+  LGBT: 'Quarto LGBT+',
+  masculina: 'Quarto Masculino',
+  feminina: 'Quarto Feminino',
+  idoso: 'Quarto de Idosos',
+  lgbt: 'Quarto LGBT+',
+};
+
+const motivoSaidaLabels: Record<string, string> = {
+  voluntario: 'Saída voluntária',
+  automatico: 'Prazo expirado',
+  abandono: 'Abandono da vaga',
+  transferencia: 'Transferência',
+  encaminhamento: 'Encaminhamento',
+  descumprimento: 'Descumprimento de regras',
+  outro: 'Outro',
+};
+
+function formatDate(value?: string | null) {
+  if (!value) return '-';
+  const datePart = String(value).split('T')[0];
+  const [year, month, day] = datePart.split('-');
+  if (year && month && day) return `${day}/${month}/${year}`;
+  return new Date(value).toLocaleDateString('pt-BR');
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getCasaLabel(value?: string | null) {
+  if (!value) return '-';
+  return CASA_LABELS[value] || value;
+}
+
+function normalizeStatus(status?: string) {
+  return (status || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function getTipoVagaLabel(value?: string) {
+  if (!value) return 'Não definido';
+  return CASA_LABELS[value] || value;
+}
+
+function getAge(dataNascimento?: string) {
+  if (!dataNascimento) return null;
+  const nascimento = new Date(dataNascimento);
+  const hoje = new Date();
+  let anos = hoje.getFullYear() - nascimento.getFullYear();
+  const mes = hoje.getMonth() - nascimento.getMonth();
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) anos--;
+  return anos;
+}
+
 const PessoaProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  // Estados de Dados
+
   const [pessoa, setPessoa] = useState<Pessoa | null>(null);
   const [estadias, setEstadias] = useState<Estadia[]>([]);
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [bloqueios, setBloqueios] = useState<Bloqueio[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Estados de Interface
-  const [activeTab, setActiveTab] = useState<'geral' | 'ocorrencias' | 'historico'>('geral');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('geral');
   const [showEditar, setShowEditar] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [showOcorrenciaModal, setShowOcorrenciaModal] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Toast helper
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // --- CARREGAMENTO DE DADOS ---
   const fetchData = async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const [p, e, o, b] = await Promise.all([
+      const [pessoaData, estadiasData, ocorrenciasData, bloqueiosData] = await Promise.all([
         getPessoaById(id),
         getEstadiasByPessoaId(id),
         getOcorrenciasByPessoaId(id),
-        apiFetch(`/api/bloqueios/pessoa/${id}`).catch(() => [])
+        apiFetch(`/api/bloqueios/pessoa/${id}`).catch(() => []),
       ]);
-      setPessoa(p as Pessoa);
-      setEstadias(e as Estadia[]);
-      setOcorrencias(o as Ocorrencia[]);
-      setBloqueios(b as Bloqueio[]);
-    } catch (err) { 
-      console.error(err); 
-      showToast("Erro ao carregar perfil", 'error');
-    } finally { 
-      setLoading(false); 
+      setPessoa(pessoaData as Pessoa);
+      setEstadias(estadiasData as Estadia[]);
+      setOcorrencias(ocorrenciasData as Ocorrencia[]);
+      setBloqueios(bloqueiosData as Bloqueio[]);
+    } catch (error) {
+      console.error(error);
+      showToast('Erro ao carregar perfil.', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, [id]);
+  useEffect(() => {
+    fetchData();
+  }, [id]);
 
-  // --- COMPUTED / HELPERS ---
-  const estadiaAtiva = useMemo(() => estadias.find(e => e.status?.toUpperCase() === 'ATIVA'), [estadias]);
-  
-  // Bloqueio ativo
+  const estadiaAtiva = useMemo(
+    () => estadias.find((estadia) => estadia.status?.toLowerCase() === 'ativa'),
+    [estadias],
+  );
+
+  const ultimaEstadiaFinalizada = useMemo(
+    () => estadias.find((estadia) => Boolean(estadia.data_checkout)),
+    [estadias],
+  );
+
   const bloqueioAtivo = useMemo(() => {
     const hoje = new Date();
-    return bloqueios.find(b => {
-      if (!b.ativo) return false;
-      const inicio = new Date(b.data_inicio);
+    return bloqueios.find((bloqueio) => {
+      if (!bloqueio.ativo) return false;
+      const inicio = new Date(bloqueio.data_inicio);
       if (hoje < inicio) return false;
-      if (b.data_fim) {
-        const fim = new Date(b.data_fim);
-        fim.setHours(23, 59, 59, 999);
-        return hoje <= fim;
-      }
-      return true;
+      if (!bloqueio.data_fim) return true;
+      const fim = new Date(bloqueio.data_fim);
+      fim.setHours(23, 59, 59, 999);
+      return hoje <= fim;
     });
   }, [bloqueios]);
 
-  // Dias restantes do bloqueio
-  const diasRestantesBloqueio = useMemo(() => {
-    if (!bloqueioAtivo?.data_fim) return null;
+  const retornoRegra = useMemo(() => {
+    if (!ultimaEstadiaFinalizada?.data_checkout || pessoa?.liberacao_antecipada || estadiaAtiva) return null;
+
+    const checkout = new Date(ultimaEstadiaFinalizada.data_checkout);
     const hoje = new Date();
-    const fim = new Date(bloqueioAtivo.data_fim);
-    const diff = fim.getTime() - hoje.getTime();
-    return Math.max(0, Math.ceil(diff / 86400000));
-  }, [bloqueioAtivo]);
-  
+    const diffDays = Math.ceil((hoje.getTime() - checkout.getTime()) / 86400000);
+    const diasRestantes = Math.max(0, 15 - diffDays);
+    const dataLiberada = new Date(checkout);
+    dataLiberada.setDate(checkout.getDate() + 15);
+
+    return {
+      diasRestantes,
+      dataLiberada,
+      checkout,
+    };
+  }, [estadiaAtiva, pessoa?.liberacao_antecipada, ultimaEstadiaFinalizada]);
+
+  const diasEstadia = useMemo(() => {
+    if (!estadiaAtiva?.data_checkin) return null;
+    const entrada = new Date(estadiaAtiva.data_checkin);
+    return Math.max(1, Math.ceil((new Date().getTime() - entrada.getTime()) / 86400000));
+  }, [estadiaAtiva]);
+
   const diasRestantesInfo = useMemo(() => {
     if (!estadiaAtiva?.data_limite) return null;
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const dataLimite = new Date(estadiaAtiva.data_limite);
-    const diff = dataLimite.getTime() - hoje.getTime();
-    const dias = Math.ceil(diff / (86400000));
-    
-    let color = '#10B981'; // Verde
-    let status = 'normal';
-    if (dias <= 3) { color = '#EF4444'; status = 'critico'; }
-    else if (dias <= 7) { color = '#F59E0B'; status = 'atencao'; }
-    
-    return { dias, color, status, data: dataLimite.toLocaleDateString() };
+    const dias = Math.ceil((dataLimite.getTime() - hoje.getTime()) / 86400000);
+    const status = dias <= 3 ? 'critico' : dias <= 7 ? 'atencao' : 'normal';
+    return { dias, status, data: formatDate(estadiaAtiva.data_limite) };
   }, [estadiaAtiva]);
 
-  // Calcular idade
-  const idade = useMemo(() => {
-    if (!pessoa?.data_nascimento) return null;
-    const nascimento = new Date(pessoa.data_nascimento);
-    const hoje = new Date();
-    let anos = hoje.getFullYear() - nascimento.getFullYear();
-    const m = hoje.getMonth() - nascimento.getMonth();
-    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) anos--;
-    return anos;
-  }, [pessoa?.data_nascimento]);
+  const idade = useMemo(() => getAge(pessoa?.data_nascimento), [pessoa?.data_nascimento]);
 
-  // --- AÇÕES ---
+  const camposAfericao = useMemo(() => {
+    if (!pessoa) return [];
+    return [
+      { label: 'Nome', value: pessoa.nome },
+      { label: 'CPF', value: pessoa.cpf },
+      { label: 'Nascimento', value: pessoa.data_nascimento },
+      { label: 'NIS', value: pessoa.nis },
+      { label: 'Data de ingresso', value: estadiaAtiva?.data_checkin || ultimaEstadiaFinalizada?.data_checkin },
+    ];
+  }, [estadiaAtiva?.data_checkin, pessoa, ultimaEstadiaFinalizada?.data_checkin]);
+
+  const pendenciasAfericao = camposAfericao.filter((campo) => !campo.value).map((campo) => campo.label);
+
+  const podeIniciarEstadia = Boolean(
+    pessoa
+    && !estadiaAtiva
+    && !bloqueioAtivo
+    && (
+      pessoa.status_cadastro === 'aprovado'
+      || pessoa.liberacao_antecipada
+      || (retornoRegra && retornoRegra.diasRestantes === 0)
+      || estadias.length === 0
+    ),
+  );
+
+  const statusOperacional = useMemo(() => {
+    if (bloqueioAtivo) return { label: 'Bloqueado', tone: 'danger' };
+    if (estadiaAtiva) return { label: 'Hospedado', tone: 'success' };
+    if (podeIniciarEstadia) return { label: 'Apto para entrada', tone: 'primary' };
+    if (retornoRegra && retornoRegra.diasRestantes > 0) return { label: 'Aguardando retorno', tone: 'warning' };
+    if (pessoa?.liberacao_antecipada) return { label: 'Liberado', tone: 'primary' };
+    return { label: pessoa?.status_cadastro || 'Sem status', tone: 'neutral' };
+  }, [bloqueioAtivo, estadiaAtiva, pessoa?.liberacao_antecipada, pessoa?.status_cadastro, podeIniciarEstadia, retornoRegra]);
+
   const handleLiberarAntecipada = async () => {
-    const funcionario = prompt("Seu nome (funcionário autorizador):");
+    const funcionario = window.prompt('Nome de quem está autorizando a liberação:');
     if (!funcionario) return;
-    
-    if (!window.confirm("Confirmar liberação antecipada para nova entrada? Isso também liberará qualquer bloqueio ativo.")) return;
+    if (!window.confirm('Confirmar liberação antecipada para nova entrada?')) return;
+
     try {
-      await apiFetch(`/api/pessoas/${id}/liberar-antecipadamente`, { 
+      await apiFetch(`/api/pessoas/${id}/liberar-antecipadamente`, {
         method: 'POST',
-        body: JSON.stringify({ funcionario })
+        body: JSON.stringify({ funcionario }),
       });
-      showToast("Pessoa liberada para nova entrada!");
+      showToast('Pessoa liberada para nova entrada.');
       fetchData();
-    } catch (e) { 
-      showToast("Erro na liberação", 'error'); 
+    } catch {
+      showToast('Erro ao registrar liberação.', 'error');
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!pessoa) return;
+    if (!window.confirm(`Registrar saída de ${getNomePrincipal(pessoa)}?`)) return;
+
+    try {
+      await apiFetch('/api/estadias/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          pessoa_id: pessoa.id,
+          observacoes_checkout: 'Saída registrada pelo perfil da pessoa.',
+        }),
+      });
+      showToast('Saída registrada.');
+      fetchData();
+    } catch (error: any) {
+      showToast(error?.message || 'Erro ao registrar saída.', 'error');
     }
   };
 
   const handleToggleLGBT = async () => {
     if (!pessoa) return;
     try {
-      const novoValor = !pessoa.lgbt;
+      const lgbt = !pessoa.lgbt;
       await apiFetch(`/api/pessoas/${pessoa.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ lgbt: novoValor }),
+        body: JSON.stringify({ lgbt }),
       });
-      setPessoa({ ...pessoa, lgbt: novoValor });
-      showToast(novoValor ? "Identificação LGBT+ adicionada" : "Identificação LGBT+ removida");
-    } catch (error) {
-      showToast("Erro ao atualizar", 'error');
+      setPessoa({ ...pessoa, lgbt });
+      showToast(lgbt ? 'Identificação LGBT+ adicionada.' : 'Identificação LGBT+ removida.');
+    } catch {
+      showToast('Erro ao atualizar identificação.', 'error');
     }
   };
 
@@ -223,548 +342,436 @@ const PessoaProfilePage: React.FC = () => {
     try {
       await createOcorrencia({ pessoa_id: id!, ...data });
       setShowOcorrenciaModal(false);
-      showToast("Ocorrência registrada!");
+      showToast('Ocorrência registrada.');
       fetchData();
-    } catch (e) { 
-      showToast("Erro ao criar ocorrência", 'error'); 
+    } catch {
+      showToast('Erro ao criar ocorrência.', 'error');
     }
   };
 
   const handleDeleteOcorrencia = async (ocorrenciaId: string) => {
-    if (!window.confirm("Excluir esta ocorrência?")) return;
+    if (!window.confirm('Excluir esta ocorrência?')) return;
     try {
       await apiFetch(`/api/ocorrencias/${ocorrenciaId}`, { method: 'DELETE' });
-      setOcorrencias(prev => prev.filter(o => o.id !== ocorrenciaId));
-      showToast("Ocorrência excluída");
-    } catch (e) {
-      showToast("Erro ao excluir", 'error');
+      setOcorrencias((current) => current.filter((ocorrencia) => ocorrencia.id !== ocorrenciaId));
+      showToast('Ocorrência excluída.');
+    } catch {
+      showToast('Erro ao excluir ocorrência.', 'error');
     }
   };
 
   const handleSavePessoa = async (data: any) => {
+    if (!pessoa) return;
     try {
-      await updatePessoa(pessoa!.id, data);
+      await updatePessoa(pessoa.id, data);
       setShowEditar(false);
-      showToast("Dados atualizados!");
+      showToast('Dados atualizados.');
       fetchData();
-    } catch (e) {
-      showToast("Erro ao salvar", 'error');
+    } catch {
+      showToast('Erro ao salvar dados.', 'error');
     }
   };
 
-  // --- LOADING / ERROR STATES ---
   if (loading) {
     return (
-      <div className="loading-screen">
-        <div className="loading-spinner">⏳</div>
-        <p>Carregando Prontuário...</p>
-      </div>
+      <main className="profile-page page-band">
+        <section className="profile-loading-state">
+          <span />
+          <strong>Carregando perfil</strong>
+          <p>Buscando cadastro, estadias e ocorrências.</p>
+        </section>
+      </main>
     );
   }
 
   if (!pessoa) {
     return (
-      <div className="error-screen">
-        <h2>😕 Pessoa não encontrada</h2>
-        <button onClick={() => navigate(-1)} className="btn-secondary">← Voltar</button>
-      </div>
+      <main className="profile-page page-band">
+        <section className="profile-empty-state">
+          <h1>Pessoa não encontrada</h1>
+          <p>O cadastro solicitado não está disponível.</p>
+          <button className="profile-button secondary" onClick={() => navigate(-1)} type="button">
+            Voltar
+          </button>
+        </section>
+      </main>
     );
   }
 
   return (
-    <div className="profile-layout">
-      
-      {/* TOAST NOTIFICATION */}
+    <main className="profile-page page-band">
       {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          {toast.type === 'success' ? '✅' : '❌'} {toast.message}
+        <div className={`profile-toast ${toast.type}`}>
+          {toast.message}
         </div>
       )}
 
-      {/* SIDEBAR ESQUERDA */}
-      <aside className="profile-sidebar">
-        {/* Botão Voltar */}
-        <button className="btn-back" onClick={() => navigate(-1)}>
-          ← Voltar
-        </button>
+      <section className="profile-hero">
+        <div className="profile-hero-left">
+          <button className="profile-back-button" onClick={() => navigate(-1)} type="button">
+            Voltar
+          </button>
 
-        <div className="profile-photo-container">
-          <FotoPreview fotoUrl={pessoa.foto_url} size={150} altText={getNomePrincipal(pessoa)} />
-          <div className={`status-badge status-${pessoa.status_cadastro?.toLowerCase().replace(' ', '-')}`}>
-            {pessoa.status_cadastro}
+          <div className="profile-photo-wrap">
+            <FotoPreview fotoUrl={pessoa.foto_url} size={104} altText={getNomePrincipal(pessoa)} />
+          </div>
+
+          <div className="profile-heading">
+            <span className={`profile-status-pill ${statusOperacional.tone}`}>{statusOperacional.label}</span>
+            <h1>{getNomePrincipal(pessoa)}</h1>
+            {pessoa.nome_social && <p>Nome civil: {pessoa.nome}</p>}
+            <div className="profile-quick-tags">
+              {idade !== null && <span>{idade} anos</span>}
+              <span>{pessoa.cpf || 'CPF não informado'}</span>
+              <span>NIS: {pessoa.nis || 'não informado'}</span>
+              {pessoa.lgbt && <span>LGBT+</span>}
+            </div>
           </div>
         </div>
 
-        <div className="profile-identity">
-          <h1>
-            {getNomePrincipal(pessoa)}
-            {pessoa.lgbt && <span className="tag-lgbt" title="Pessoa LGBT+">🏳️‍🌈</span>}
-          </h1>
-          {pessoa.nome_social && (
-            <p className="subtitle">Civil: {pessoa.nome}</p>
-          )}
-          {idade && <p className="age-info">{idade} anos</p>}
-        </div>
-
-        <div className="sidebar-info">
-          <InfoRow icon="📅" label="Nascimento" value={pessoa.data_nascimento ? new Date(pessoa.data_nascimento).toLocaleDateString() : '-'} />
-          <InfoRow icon="📱" label="Telefone" value={pessoa.telefone || '-'} />
-          <InfoRow icon="📍" label="Cidade" value={pessoa.cidade ? `${pessoa.cidade}/${pessoa.uf || ''}` : '-'} />
-          {pessoa.cpf && <InfoRow icon="🪪" label="CPF" value={pessoa.cpf} />}
-        </div>
-
-        {/* Toggle LGBT */}
-        <div className="sidebar-toggle">
-          <label className="toggle-label">
-            <input
-              type="checkbox"
-              checked={pessoa.lgbt || false}
-              onChange={handleToggleLGBT}
-            />
-            <span className="toggle-text">🏳️‍🌈 Identificação LGBT+</span>
-          </label>
-        </div>
-
-        <div className="sidebar-actions">
-          <button className="btn-primary full" onClick={() => setShowEditar(true)}>
-            ✏️ Editar Dados
+        <div className="profile-hero-actions">
+          <button className="profile-button secondary" onClick={() => setShowEditar(true)} type="button">
+            Editar cadastro
           </button>
-          
-          {/* Botão Check-in: aparece se não tem estadia ativa, já foi liberado e não tem bloqueio ativo */}
-          {!estadiaAtiva && pessoa.liberacao_antecipada && !bloqueioAtivo && (
-            <button className="btn-success full" onClick={() => setShowCheckin(true)}>
-              🏨 Fazer Check-in
-            </button>
-          )}
-          
-          {/* Botão Liberar Entrada: aparece se tem bloqueio ativo OU se não tem estadia e não foi liberado */}
-          {bloqueioAtivo && (
-            <button className="btn-warning full" onClick={handleLiberarAntecipada}>
-              🔓 Liberar Bloqueio Antecipado
-            </button>
-          )}
-          
-          {!estadiaAtiva && !pessoa.liberacao_antecipada && !bloqueioAtivo && (
-            <button className="btn-warning full" onClick={handleLiberarAntecipada}>
-              🔓 Liberar Entrada
+          {podeIniciarEstadia && (
+            <button className="profile-button primary" onClick={() => setShowCheckin(true)} type="button">
+              Iniciar estadia
             </button>
           )}
         </div>
-      </aside>
+      </section>
 
-      {/* ÁREA PRINCIPAL */}
-      <main className="profile-main">
-        
-        {/* BANNER DE BLOQUEIO ATIVO */}
-        {bloqueioAtivo && (
-          <div className="block-banner">
-            <div className="block-info">
-              <span className="block-icon">🚫</span>
-              <div className="block-details">
-                <strong>Pessoa Bloqueada</strong>
-                <span className="block-reason">{bloqueioAtivo.motivo}</span>
-                <small>
-                  Tipo: {bloqueioAtivo.tipo} • 
-                  {bloqueioAtivo.data_fim 
-                    ? ` Liberação em ${new Date(bloqueioAtivo.data_fim).toLocaleDateString()}`
-                    : ' Bloqueio permanente'}
-                </small>
+      <section className={`stay-command-card ${statusOperacional.tone}`}>
+        <div className="stay-command-header">
+          <div>
+            <span className="institutional-eyebrow">Albergue Noturno</span>
+            <h2>Situação da estadia</h2>
+          </div>
+          <strong>{statusOperacional.label}</strong>
+        </div>
+
+        {estadiaAtiva && (
+          <div className="stay-active-grid">
+            <Metric label="Cama" value={estadiaAtiva.cama ? `${estadiaAtiva.cama.numero}` : '-'} detail={getCasaLabel(estadiaAtiva.cama?.casa)} />
+            <Metric label="Entrada" value={formatDate(estadiaAtiva.data_checkin)} detail={formatDateTime(estadiaAtiva.data_checkin)} />
+            <Metric label="Dias de estadia" value={diasEstadia ? String(diasEstadia) : '-'} detail="desde o check-in" />
+            <Metric
+              label="Saída prevista"
+              value={diasRestantesInfo ? `${diasRestantesInfo.dias} dias` : '-'}
+              detail={diasRestantesInfo ? `até ${diasRestantesInfo.data}` : 'sem data limite'}
+              tone={diasRestantesInfo?.status}
+            />
+          </div>
+        )}
+
+        {!estadiaAtiva && bloqueioAtivo && (
+          <div className="stay-message-grid">
+            <div>
+              <h3>Entrada bloqueada neste momento</h3>
+              <p>{bloqueioAtivo.motivo}</p>
+              <small>
+                {bloqueioAtivo.data_fim
+                  ? `Liberação prevista em ${formatDate(bloqueioAtivo.data_fim)}`
+                  : 'Bloqueio sem data final definida'}
+              </small>
+            </div>
+            <button className="profile-button warning" onClick={handleLiberarAntecipada} type="button">
+              Liberar bloqueio
+            </button>
+          </div>
+        )}
+
+        {!estadiaAtiva && !bloqueioAtivo && podeIniciarEstadia && (
+          <div className="stay-message-grid">
+            <div>
+              <h3>Pessoa apta para entrada hoje</h3>
+              <p>O operador pode iniciar a estadia selecionando uma cama disponível.</p>
+              <small>Quarto sugerido: {getTipoVagaLabel(pessoa.tipo_vaga)}</small>
+            </div>
+            <button className="profile-button primary large" onClick={() => setShowCheckin(true)} type="button">
+              Iniciar estadia
+            </button>
+          </div>
+        )}
+
+        {!estadiaAtiva && !bloqueioAtivo && !podeIniciarEstadia && (
+          <div className="stay-message-grid">
+            <div>
+              <h3>Entrada não disponível automaticamente</h3>
+              {retornoRegra && retornoRegra.diasRestantes > 0 ? (
+                <p>
+                  Regra de retorno em andamento. Faltam {retornoRegra.diasRestantes} dias para nova entrada automática.
+                </p>
+              ) : (
+                <p>Use liberação apenas quando houver autorização operacional.</p>
+              )}
+              {retornoRegra && <small>Retorno automático a partir de {formatDate(retornoRegra.dataLiberada.toISOString())}</small>}
+            </div>
+            <button className="profile-button warning" onClick={handleLiberarAntecipada} type="button">
+              Liberar entrada
+            </button>
+          </div>
+        )}
+
+        {estadiaAtiva && (
+          <div className="stay-actions-row">
+            <button className="profile-button secondary" onClick={() => setActiveTab('historico')} type="button">
+              Ver histórico
+            </button>
+            <button className="profile-button danger" onClick={handleCheckout} type="button">
+              Registrar saída
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section className="profile-kpis">
+        <Metric label="Estadias registradas" value={String(estadias.length)} detail="histórico da pessoa" />
+        <Metric label="Ocorrências" value={String(ocorrencias.length)} detail={ocorrencias.length ? 'há registros no perfil' : 'sem ocorrências'} />
+        <Metric label="Pendências de aferição" value={String(pendenciasAfericao.length)} detail={pendenciasAfericao.length ? pendenciasAfericao.join(', ') : 'campos essenciais completos'} />
+      </section>
+
+      <nav className="profile-tabs" aria-label="Seções do perfil">
+        <button className={activeTab === 'geral' ? 'active' : ''} onClick={() => setActiveTab('geral')} type="button">
+          Visão geral
+        </button>
+        <button className={activeTab === 'ocorrencias' ? 'active' : ''} onClick={() => setActiveTab('ocorrencias')} type="button">
+          Ocorrências
+          {ocorrencias.length > 0 && <span>{ocorrencias.length}</span>}
+        </button>
+        <button className={activeTab === 'historico' ? 'active' : ''} onClick={() => setActiveTab('historico')} type="button">
+          Histórico
+        </button>
+      </nav>
+
+      {activeTab === 'geral' && (
+        <section className="profile-info-grid">
+          <article className="profile-card afericao-card">
+            <div className="profile-card-header">
+              <h3>Dados para aferição</h3>
+              <span className={pendenciasAfericao.length ? 'chip-warning' : 'chip-success'}>
+                {pendenciasAfericao.length ? `${pendenciasAfericao.length} pendências` : 'Completo'}
+              </span>
+            </div>
+            <div className="field-list">
+              {camposAfericao.map((campo) => (
+                <FieldRow
+                  key={campo.label}
+                  label={campo.label}
+                  value={campo.label.includes('Data') || campo.label === 'Nascimento' ? formatDate(campo.value) : campo.value || '-'}
+                  missing={!campo.value}
+                />
+              ))}
+            </div>
+          </article>
+
+          <article className="profile-card">
+            <div className="profile-card-header">
+              <h3>Saúde e cuidados</h3>
+            </div>
+            <CareRow label="Alergias" value={pessoa.alergias || 'Nenhuma registrada'} tone={pessoa.alergias ? 'warning' : undefined} />
+            <CareRow label="Condições crônicas" value={pessoa.condicoes_cronicas || 'Nenhuma registrada'} />
+            <CareRow label="Medicamentos contínuos" value={pessoa.medicamentos_uso_continuo || 'Nenhum registrado'} tone={pessoa.medicamentos_uso_continuo ? 'info' : undefined} />
+          </article>
+
+          <article className="profile-card">
+            <div className="profile-card-header">
+              <h3>Família e contatos</h3>
+            </div>
+            <FieldRow label="Telefone" value={pessoa.telefone || '-'} />
+            <FieldRow label="Mãe" value={pessoa.nome_mae || '-'} />
+            <FieldRow label="Pai" value={pessoa.nome_pai || '-'} />
+            <FieldRow label="Contato de emergência" value={pessoa.contato_emergencia || '-'} />
+            <FieldRow label="Telefone de emergência" value={pessoa.telefone_emergencia || '-'} />
+          </article>
+
+          <article className="profile-card">
+            <div className="profile-card-header">
+              <h3>Endereço e origem</h3>
+            </div>
+            <FieldRow label="Endereço" value={pessoa.endereco || '-'} />
+            <FieldRow label="Cidade" value={pessoa.cidade ? `${pessoa.cidade}/${pessoa.uf || ''}` : '-'} />
+            <FieldRow label="CEP" value={pessoa.cep || '-'} />
+            <FieldRow label="Naturalidade" value={pessoa.naturalidade || '-'} />
+          </article>
+
+          <article className="profile-card">
+            <div className="profile-card-header">
+              <h3>Identidade e vaga</h3>
+            </div>
+            <FieldRow label="Sexo" value={pessoa.sexo || '-'} />
+            <FieldRow label="Gênero" value={pessoa.genero || '-'} />
+            <FieldRow label="Cor/raça" value={pessoa.cor || '-'} />
+            <FieldRow label="Tipo de vaga" value={getTipoVagaLabel(pessoa.tipo_vaga)} />
+            <label className="profile-switch">
+              <input checked={Boolean(pessoa.lgbt)} onChange={handleToggleLGBT} type="checkbox" />
+              <span>Identificação LGBT+</span>
+            </label>
+          </article>
+
+          <article className="profile-card">
+            <div className="profile-card-header">
+              <h3>Observações</h3>
+            </div>
+            <p className="profile-notes">{pessoa.observacoes || 'Nenhuma observação registrada.'}</p>
+          </article>
+        </section>
+      )}
+
+      {activeTab === 'ocorrencias' && (
+        <section className="profile-card profile-section-card">
+          <div className="profile-card-header">
+            <div>
+              <h3>Ocorrências</h3>
+              <p>Registros operacionais vinculados à pessoa.</p>
+            </div>
+            <button className="profile-button primary" onClick={() => setShowOcorrenciaModal(true)} type="button">
+              Nova ocorrência
+            </button>
+          </div>
+
+          {ocorrencias.length === 0 ? (
+            <div className="profile-empty-state compact">
+              <strong>Nenhuma ocorrência registrada</strong>
+              <p>O histórico operacional está limpo.</p>
+            </div>
+          ) : (
+            <div className="occurrence-list">
+              {ocorrencias.map((ocorrencia) => (
+                <article className={`occurrence-item severity-${ocorrencia.severidade}`} key={ocorrencia.id}>
+                  <div>
+                    <span>{formatDate(ocorrencia.data_ocorrencia)}</span>
+                    <strong>{ocorrencia.titulo || ocorrencia.tipo}</strong>
+                    <p>{ocorrencia.descricao}</p>
+                    <small>
+                      {ocorrencia.tipo} · Severidade {ocorrencia.severidade}
+                      {ocorrencia.criado_por ? ` · Por ${ocorrencia.criado_por}` : ''}
+                    </small>
+                  </div>
+                  <button className="profile-delete-button" onClick={() => handleDeleteOcorrencia(ocorrencia.id)} type="button">
+                    Excluir
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'historico' && (
+        <section className="history-grid">
+          <article className="profile-card profile-section-card">
+            <div className="profile-card-header">
+              <div>
+                <h3>Histórico de estadias</h3>
+                <p>Entradas, saídas, camas e observações de permanência.</p>
               </div>
             </div>
-            {diasRestantesBloqueio !== null && diasRestantesBloqueio > 0 && (
-              <div className="block-countdown">
-                <span className="days">{diasRestantesBloqueio}</span>
-                <span className="label">dias restantes</span>
+
+            {estadias.length === 0 ? (
+              <div className="profile-empty-state compact">
+                <strong>Nenhuma estadia registrada</strong>
+                <p>A pessoa ainda não possui permanência no albergue.</p>
+              </div>
+            ) : (
+              <div className="stay-history-list">
+                {estadias.map((estadia) => (
+                  <article className={`stay-history-card status-${normalizeStatus(estadia.status)}`} key={estadia.id}>
+                    <div className="stay-history-top">
+                      <strong>{estadia.status || 'Sem status'}</strong>
+                      <span>{estadia.cama ? `Cama ${estadia.cama.numero} · ${getCasaLabel(estadia.cama.casa)}` : 'Sem cama vinculada'}</span>
+                    </div>
+                    <div className="stay-history-metrics">
+                      <FieldRow label="Entrada" value={formatDateTime(estadia.data_checkin)} />
+                      <FieldRow label="Saída" value={estadia.data_checkout ? formatDateTime(estadia.data_checkout) : 'Em permanência'} />
+                      <FieldRow label="Limite" value={formatDate(estadia.data_limite)} />
+                      {estadia.motivo_saida && <FieldRow label="Motivo" value={motivoSaidaLabels[estadia.motivo_saida] || estadia.motivo_saida} />}
+                    </div>
+                    {(estadia.observacoes_checkin || estadia.observacoes_checkout || estadia.motivo_prorrogacao) && (
+                      <div className="stay-history-notes">
+                        {estadia.observacoes_checkin && <p><strong>Entrada:</strong> {estadia.observacoes_checkin}</p>}
+                        {estadia.observacoes_checkout && <p><strong>Saída:</strong> {estadia.observacoes_checkout}</p>}
+                        {estadia.motivo_prorrogacao && <p><strong>Prorrogação:</strong> {estadia.motivo_prorrogacao}</p>}
+                      </div>
+                    )}
+                  </article>
+                ))}
               </div>
             )}
-          </div>
-        )}
+          </article>
 
-        {/* BANNER DE ESTADIA ATIVA */}
-        {estadiaAtiva && diasRestantesInfo && (
-          <div className={`active-stay-banner status-${diasRestantesInfo.status}`}>
-            <div className="stay-info">
-              <span className="stay-label">🏨 Estadia Ativa</span>
-              <span className="stay-dates">
-                Entrada: {new Date(estadiaAtiva.data_checkin).toLocaleDateString()}
-                {estadiaAtiva.cama && ` • Cama ${estadiaAtiva.cama.numero} (${estadiaAtiva.cama.casa})`}
-              </span>
-              {estadiaAtiva.prorrogada && (
-                <span className="stay-extended">⏰ Prorrogada (+{estadiaAtiva.dias_prorrogacao} dias)</span>
-              )}
-            </div>
-            <div className="stay-countdown">
-              <span className="days" style={{ color: diasRestantesInfo.color }}>
-                {diasRestantesInfo.dias}
-              </span>
-              <span className="label">dias restantes</span>
-              <small>até {diasRestantesInfo.data}</small>
-            </div>
-          </div>
-        )}
-
-        {/* NAVEGAÇÃO POR ABAS */}
-        <div className="tabs-nav">
-          <button 
-            className={activeTab === 'geral' ? 'active' : ''} 
-            onClick={() => setActiveTab('geral')}
-          >
-            📋 Visão Geral
-          </button>
-          <button 
-            className={activeTab === 'ocorrencias' ? 'active' : ''} 
-            onClick={() => setActiveTab('ocorrencias')}
-          >
-            ⚠️ Ocorrências 
-            {ocorrencias.length > 0 && <span className="tab-badge">{ocorrencias.length}</span>}
-          </button>
-          <button 
-            className={activeTab === 'historico' ? 'active' : ''} 
-            onClick={() => setActiveTab('historico')}
-          >
-            📜 Histórico
-          </button>
-        </div>
-
-        <div className="tab-content">
-          
-          {/* ABA GERAL */}
-          {activeTab === 'geral' && (
-            <div className="general-grid">
-              
-              {/* Card Saúde */}
-              <div className="card health-card">
-                <h3>🏥 Informações de Saúde</h3>
-                <div className={`health-item ${pessoa.alergias ? 'warning' : ''}`}>
-                  <label>⚠️ Alergias</label>
-                  <p>{pessoa.alergias || 'Nenhuma registrada'}</p>
-                </div>
-                <div className="health-item">
-                  <label>🩺 Condições Crônicas</label>
-                  <p>{pessoa.condicoes_cronicas || 'Nenhuma registrada'}</p>
-                </div>
-                <div className={`health-item ${pessoa.medicamentos_uso_continuo ? 'info' : ''}`}>
-                  <label>💊 Medicamentos Contínuos</label>
-                  <p>{pessoa.medicamentos_uso_continuo || 'Nenhum'}</p>
+          {bloqueios.length > 0 && (
+            <article className="profile-card profile-section-card">
+              <div className="profile-card-header">
+                <div>
+                  <h3>Histórico de bloqueios</h3>
+                  <p>Restrições, liberações e registros administrativos.</p>
                 </div>
               </div>
-
-              {/* Card Contatos */}
-              <div className="card contact-card">
-                <h3>👨‍👩‍👦 Família e Contatos</h3>
-                <div className="contact-item">
-                  <label>👩 Nome da Mãe</label>
-                  <p>{pessoa.nome_mae || '-'}</p>
-                </div>
-                <div className="contact-item">
-                  <label>👨 Nome do Pai</label>
-                  <p>{pessoa.nome_pai || '-'}</p>
-                </div>
-                <div className="contact-item emergency">
-                  <label>🚨 Contato de Emergência</label>
-                  <p>{pessoa.contato_emergencia || '-'}</p>
-                  {pessoa.telefone_emergencia && <small>📞 {pessoa.telefone_emergencia}</small>}
-                </div>
-              </div>
-
-              {/* Card Endereço */}
-              <div className="card address-card">
-                <h3>📍 Endereço</h3>
-                <p className="address-full">
-                  {pessoa.endereco || 'Não informado'}
-                  {pessoa.cidade && <><br />{pessoa.cidade} - {pessoa.uf}</>}
-                  {pessoa.cep && <><br />CEP: {pessoa.cep}</>}
-                </p>
-                {pessoa.naturalidade && (
-                  <p className="naturalidade">🌍 Natural de: {pessoa.naturalidade}</p>
-                )}
-              </div>
-
-              {/* Card Observações */}
-              {pessoa.observacoes && (
-                <div className="card obs-card full-width">
-                  <h3>📝 Observações</h3>
-                  <p>{pessoa.observacoes}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ABA OCORRÊNCIAS */}
-          {activeTab === 'ocorrencias' && (
-            <div className="ocorrencias-tab">
-              <div className="action-bar">
-                <button className="btn-primary" onClick={() => setShowOcorrenciaModal(true)}>
-                  + Nova Ocorrência
-                </button>
-              </div>
-              
-              {ocorrencias.length === 0 ? (
-                <div className="empty-state">
-                  <span className="empty-icon">✅</span>
-                  <p>Nenhuma ocorrência registrada</p>
-                </div>
-              ) : (
-                <div className="timeline-list">
-                  {ocorrencias.map(oc => (
-                    <div key={oc.id} className={`timeline-item severity-${oc.severidade}`}>
-                      <div className="timeline-marker" />
-                      <div className="timeline-date">
-                        {new Date(oc.data_ocorrencia).toLocaleDateString()}
-                      </div>
-                      <div className="timeline-content">
-                        <div className="timeline-header">
-                          <span className={`badge badge-${oc.severidade}`}>
-                            {oc.severidade === 'alta' ? '🔴' : oc.severidade === 'media' ? '🟡' : '🟢'} {oc.severidade}
-                          </span>
-                          <span className="tipo-tag">{oc.tipo}</span>
-                        </div>
-                        <h4>{oc.titulo || 'Sem título'}</h4>
-                        <p>{oc.descricao}</p>
-                        {oc.criado_por && <small className="author">Por: {oc.criado_por}</small>}
-                        <button 
-                          className="btn-delete-small"
-                          onClick={() => handleDeleteOcorrencia(oc.id)}
-                          title="Excluir"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+              <div className="block-history-list">
+                {bloqueios.map((bloqueio) => (
+                  <article className={`block-history-card ${bloqueio.ativo ? 'ativo' : 'encerrado'}`} key={bloqueio.id}>
+                    <div>
+                      <strong>{bloqueio.tipo}</strong>
+                      <span>{bloqueio.ativo ? 'Ativo' : bloqueio.liberacao_antecipada ? 'Liberado antecipadamente' : 'Encerrado'}</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <p>{bloqueio.motivo}</p>
+                    <small>
+                      Início: {formatDate(bloqueio.data_inicio)}
+                      {bloqueio.data_fim ? ` · Fim: ${formatDate(bloqueio.data_fim)}` : ''}
+                      {bloqueio.criado_por ? ` · Criado por ${bloqueio.criado_por}` : ''}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            </article>
           )}
+        </section>
+      )}
 
-          {/* ABA HISTÓRICO */}
-          {activeTab === 'historico' && (
-            <div className="historico-tab">
-              {estadias.length === 0 ? (
-                <div className="empty-state">
-                  <span className="empty-icon">📭</span>
-                  <p>Nenhuma estadia registrada</p>
-                </div>
-              ) : (
-                <div className="estadias-cards">
-                  {estadias.map(est => {
-                    const entrada = new Date(est.data_checkin);
-                    const saida = est.data_checkout ? new Date(est.data_checkout) : null;
-                    const dias = saida 
-                      ? Math.ceil((saida.getTime() - entrada.getTime()) / 86400000)
-                      : Math.ceil((new Date().getTime() - entrada.getTime()) / 86400000);
-                    
-                    // Mapear status para cores e labels
-                    const statusConfig: Record<string, { color: string; label: string; icon: string }> = {
-                      'ativa': { color: '#10B981', label: 'Ativa', icon: '🟢' },
-                      'finalizada': { color: '#6B7280', label: 'Finalizada', icon: '✅' },
-                      'cancelada': { color: '#EF4444', label: 'Cancelada', icon: '❌' },
-                      'abandono': { color: '#F59E0B', label: 'Abandono', icon: '🚪' },
-                      'checkout_automatico': { color: '#8B5CF6', label: 'Automático', icon: '⏰' },
-                    };
-
-                    const motivoSaidaLabels: Record<string, string> = {
-                      'voluntario': '👋 Saída Voluntária',
-                      'automatico': '⏰ Prazo Expirado',
-                      'abandono': '🚪 Abandonou a Vaga',
-                      'transferencia': '🔄 Transferência',
-                      'encaminhamento': '📋 Encaminhamento',
-                      'descumprimento': '⚠️ Descumpriu Regras',
-                      'outro': '📝 Outro',
-                    };
-
-                    const config = statusConfig[est.status?.toLowerCase()] || statusConfig['finalizada'];
-                    
-                    return (
-                      <div key={est.id} className="estadia-card">
-                        <div className="estadia-header">
-                          <div className="estadia-dates">
-                            <span className="date-badge entrada">
-                              📥 {entrada.toLocaleDateString()}
-                            </span>
-                            <span className="date-arrow">→</span>
-                            <span className={`date-badge saida ${!saida ? 'presente' : ''}`}>
-                              {saida ? `📤 ${saida.toLocaleDateString()}` : '🏠 Presente'}
-                            </span>
-                          </div>
-                          <span 
-                            className="status-pill-large"
-                            style={{ backgroundColor: config.color }}
-                          >
-                            {config.icon} {config.label}
-                          </span>
-                        </div>
-
-                        <div className="estadia-body">
-                          <div className="estadia-stats">
-                            <div className="stat">
-                              <span className="stat-value">{dias}</span>
-                              <span className="stat-label">dias</span>
-                            </div>
-                            {est.cama && (
-                              <div className="stat">
-                                <span className="stat-value">🛏️ {est.cama.numero}</span>
-                                <span className="stat-label">{est.cama.casa}</span>
-                              </div>
-                            )}
-                            {est.prorrogada && (
-                              <div className="stat extended">
-                                <span className="stat-value">+{est.dias_prorrogacao}</span>
-                                <span className="stat-label">prorrogação</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Motivo de Saída */}
-                          {est.motivo_saida && (
-                            <div className="motivo-saida">
-                              <strong>Motivo:</strong> {motivoSaidaLabels[est.motivo_saida] || est.motivo_saida}
-                            </div>
-                          )}
-
-                          {/* Prorrogação */}
-                          {est.prorrogada && est.motivo_prorrogacao && (
-                            <div className="info-tag prorrogacao">
-                              ⏰ Prorrogada: {est.motivo_prorrogacao}
-                            </div>
-                          )}
-
-                          {/* Observações */}
-                          {(est.observacoes_checkin || est.observacoes_checkout) && (
-                            <div className="estadia-obs">
-                              {est.observacoes_checkin && (
-                                <p><strong>Entrada:</strong> {est.observacoes_checkin}</p>
-                              )}
-                              {est.observacoes_checkout && (
-                                <p><strong>Saída:</strong> {est.observacoes_checkout}</p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Funcionários */}
-                          <div className="estadia-footer">
-                            {est.funcionario_checkin && (
-                              <small>Check-in: {est.funcionario_checkin}</small>
-                            )}
-                            {est.funcionario_checkout && (
-                              <small>Check-out: {est.funcionario_checkout}</small>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* SEÇÃO DE BLOQUEIOS */}
-              {bloqueios.length > 0 && (
-                <>
-                  <h3 className="section-title">🚫 Histórico de Bloqueios</h3>
-                  <div className="bloqueios-cards">
-                    {bloqueios.map(bloq => {
-                      const tipoBloqueioLabels: Record<string, { label: string; icon: string; color: string }> = {
-                        'comportamento': { label: 'Comportamento', icon: '⚠️', color: '#EF4444' },
-                        'descumprimento_regras': { label: 'Descumprimento', icon: '📋', color: '#F59E0B' },
-                        'administrativo': { label: 'Administrativo', icon: '📝', color: '#6B7280' },
-                        'abandono': { label: 'Abandono de Vaga', icon: '🚪', color: '#DC2626' },
-                        'outros': { label: 'Outros', icon: '📌', color: '#8B5CF6' },
-                      };
-
-                      const tipoConfig = tipoBloqueioLabels[bloq.tipo] || tipoBloqueioLabels['outros'];
-                      const inicio = new Date(bloq.data_inicio);
-                      const fim = bloq.data_fim ? new Date(bloq.data_fim) : null;
-
-                      return (
-                        <div key={bloq.id} className={`bloqueio-card ${bloq.ativo ? 'ativo' : 'inativo'} ${bloq.liberacao_antecipada ? 'liberado' : ''}`}>
-                          <div className="bloqueio-header">
-                            <span className="bloqueio-tipo" style={{ backgroundColor: tipoConfig.color }}>
-                              {tipoConfig.icon} {tipoConfig.label}
-                            </span>
-                            <span className={`bloqueio-status ${bloq.ativo ? 'ativo' : bloq.liberacao_antecipada ? 'liberado' : 'encerrado'}`}>
-                              {bloq.ativo ? '🔴 Ativo' : bloq.liberacao_antecipada ? '🟢 Liberado' : '⚪ Encerrado'}
-                            </span>
-                          </div>
-                          
-                          <div className="bloqueio-body">
-                            <p className="bloqueio-motivo">{bloq.motivo}</p>
-                            
-                            <div className="bloqueio-datas">
-                              <span>📅 {inicio.toLocaleDateString()}</span>
-                              {fim && <span>→ {fim.toLocaleDateString()}</span>}
-                              {bloq.dias_bloqueio && <span className="dias-tag">{bloq.dias_bloqueio} dias</span>}
-                            </div>
-
-                            {/* Info de liberação antecipada */}
-                            {bloq.liberacao_antecipada && (
-                              <div className="liberacao-info">
-                                <span className="liberacao-badge">✅ Liberação Antecipada</span>
-                                {bloq.data_liberacao_antecipada && (
-                                  <small>em {new Date(bloq.data_liberacao_antecipada).toLocaleDateString()}</small>
-                                )}
-                                {bloq.liberado_por && <small>por {bloq.liberado_por}</small>}
-                                {bloq.motivo_liberacao_antecipada && (
-                                  <p className="motivo-liberacao">"{bloq.motivo_liberacao_antecipada}"</p>
-                                )}
-                              </div>
-                            )}
-
-                            {bloq.observacoes && (
-                              <p className="bloqueio-obs"><small>{bloq.observacoes}</small></p>
-                            )}
-                          </div>
-
-                          <div className="bloqueio-footer">
-                            <small>Criado por: {bloq.criado_por}</small>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* MODAIS */}
       {showEditar && (
-        <EditarPessoaModal 
-          pessoa={pessoa} 
-          onClose={() => setShowEditar(false)} 
-          onSave={handleSavePessoa} 
+        <EditarPessoaModal
+          onClose={() => setShowEditar(false)}
+          onSave={handleSavePessoa}
+          pessoa={pessoa}
         />
       )}
-      
+
       {showCheckin && (
-        <CheckinModal 
-          pessoa={pessoa} 
-          onClose={() => setShowCheckin(false)} 
+        <CheckinModal
           onCheckinSuccess={() => {
             setShowCheckin(false);
-            showToast("Check-in realizado!");
+            showToast('Estadia iniciada.');
             fetchData();
-          }} 
+          }}
+          onClose={() => setShowCheckin(false)}
+          pessoa={pessoa}
         />
       )}
 
-      {/* MODAL DE OCORRÊNCIA */}
       {showOcorrenciaModal && (
-        <div className="modal-overlay" onClick={() => setShowOcorrenciaModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>⚠️ Nova Ocorrência</h3>
-              <button className="close-btn" onClick={() => setShowOcorrenciaModal(false)}>×</button>
+        <div className="profile-modal-overlay" onClick={() => setShowOcorrenciaModal(false)}>
+          <div className="profile-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="profile-modal-header">
+              <div>
+                <span>Registro operacional</span>
+                <h3>Nova ocorrência</h3>
+              </div>
+              <button className="profile-close-button" onClick={() => setShowOcorrenciaModal(false)} type="button">
+                ×
+              </button>
             </div>
-            <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              handleCreateOcorrencia(Object.fromEntries(formData));
-            }}>
-              <div className="form-group">
-                <label>Tipo</label>
-                <select name="tipo" className="input-block" required>
+            <form
+              className="profile-modal-form"
+              onSubmit={(event: React.FormEvent<HTMLFormElement>) => {
+                event.preventDefault();
+                const formData = new FormData(event.currentTarget);
+                handleCreateOcorrencia(Object.fromEntries(formData));
+              }}
+            >
+              <label>
+                Tipo
+                <select name="tipo" required>
                   <option value="">Selecione...</option>
                   <option value="Comportamental">Comportamental</option>
                   <option value="Médica">Médica</option>
@@ -773,54 +780,62 @@ const PessoaProfilePage: React.FC = () => {
                   <option value="Evasão">Evasão</option>
                   <option value="Outro">Outro</option>
                 </select>
-              </div>
-              <div className="form-group">
-                <label>Título</label>
-                <input name="titulo" placeholder="Resumo breve" className="input-block" />
-              </div>
-              <div className="form-group">
-                <label>Severidade</label>
-                <select name="severidade" className="input-block" required>
-                  <option value="baixa">🟢 Baixa</option>
-                  <option value="media">🟡 Média</option>
-                  <option value="alta">🔴 Alta</option>
+              </label>
+              <label>
+                Título
+                <input name="titulo" placeholder="Resumo breve" />
+              </label>
+              <label>
+                Severidade
+                <select name="severidade" required>
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
                 </select>
-              </div>
-              <div className="form-group">
-                <label>Descrição</label>
-                <textarea 
-                  name="descricao" 
-                  placeholder="Descreva a ocorrência em detalhes..." 
-                  required 
-                  className="input-block" 
-                  rows={4} 
-                />
-              </div>
-              <div className="form-group">
-                <label>Registrado por</label>
-                <input name="criado_por" placeholder="Seu nome" className="input-block" />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowOcorrenciaModal(false)}>
+              </label>
+              <label>
+                Descrição
+                <textarea name="descricao" placeholder="Descreva a ocorrência..." required rows={4} />
+              </label>
+              <label>
+                Registrado por
+                <input name="criado_por" placeholder="Nome do responsável pelo registro" />
+              </label>
+              <div className="profile-modal-actions">
+                <button className="profile-button secondary" onClick={() => setShowOcorrenciaModal(false)} type="button">
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  Salvar Ocorrência
+                <button className="profile-button primary" type="submit">
+                  Salvar ocorrência
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 };
 
-// Componente Auxiliar
-const InfoRow = ({ icon, label, value }: { icon?: string; label: string; value: string }) => (
-  <div className="info-row">
-    <span className="label">{icon} {label}</span>
-    <span className="value">{value}</span>
+const Metric = ({ label, value, detail, tone }: { label: string; value: string; detail?: string; tone?: string }) => (
+  <article className={`profile-metric ${tone || ''}`}>
+    <span>{label}</span>
+    <strong>{value}</strong>
+    {detail && <small>{detail}</small>}
+  </article>
+);
+
+const FieldRow = ({ label, value, missing }: { label: string; value?: string | null; missing?: boolean }) => (
+  <div className={`field-row ${missing ? 'missing' : ''}`}>
+    <span>{label}</span>
+    <strong>{value || '-'}</strong>
+  </div>
+);
+
+const CareRow = ({ label, value, tone }: { label: string; value: string; tone?: 'warning' | 'info' }) => (
+  <div className={`care-row ${tone || ''}`}>
+    <span>{label}</span>
+    <p>{value}</p>
   </div>
 );
 

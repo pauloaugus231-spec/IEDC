@@ -7,10 +7,11 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Pessoa } from '../../entities/pessoa.entity';
+import { resolveCorsOrigin } from '../../config/cors-origin';
 
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001'],
+    origin: resolveCorsOrigin(),
     credentials: true,
   },
 })
@@ -50,31 +51,19 @@ export class DiasCruzGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     this.server.emit('vagasAtualizadas', painel);
   }
 
-  // ============================================
-  // EVENTOS: ESPAÇO DE CUIDADOS
-  // ============================================
-  
-  emitEspacoCuidadosSessaoIniciada(sessao: any) {
-    this.server.emit('espaco-cuidados:sessao-iniciada', sessao);
+  emitLojasAtualizadas(payload: any) {
+    this.server.emit('lojas:atualizado', payload);
   }
 
-  emitEspacoCuidadosSessaoEncerrada(sessao: any) {
-    this.server.emit('espaco-cuidados:sessao-encerrada', sessao);
+  emitComandaAtualizada(payload: any) {
+    this.server.emit('lojas:comanda-atualizada', payload);
   }
 
-  emitEspacoCuidadosPessoaAdicionada(entrada: any) {
-    this.server.emit('espaco-cuidados:pessoa-adicionada', entrada);
+  emitClienteComercialAtualizado(payload: any) {
+    this.server.emit('lojas:cliente-atualizado', payload);
   }
 
-  emitEspacoCuidadosStatusAtualizado(entrada: any) {
-    this.server.emit('espaco-cuidados:status-atualizado', entrada);
-  }
-
-  emitEspacoCuidadosPassouVez(entrada: any) {
-    this.server.emit('espaco-cuidados:passou-vez', entrada);
-  }
-
-  emitEspacoCuidadosDashboardAtualizado() {
-    this.server.emit('espaco-cuidados:dashboard-atualizado');
+  emitRetiradaAtualizada(payload: any) {
+    this.server.emit('lojas:retirada-atualizada', payload);
   }
 }

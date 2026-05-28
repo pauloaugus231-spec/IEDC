@@ -1,7 +1,10 @@
 import { Controller, Get, Query, Post, Body } from '@nestjs/common';
 import { RelatoriosService } from './relatorios.service';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @Controller('relatorios')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
 export class RelatoriosController {
   constructor(private readonly relatoriosService: RelatoriosService) {}
 
@@ -65,6 +68,16 @@ export class RelatoriosController {
     @Query('fim') fim?: string,
   ) {
     return this.relatoriosService.getRelatorioEstadias(inicio, fim);
+  }
+
+  @Get('operacional-resumo')
+  async getResumoOperacional(
+    @Query('inicio') inicio?: string,
+    @Query('fim') fim?: string,
+    @Query('filtros') filtros?: string,
+  ) {
+    const filtrosObj = filtros ? JSON.parse(filtros) : {};
+    return this.relatoriosService.getResumoOperacional(inicio, fim, filtrosObj);
   }
 
   @Post('dashboards')

@@ -7,9 +7,12 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PlantoesService, PlantaoFilters, PlantaoDto } from './plantoes.service';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @ApiTags('plantoes')
 @Controller('plantoes')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
 export class PlantoesController {
   constructor(private readonly plantoesService: PlantoesService) {}
 

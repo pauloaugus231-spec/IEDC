@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>conceito-dashboard-executivo-dias-da-cruz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: rgba(255,255,255,0.92);
+      --surface-strong: #ffffff;
+      --line: #dfe7f1;
+      --text: #142033;
+      --muted: #667085;
+      --primary: #1d4f91;
+      --primary-2: #2d6fd2;
+      --primary-soft: #eaf2ff;
+      --gold: #f0b24f;
+      --success: #1f8f55;
+      --warning: #c88719;
+      --danger: #ca3d3d;
+      --shadow: 0 18px 45px rgba(18, 38, 63, 0.08);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(45,111,210,0.08), transparent 28%),
+        linear-gradient(180deg, #f8fbff 0%, #f2f6fb 100%);
+      color: var(--text);
+    }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 290px 1fr;
+    }
+
+    .sidebar {
+      padding: 26px 18px;
+      border-right: 1px solid rgba(29,79,145,0.08);
+      background: rgba(250, 252, 255, 0.82);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,249,255,0.9));
+      border: 1px solid rgba(29,79,145,0.08);
+      box-shadow: var(--shadow);
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: white;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .sidebar-section {
+      margin-top: 22px;
+    }
+
+    .sidebar-title {
+      margin: 0 0 10px;
+      padding: 0 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border-radius: 16px;
+      text-decoration: none;
+      color: var(--text);
+      transition: 0.2s ease;
+    }
+
+    .nav-item:hover {
+      background: rgba(29,79,145,0.05);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(180deg, rgba(29,79,145,0.1), rgba(29,79,145,0.06));
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(29,79,145,0.08);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .nav-badge {
+      min-width: 24px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: rgba(240,178,79,0.16);
+      color: #8f5b10;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .founder-box {
+      margin-top: 24px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(29,79,145,0.98), rgba(39,97,179,0.94));
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    .founder-box strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .founder-box p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      opacity: 0.92;
+    }
+
+    .main {
+      padding: 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .topbar p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+      line-height: 1.7;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid rgba(29,79,145,0.12);
+      background: rgba(255,255,255,0.94);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 10px 24px rgba(18, 38, 63, 0.05);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: white;
+      border-color: transparent;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .hero-panel,
+    .hero-side {
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(29,79,145,0.08);
+      overflow: hidden;
+    }
+
+    .hero-panel {
+      background: linear-gradient(135deg, #1b4a8d 0%, #2d6fd2 100%);
+      color: white;
+      padding: 28px;
+    }
+
+    .hero-panel h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-panel p {
+      margin: 0;
+      max-width: 58ch;
+      line-height: 1.7;
+      opacity: 0.94;
+    }
+
+    .hero-strip {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-chip {
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.14);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hero-side {
+      background: rgba(255,255,255,0.92);
+      padding: 22px;
+    }
+
+    .hero-side h4 {
+      margin: 0 0 14px;
+      font-size: 14px;
+    }
+
+    .metric-stack {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .metric-mini {
+      padding: 14px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fbfdff, #f3f7fd);
+      border: 1px solid var(--line);
+    }
+
+    .metric-mini strong {
+      display: block;
+      font-size: 26px;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+
+    .metric-mini span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .kpi {
+      background: var(--surface);
+      border: 1px solid rgba(29,79,145,0.08);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .kpi span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .kpi strong {
+      display: block;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .kpi small {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(29,79,145,0.08);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .panel-head h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .panel-head a {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .service-list,
+    .report-list,
+    .activity-list,
+    .priority-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .service-card,
+    .report-row,
+    .activity-row,
+    .priority-row {
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fcfdff, #f6f9fd);
+      border: 1px solid var(--line);
+      padding: 16px;
+    }
+
+    .service-card strong,
+    .report-row strong,
+    .activity-row strong,
+    .priority-row strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    .service-card span,
+    .report-row span,
+    .activity-row small,
+    .priority-row span {
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .service-card p {
+      margin: 10px 0 0;
+      color: #41536b;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .report-row,
+    .priority-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .status {
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status.warning {
+      background: rgba(200,135,25,0.12);
+      color: var(--warning);
+    }
+
+    .status.success {
+      background: rgba(31,143,85,0.12);
+      color: var(--success);
+    }
+
+    .activity-row {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .activity-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(29,79,145,0.08);
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid rgba(29,79,145,0.08); }
+      .hero, .grid, .kpis { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .main { padding: 18px; }
+      .topbar { flex-direction: column; }
+      .hero, .grid, .kpis, .metric-stack { grid-template-columns: 1fr; }
+      .topbar h2 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">DC</div>
+        <div>
+          <h1>Gestão Social</h1>
+          <p>Dias da Cruz · Albergue + Creche</p>
+        </div>
+      </div>
+
+      <section class="sidebar-section">
+        <h3 class="sidebar-title">Institucional</h3>
+        <a class="nav-item active" href="#">
+          <span class="nav-left"><span class="nav-icon">G</span>Visão institucional</span>
+          <span class="nav-badge">3</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-left"><span class="nav-icon">A</span>Albergue</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-left"><span class="nav-icon">C</span>Creche</span>
+        </a>
+      </section>
+
+      <section class="sidebar-section">
+        <h3 class="sidebar-title">Operação</h3>
+        <a class="nav-item" href="#">
+          <span class="nav-left"><span class="nav-icon">R</span>Relatórios</span>
+          <span class="nav-badge">2</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-left"><span class="nav-icon">F</span>Aferição</span>
+        </a>
+        <a class="nav-item" href="#">
+          <span class="nav-left"><span class="nav-icon">P</span>Pendências</span>
+        </a>
+      </section>
+
+      <div class="founder-box">
+        <strong>Construção conjunta</strong>
+        <p>Protótipo executivo para apresentar a visão integrada do Albergue e da Casa do Pequenino, com foco em gestão, prestação de contas e expansão futura.</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Instituto Espírita Dias da Cruz</p>
+          <h2>Visão institucional</h2>
+          <p>Acompanhe albergue e creche em uma leitura única, com indicadores, alertas operacionais, relatórios prontos e prioridades do período.</p>
+        </div>
+        <div class="actions">
+          <a class="btn" href="#">Exportar prévia</a>
+          <a class="btn primary" href="#">Gerar relatório mensal</a>
+        </div>
+      </header>
+
+      <section class="hero">
+        <article class="hero-panel">
+          <h3>Uma gestão integrada, clara e preparada para crescer.</h3>
+          <p>Em vez de repetir informações de usuário e contexto, o topo passa a destacar o que realmente importa para a direção: leitura rápida da operação, visão combinada dos serviços e decisões orientadas por dados.</p>
+          <div class="hero-strip">
+            <span class="hero-chip">Albergue com ocupação em tempo real</span>
+            <span class="hero-chip">Creche com frequência consolidada</span>
+            <span class="hero-chip">Relatórios em poucos cliques</span>
+          </div>
+        </article>
+
+        <aside class="hero-side">
+          <h4>Resumo do período</h4>
+          <div class="metric-stack">
+            <div class="metric-mini">
+              <strong>94</strong>
+              <span>Pessoas acompanhadas entre os serviços</span>
+            </div>
+            <div class="metric-mini">
+              <strong>87%</strong>
+              <span>Frequência média consolidada</span>
+            </div>
+            <div class="metric-mini">
+              <strong>68</strong>
+              <span>Pernoites registrados no mês</span>
+            </div>
+            <div class="metric-mini">
+              <strong>4</strong>
+              <span>Relatórios exigindo revisão</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="kpis">
+        <article class="kpi">
+          <span>Ocupação do albergue</span>
+          <strong>82%</strong>
+          <small>41 acolhidos ativos e leitura imediata da disponibilidade.</small>
+        </article>
+        <article class="kpi">
+          <span>Crianças ativas</span>
+          <strong>53</strong>
+          <small>Distribuídas por turma, com leitura rápida da base atual.</small>
+        </article>
+        <article class="kpi">
+          <span>Pendências cadastrais</span>
+          <strong>7</strong>
+          <small>NIS, documentação ou conferência em aberto.</small>
+        </article>
+        <article class="kpi">
+          <span>Ingressos do período</span>
+          <strong>12</strong>
+          <small>Base comparativa para aferição e fechamento mensal.</small>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Serviços conectados</h3>
+            <a href="#">Abrir módulos</a>
+          </div>
+          <div class="service-list">
+            <div class="service-card">
+              <strong>Albergue Noturno</strong>
+              <span>Operação 12h</span>
+              <p>Check-in, checkout, vagas, estadias, histórico operacional e conferência de movimento com leitura rápida para o plantão.</p>
+            </div>
+            <div class="service-card">
+              <strong>Casa do Pequenino</strong>
+              <span>Creche</span>
+              <p>Crianças, responsáveis, turmas, frequência, pendências de NIS e base pronta para relatórios do serviço.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Relatórios do mês</h3>
+            <a href="#">Ver área técnica</a>
+          </div>
+          <div class="report-list">
+            <div class="report-row">
+              <div>
+                <strong>Instrumento de aferição</strong>
+                <span>Base consolidada com nome, CPF, NIS e data de ingresso.</span>
+              </div>
+              <span class="status warning">Revisar</span>
+            </div>
+            <div class="report-row">
+              <div>
+                <strong>Ocupação do albergue</strong>
+                <span>Pernoites, estadias ativas e vagas livres do período.</span>
+              </div>
+              <span class="status success">Pronto</span>
+            </div>
+            <div class="report-row">
+              <div>
+                <strong>Frequência da creche</strong>
+                <span>Turmas, presença mensal e pendências cadastrais.</span>
+              </div>
+              <span class="status warning">Pendente</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Atividades recentes</h3>
+            <a href="#">Auditoria</a>
+          </div>
+          <div class="activity-list">
+            <div class="activity-row">
+              <div class="activity-badge">A</div>
+              <div>
+                <strong>Checkout registrado no albergue</strong>
+                <small>Educador do plantão · há 12 minutos</small>
+              </div>
+            </div>
+            <div class="activity-row">
+              <div class="activity-badge">C</div>
+              <div>
+                <strong>Frequência atualizada na creche</strong>
+                <small>Coordenação da creche · hoje, 15:40</small>
+              </div>
+            </div>
+            <div class="activity-row">
+              <div class="activity-badge">R</div>
+              <div>
+                <strong>Prévia de aferição gerada</strong>
+                <small>Gestão institucional · hoje, 14:18</small>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Prioridades do dia</h3>
+          </div>
+          <div class="priority-list">
+            <div class="priority-row">
+              <div>
+                <strong>Completar NIS pendentes</strong>
+                <span>4 registros da creche aguardando revisão cadastral.</span>
+              </div>
+              <span class="status warning">Hoje</span>
+            </div>
+            <div class="priority-row">
+              <div>
+                <strong>Revisar saídas previstas</strong>
+                <span>Conferir consistência de movimento e ocupação do albergue.</span>
+              </div>
+              <span class="status warning">Atenção</span>
+            </div>
+            <div class="priority-row">
+              <div>
+                <strong>Fechar relatório mensal</strong>
+                <span>Versão executiva pronta para direção e prestação de contas.</span>
+              </div>
+              <span class="status success">Pronto</span>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

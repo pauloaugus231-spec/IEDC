@@ -15,7 +15,7 @@ const FotoPreview: React.FC<FotoPreviewProps> = ({ fotoUrl, size = 50, altText =
 
   // A URL da foto vinda do backend pode não ter o prefixo do servidor.
   const fullFotoUrl = fotoUrl 
-    ? (fotoUrl.startsWith('data:') || fotoUrl.startsWith('http') ? fotoUrl : `http://localhost:3001${fotoUrl.startsWith('/') ? '' : '/'}${fotoUrl}`)
+    ? (fotoUrl.startsWith('data:') || fotoUrl.startsWith('http') ? fotoUrl : `${fotoUrl.startsWith('/') ? '' : '/'}${fotoUrl}`)
     : null;
 
   useEffect(() => {

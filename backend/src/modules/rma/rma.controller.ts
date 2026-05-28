@@ -13,8 +13,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { RmaService } from './rma.service';
 import { UploadRmaDto } from './dto/upload-rma.dto';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @Controller('rma')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
 export class RmaController {
   // Armazenamento temporário dos resultados (em produção, usar Redis ou banco)
   private resultadosCache = new Map<string, any>();
@@ -36,12 +39,11 @@ export class RmaController {
 
     // Validar tipo de arquivo
     const allowedMimeTypes = [
-      'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ];
     
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Formato de arquivo inválido. Envie um arquivo .xls ou .xlsx');
+      throw new BadRequestException('Formato de arquivo inválido. Envie um arquivo .xlsx');
     }
 
     // Validar tamanho (máx 5MB)
@@ -130,6 +132,7 @@ export class RmaController {
    * Limpar cache de resultados antigos (chamar via cron job)
    */
   @Post('limpar-cache')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
   limparCache() {
     this.resultadosCache.clear();
     return {

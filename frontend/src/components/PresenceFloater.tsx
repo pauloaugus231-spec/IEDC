@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import {
+  clearTriagemCensoStorage,
+  getTriagemCensoStorageState,
+  type PresenceFloaterMode,
+} from "../utils";
 
 interface PresenceFloaterProps {
   pendentesCount: number;
@@ -14,18 +19,20 @@ interface PresenceFloaterProps {
     pendentesNoEncerramento?: number;
   } | null;
   isTriagemEncerrada?: boolean;
+  onCensoExpired?: () => void;
 }
 
 const PresenceFloater: React.FC<PresenceFloaterProps> = ({ 
   pendentesCount, 
   totalCount = 0,
   censoData, 
-  isTriagemEncerrada = false 
+  isTriagemEncerrada = false,
+  onCensoExpired,
 }) => {
   const navigate = useNavigate();
   const [showTooltip, setShowTooltip] = useState(false);
   const [showCensoModal, setShowCensoModal] = useState(false);
-  const [isAfterMidnight, setIsAfterMidnight] = useState(false);
+  const [floaterMode, setFloaterMode] = useState<PresenceFloaterMode>('presenca');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Responsivo
@@ -35,27 +42,35 @@ const PresenceFloater: React.FC<PresenceFloaterProps> = ({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Verificar se passou da meia-noite (novo dia)
-  useEffect(() => {
-    const checkNewDay = () => {
-      const hoje = new Date().toISOString().split('T')[0];
-      const lastTriagemDate = localStorage.getItem('lastTriagemDate');
-      setIsAfterMidnight(lastTriagemDate !== hoje);
-    };
+  const syncFloaterMode = useCallback(() => {
+    const storageState = getTriagemCensoStorageState();
 
-    checkNewDay();
-    const interval = setInterval(checkNewDay, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Resetar após meia-noite (novo dia)
-  useEffect(() => {
-    if (isAfterMidnight && localStorage.getItem('triagemEncerrada') === 'true') {
-      localStorage.removeItem('triagemEncerrada');
-      localStorage.removeItem('censoData');
-      window.location.reload();
+    if (storageState.shouldClear) {
+      clearTriagemCensoStorage();
+      setShowCensoModal(false);
+      setShowTooltip(false);
+      setFloaterMode('presenca');
+      onCensoExpired?.();
+      return;
     }
-  }, [isAfterMidnight]);
+
+    const nextMode = isTriagemEncerrada && censoData && storageState.mode === 'censo'
+      ? 'censo'
+      : 'presenca';
+
+    setFloaterMode(nextMode);
+    if (nextMode === 'presenca') {
+      setShowCensoModal(false);
+      setShowTooltip(false);
+    }
+  }, [censoData, isTriagemEncerrada, onCensoExpired]);
+
+  // Verifica pelo relógio se o censo ainda pertence ao plantão atual.
+  useEffect(() => {
+    syncFloaterMode();
+    const interval = setInterval(syncFloaterMode, 30000);
+    return () => clearInterval(interval);
+  }, [syncFloaterMode]);
 
   const handleClick = () => {
     if (isCensoMode) {
@@ -65,7 +80,7 @@ const PresenceFloater: React.FC<PresenceFloaterProps> = ({
     navigate('/presencas');
   };
 
-  const isCensoMode = isTriagemEncerrada && !isAfterMidnight && !!censoData;
+  const isCensoMode = floaterMode === 'censo';
   const progressPercent = totalCount > 0 ? Math.round(((totalCount - pendentesCount) / totalCount) * 100) : 0;
 
   return (

@@ -135,11 +135,15 @@ export class TriagemService {
     // Buscar novos cadastros do dia
     const novosCadastros = await this.getNovosCadastrosHoje();
 
-    // Configurações hardcoded para teste
     const configs = [
-      { tipo: 'telegram', destino: '-5008990442', nome: 'Grupo Gestão', ativo: true },
-      { tipo: 'email', destino: 'pauloaugus231@icloud.com', nome: 'Paulo iCloud', ativo: true }
+      ...(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_GROUP_COORDENACAO
+        ? [{ tipo: 'telegram', destino: process.env.TELEGRAM_GROUP_COORDENACAO, nome: 'Telegram coordenação', ativo: true }]
+        : []),
+      ...(process.env.RESEND_API_KEY && process.env.TRIAGEM_EMAIL_DESTINATION && process.env.RESEND_FROM
+        ? [{ tipo: 'email', destino: process.env.TRIAGEM_EMAIL_DESTINATION, nome: 'Email triagem', ativo: true }]
+        : []),
     ];
+    const incluirDadosSensiveis = process.env.TRIAGEM_NOTIFICATION_INCLUDE_PII === 'true';
 
     const resultadoNotifs: { telegram: boolean; email: boolean; telegramError?: string; emailError?: string } = {
       telegram: false,
@@ -154,7 +158,7 @@ export class TriagemService {
         
         // Seção de novos cadastros
         let novosCadastrosTexto = '';
-        if (novosCadastros.length > 0) {
+        if (novosCadastros.length > 0 && incluirDadosSensiveis) {
           novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} Novo(s) Cadastro(s) Hoje:*\n\n`;
           novosCadastros.forEach((cadastro, index) => {
             novosCadastrosTexto += `${index + 1}. *${cadastro.nome}*`;
@@ -176,11 +180,13 @@ export class TriagemService {
             novosCadastrosTexto += `   • Raça/Cor: ${cadastro.raca || 'Não informado'}\n`;
             novosCadastrosTexto += `   • Gênero: ${cadastro.genero}\n\n`;
           });
+        } else if (novosCadastros.length > 0) {
+          novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} novo(s) cadastro(s) hoje.* Consulte os detalhes no sistema.`;
         }
 
         const message = `🌙 *Relatório Final da Triagem*\n\n📊 **Total:** ${dadosRelatorio.total}\n👨 **Masculino:** ${dadosRelatorio.masc}\n👩 **Feminino:** ${dadosRelatorio.fem}\n👴 **Idosos:** ${dadosRelatorio.idosos}${lgbtInfo}\n❌ **Ausentes:** ${dadosRelatorio.ausentes}${novosCadastrosTexto}\n📅 Data: ${dadosRelatorio.data}`;
 
-        const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`, {
+        const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -206,7 +212,8 @@ export class TriagemService {
 
     // Enviar Email
     const emailConfig = configs.find(c => c.tipo === 'email' && c.ativo);
-    if (emailConfig) {
+    const emailFrom = process.env.RESEND_FROM;
+    if (emailConfig && emailFrom) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const lgbtRow = dadosRelatorio.lgbt ? `
@@ -217,7 +224,7 @@ export class TriagemService {
 
         // Seção de novos cadastros para email
         let novosCadastrosHtml = '';
-        if (novosCadastros.length > 0) {
+        if (novosCadastros.length > 0 && incluirDadosSensiveis) {
           novosCadastrosHtml = `
             <div style="margin-top: 30px; padding: 20px; background-color: #F0FDF4; border-radius: 8px; border-left: 4px solid #10B981;">
               <h2 style="color: #059669; margin-top: 0;">✨ ${novosCadastros.length} Novo(s) Cadastro(s) Hoje</h2>
@@ -244,6 +251,13 @@ export class TriagemService {
                   </table>
                 </div>
               `).join('')}
+            </div>
+          `;
+        } else if (novosCadastros.length > 0) {
+          novosCadastrosHtml = `
+            <div style="margin-top: 30px; padding: 20px; background-color: #F0FDF4; border-radius: 8px; border-left: 4px solid #10B981;">
+              <h2 style="color: #059669; margin-top: 0;">${novosCadastros.length} novo(s) cadastro(s) hoje</h2>
+              <p style="margin-bottom: 0; color: #374151;">Consulte os detalhes no sistema com um perfil autorizado.</p>
             </div>
           `;
         }
@@ -290,7 +304,7 @@ export class TriagemService {
         `;
 
         await resend.emails.send({
-          from: 'noreply@exemplo.com',
+          from: emailFrom,
           to: emailConfig.destino,
           subject: '🌙 Relatório Final da Triagem - ' + dadosRelatorio.data,
           html,

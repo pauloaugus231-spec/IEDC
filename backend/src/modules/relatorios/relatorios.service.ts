@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pessoa } from '../../entities/pessoa.entity';
@@ -19,7 +19,25 @@ export class RelatoriosService {
 
   async getRelatorioCustom(inicio?: string, fim?: string, campos: string[] = [], filtros: any = {}, lgpd: boolean = false) {
     // Validar campos permitidos para segurança
-    const camposPermitidos = ['id', 'nome', 'sobrenome', 'nome_social', 'cpf', 'data_nascimento', 'genero', 'cor', 'lgbt', 'status_cadastro', 'created_at', 'updated_at'];
+    const camposPermitidos = [
+      'id',
+      'nome',
+      'nome_social',
+      'cpf',
+      'rg',
+      'nis',
+      'data_nascimento',
+      'sexo',
+      'genero',
+      'cor',
+      'raca',
+      'sexualidade',
+      'lgbt',
+      'status_cadastro',
+      'tipo_vaga',
+      'created_at',
+      'updated_at',
+    ];
     const camposValidos = campos.filter(campo => camposPermitidos.includes(campo));
 
     if (camposValidos.length === 0) {
@@ -295,14 +313,124 @@ export class RelatoriosService {
     return query.getRawMany();
   }
 
+  async getResumoOperacional(inicio?: string, fim?: string, filtros: any = {}) {
+    const hoje = new Date();
+    const periodoInicio = inicio || new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+    const periodoFim = fim || new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const params: any[] = [periodoInicio, periodoFim];
+    let filtroQuarto = '';
+
+    if (filtros.quarto && filtros.quarto !== 'Todos') {
+      params.push(filtros.quarto);
+      filtroQuarto = 'AND c.casa = $3';
+    }
+
+    const [resumo] = await this.estadiaRepository.query(
+      `
+        WITH estadias_periodo AS (
+          SELECT
+            e.id,
+            e.pessoa_id,
+            e.data_checkin::date AS data_checkin,
+            e.data_checkout::date AS data_checkout
+          FROM estadias e
+          LEFT JOIN camas c ON c.id = e.cama_id
+          WHERE e.data_checkin::date <= $2::date
+            AND COALESCE(e.data_checkout::date, $2::date) >= $1::date
+            ${filtroQuarto}
+        ),
+        primeira_estadia AS (
+          SELECT pessoa_id, MIN(data_checkin::date) AS primeira_data
+          FROM estadias
+          GROUP BY pessoa_id
+        )
+        SELECT
+          COUNT(ep.id)::int AS acessos_periodo,
+          COUNT(DISTINCT ep.pessoa_id)::int AS pessoas_unicas,
+          COUNT(DISTINCT ep.pessoa_id) FILTER (
+            WHERE pe.primeira_data BETWEEN $1::date AND $2::date
+          )::int AS novos_acessos,
+          COUNT(DISTINCT ep.pessoa_id) FILTER (
+            WHERE pe.primeira_data < $1::date
+          )::int AS retornos,
+          COALESCE(SUM(
+            GREATEST(
+              1,
+              (
+                LEAST(COALESCE(ep.data_checkout, $2::date), $2::date)
+                - GREATEST(ep.data_checkin, $1::date)
+              )::int + 1
+            )
+          ), 0)::int AS pernoites_estimados
+        FROM estadias_periodo ep
+        JOIN primeira_estadia pe ON pe.pessoa_id = ep.pessoa_id
+      `,
+      params,
+    );
+
+    const faixaEtaria = await this.estadiaRepository.query(
+      `
+        WITH pessoas_periodo AS (
+          SELECT DISTINCT e.pessoa_id
+          FROM estadias e
+          LEFT JOIN camas c ON c.id = e.cama_id
+          WHERE e.data_checkin::date <= $2::date
+            AND COALESCE(e.data_checkout::date, $2::date) >= $1::date
+            ${filtroQuarto}
+        )
+        SELECT faixa, COUNT(*)::int AS total
+        FROM (
+          SELECT
+            CASE
+              WHEN p.data_nascimento IS NULL THEN 'Não informado'
+              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.data_nascimento)) BETWEEN 18 AND 24 THEN '18 a 24'
+              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.data_nascimento)) BETWEEN 25 AND 29 THEN '25 a 29'
+              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.data_nascimento)) BETWEEN 30 AND 39 THEN '30 a 39'
+              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.data_nascimento)) BETWEEN 40 AND 49 THEN '40 a 49'
+              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.data_nascimento)) BETWEEN 50 AND 59 THEN '50 a 59'
+              WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.data_nascimento)) >= 60 THEN '60+'
+              ELSE 'Não informado'
+            END AS faixa
+          FROM pessoas_periodo pp
+          JOIN pessoas p ON p.id = pp.pessoa_id
+        ) faixas
+        GROUP BY faixa
+        ORDER BY
+          CASE faixa
+            WHEN '18 a 24' THEN 1
+            WHEN '25 a 29' THEN 2
+            WHEN '30 a 39' THEN 3
+            WHEN '40 a 49' THEN 4
+            WHEN '50 a 59' THEN 5
+            WHEN '60+' THEN 6
+            ELSE 7
+          END
+      `,
+      params,
+    );
+
+    return {
+      periodo: {
+        inicio: periodoInicio,
+        fim: periodoFim,
+      },
+      acessosPeriodo: Number(resumo?.acessos_periodo || 0),
+      pessoasUnicas: Number(resumo?.pessoas_unicas || 0),
+      novosAcessos: Number(resumo?.novos_acessos || 0),
+      retornos: Number(resumo?.retornos || 0),
+      pernoitesEstimados: Number(resumo?.pernoites_estimados || 0),
+      faixaEtaria: faixaEtaria.map((row: any) => ({
+        faixa: row.faixa,
+        total: Number(row.total || 0),
+      })),
+    };
+  }
+
   async salvarDashboardPersonalizado(userId: string, nome: string, config: any) {
-    // Implementar salvamento no banco (ex: tabela dashboards)
-    // Por simplicidade, retornar mock
-    return { id: '1', nome, config };
+    throw new NotImplementedException('Dashboards personalizados ainda não foram oficializados.');
   }
 
   async getDashboardsPersonalizados(userId: string) {
-    // Retornar dashboards salvos
     return [];
   }
 

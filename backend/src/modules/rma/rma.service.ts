@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
-import * as XLSX from 'xlsx';
 import * as ExcelJS from 'exceljs';
 import { Pessoa } from '../../entities/pessoa.entity';
 import { Estadia, StatusEstadia } from '../../entities/estadia.entity';
@@ -26,12 +25,34 @@ export class RmaService {
    */
   async lerArquivoGesuas(file: Express.Multer.File): Promise<PessoaGesuas[]> {
     try {
-      const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      // Converter para JSON
-      const dados: any[] = XLSX.utils.sheet_to_json(worksheet);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(file.buffer as any);
+
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        throw new BadRequestException('Arquivo Excel sem planilhas válidas');
+      }
+
+      const headers: string[] = [];
+      worksheet.getRow(1).eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = this.valorCelulaParaTexto(cell.value);
+      });
+
+      const dados: Record<string, string>[] = [];
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+
+        const linha: Record<string, string> = {};
+        row.eachCell((cell, colNumber) => {
+          const header = headers[colNumber - 1];
+          if (!header) return;
+          linha[header] = this.valorCelulaParaTexto(cell.value);
+        });
+
+        if (Object.values(linha).some(Boolean)) {
+          dados.push(linha);
+        }
+      });
       
       if (!dados || dados.length === 0) {
         throw new BadRequestException('Arquivo Excel vazio ou sem dados válidos');
@@ -58,7 +79,7 @@ export class RmaService {
       return pessoas;
     } catch (error) {
       console.error('Erro ao ler arquivo Excel:', error);
-      throw new BadRequestException('Erro ao processar arquivo Excel. Verifique o formato.');
+      throw new BadRequestException('Erro ao processar arquivo Excel. Envie um arquivo .xlsx válido.');
     }
   }
 
@@ -241,6 +262,23 @@ export class RmaService {
   private normalizarCPF(cpf: string): string {
     if (!cpf) return '';
     return cpf.replace(/\D/g, ''); // Remove tudo que não é número
+  }
+
+  private valorCelulaParaTexto(value: ExcelJS.CellValue): string {
+    if (value === null || value === undefined) return '';
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim();
+    }
+    if ('text' in value && value.text) return String(value.text).trim();
+    if ('richText' in value && Array.isArray(value.richText)) {
+      return value.richText.map((part) => part.text).join('').trim();
+    }
+    if ('result' in value && value.result !== undefined && value.result !== null) {
+      return String(value.result).trim();
+    }
+
+    return String(value).trim();
   }
 
   private compararNomes(nome1: string, nome2: string): boolean {

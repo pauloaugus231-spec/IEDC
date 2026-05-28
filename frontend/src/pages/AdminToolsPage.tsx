@@ -1,29 +1,115 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { apiFetch } from '../api';
+import NovoPedidoModal, { type NovoPedidoForm, type PrioridadePedido } from '../components/NovoPedidoModal';
 
 type StatusPedido = 'Pendente' | 'Em Andamento' | 'Concluído';
-type Prioridade = 'Normal' | 'Urgente';
 type PeriodoEscala = 7 | 30 | 90 | 180;
+
+type PedidoOperacional = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  prioridade: PrioridadePedido;
+  solicitante: string;
+  setor: string;
+  status: StatusPedido;
+  created_at?: string;
+};
+
+type PlantaoEscala = {
+  data?: string;
+  colaborador?: {
+    nome?: string;
+  };
+  turno?: {
+    nome?: string;
+  };
+};
+
+type SetorTone = {
+  label: string;
+  bg: string;
+  color: string;
+  border: string;
+};
+
+const PEDIDOS_STORAGE_KEY = 'iedc-admin-pedidos';
+
+const emptyPedidoForm: NovoPedidoForm = {
+  titulo: '',
+  descricao: '',
+  prioridade: 'Normal',
+  solicitante: '',
+  setor: 'Manutenção',
+};
+
+const normalizeText = (value: unknown) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+const normalizeStatus = (status: unknown): StatusPedido => {
+  const value = normalizeText(status);
+  if (value.includes('andamento')) return 'Em Andamento';
+  if (value.includes('concluido') || value.includes('aprovada') || value.includes('finalizado')) return 'Concluído';
+  return 'Pendente';
+};
+
+const normalizePriority = (prioridade: unknown): PrioridadePedido =>
+  normalizeText(prioridade).includes('urgente') ? 'Urgente' : 'Normal';
+
+const normalizePedido = (item: unknown): PedidoOperacional | null => {
+  if (!item || typeof item !== 'object') return null;
+  const record = item as Record<string, unknown>;
+  const titulo = String(record.titulo ?? '').trim();
+  if (!titulo) return null;
+
+  return {
+    id: String(record.id ?? `local-${crypto.randomUUID()}`),
+    titulo,
+    descricao: String(record.descricao ?? record.justificativa ?? record.observacoes ?? ''),
+    prioridade: normalizePriority(record.prioridade),
+    solicitante: String(record.solicitante ?? record.solicitado_por ?? ''),
+    setor: String(record.setor ?? record.tipo ?? 'Administrativo'),
+    status: normalizeStatus(record.status),
+    created_at: typeof record.created_at === 'string' ? record.created_at : undefined,
+  };
+};
+
+const loadStoredRequests = (): PedidoOperacional[] | null => {
+  try {
+    const raw = window.localStorage.getItem(PEDIDOS_STORAGE_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map(normalizePedido).filter((request): request is PedidoOperacional => Boolean(request));
+  } catch (error) {
+    console.error('Erro ao carregar pedidos locais', error);
+    return null;
+  }
+};
+
+const persistRequests = (requests: PedidoOperacional[]) => {
+  window.localStorage.setItem(PEDIDOS_STORAGE_KEY, JSON.stringify(requests));
+};
+
+const isPlantaoEscala = (item: unknown): item is PlantaoEscala =>
+  Boolean(item) && typeof item === 'object';
 
 const AdminToolsPage = () => {
   // --- ESTADOS ---
-  const [escala, setEscala] = useState<any[]>([]);
+  const [escala, setEscala] = useState<PlantaoEscala[]>([]);
   const [loadingEscala, setLoadingEscala] = useState(false);
-  const [requests, setRequests] = useState<any[]>([]);
-  const [_loadingRequests, setLoadingRequests] = useState(false);
+  const [requests, setRequests] = useState<PedidoOperacional[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   const [showModal, setShowModal] = useState(false);
   
   // Filtro de período
   const [periodoSelecionado, setPeriodoSelecionado] = useState<PeriodoEscala>(7);
   
   // Estado do Formulário
-  const [newRequest, setNewRequest] = useState({
-    titulo: '',
-    descricao: '',
-    prioridade: 'Normal' as Prioridade,
-    solicitante: '',
-    setor: 'Manutenção', 
-  });
+  const [newRequest, setNewRequest] = useState<NovoPedidoForm>({ ...emptyPedidoForm });
 
   // --- CARREGAMENTO ---
   useEffect(() => {
@@ -31,12 +117,21 @@ const AdminToolsPage = () => {
       setLoadingEscala(true);
       setLoadingRequests(true);
       try {
+        const storedRequests = loadStoredRequests();
         const [escalaData, pedidosData] = await Promise.all([
           apiFetch('/api/plantoes'),
-          apiFetch('/api/pedidos')
+          storedRequests === null ? apiFetch('/api/pedidos') : Promise.resolve(null)
         ]);
-        setEscala(Array.isArray(escalaData) ? escalaData : []);
-        setRequests(Array.isArray(pedidosData) ? pedidosData : []);
+        setEscala(Array.isArray(escalaData) ? escalaData.filter(isPlantaoEscala) : []);
+
+        if (storedRequests !== null) {
+          setRequests(storedRequests);
+        } else {
+          const normalizedRequests = Array.isArray(pedidosData)
+            ? pedidosData.map(normalizePedido).filter((request): request is PedidoOperacional => Boolean(request))
+            : [];
+          setRequests(normalizedRequests);
+        }
       } catch (error) { console.error(error); } 
       finally { setLoadingEscala(false); setLoadingRequests(false); }
     };
@@ -52,7 +147,7 @@ const AdminToolsPage = () => {
     dataLimite.setDate(hoje.getDate() + periodoSelecionado);
     dataLimite.setHours(23, 59, 59, 999);
 
-    const groups: Record<string, any[]> = {};
+    const groups: Record<string, PlantaoEscala[]> = {};
     
     escala.forEach((item) => {
       if (!item.data) return;
@@ -71,49 +166,57 @@ const AdminToolsPage = () => {
 
   const hojeISO = new Date().toISOString().split('T')[0];
   const urgentCount = requests.filter(r => r.prioridade === 'Urgente' && r.status !== 'Concluído').length;
-  
-  const now = new Date();
-  const hour = now.getHours();
-  let turnoInfo = { nome: 'Noite', icone: '🌙' };
-  if (hour >= 7 && hour < 13) turnoInfo = { nome: 'Manhã', icone: '☀️' };
-  else if (hour >= 13 && hour < 19) turnoInfo = { nome: 'Tarde', icone: '🌤️' };
 
   // --- AÇÕES ---
-  const handleCreateRequest = async () => {
-    if (!newRequest.titulo) return;
-    try {
-      const payload = { ...newRequest, status: 'Pendente' };
-      const created = await apiFetch('/api/pedidos', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      });
-      setRequests(prev => [...prev, created]);
-      setShowModal(false);
-      setNewRequest({ titulo: '', descricao: '', prioridade: 'Normal', solicitante: '', setor: 'Manutenção' });
-    } catch (error) { console.error(error); }
+  const handleCreateRequest = () => {
+    const titulo = newRequest.titulo.trim();
+    if (!titulo) return;
+
+    const created: PedidoOperacional = {
+      id: `local-${crypto.randomUUID()}`,
+      titulo,
+      descricao: newRequest.descricao.trim(),
+      prioridade: newRequest.prioridade,
+      solicitante: newRequest.solicitante.trim(),
+      setor: newRequest.setor,
+      status: 'Pendente',
+      created_at: new Date().toISOString(),
+    };
+
+    setRequests(prev => {
+      const next = [created, ...prev];
+      persistRequests(next);
+      return next;
+    });
+    setShowModal(false);
+    setNewRequest({ ...emptyPedidoForm });
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: StatusPedido) => {
-    setRequests(prev => prev.map(r => (r.id === id ? { ...r, status: newStatus } : r)));
-    apiFetch(`/api/pedidos/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }),
-    }).catch(console.error);
+  const handleUpdateStatus = (id: string, newStatus: StatusPedido) => {
+    setRequests(prev => {
+      const next = prev.map(r => (r.id === id ? { ...r, status: newStatus } : r));
+      persistRequests(next);
+      return next;
+    });
   };
 
-  const handleDeleteRequest = async (id: string) => {
+  const handleDeleteRequest = (id: string) => {
     if(!confirm('Excluir este pedido?')) return;
-    try {
-      await apiFetch(`/api/pedidos/${id}`, { method: 'DELETE' });
-      setRequests(prev => prev.filter(r => r.id !== id));
-    } catch (error) { console.error(error); }
+    setRequests(prev => {
+      const next = prev.filter(r => r.id !== id);
+      persistRequests(next);
+      return next;
+    });
   };
 
-  const getSetorIcon = (setor: string) => {
+  const getSetorTone = (setor: string): SetorTone => {
     const s = setor?.toLowerCase() || '';
-    if (s.includes('alim')) return '🍔';
-    if (s.includes('manu')) return '🔧';
-    if (s.includes('limp')) return '🧹';
-    if (s.includes('saú')) return '💊';
-    return '📦';
+    if (s.includes('manu')) return { label: 'Manutenção', bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+    if (s.includes('hig')) return { label: 'Higiene', bg: '#F0FDFA', color: '#0F766E', border: '#99F6E4' };
+    if (s.includes('limp')) return { label: 'Limpeza', bg: '#F8FAFC', color: '#475569', border: '#CBD5E1' };
+    if (s.includes('alim')) return { label: 'Alimentação', bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' };
+    if (s.includes('saú') || s.includes('sau')) return { label: 'Saúde', bg: '#F0FDF4', color: '#15803D', border: '#BBF7D0' };
+    return { label: setor || 'Demanda', bg: '#F5F3FF', color: '#6D28D9', border: '#DDD6FE' };
   };
 
   return (
@@ -130,17 +233,12 @@ const AdminToolsPage = () => {
           
           <div style={{ display: 'flex', gap: '12px' }}>
              <button onClick={() => setShowModal(true)} style={{ backgroundColor: '#2563EB', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)' }}>
-              + Novo Pedido
+              + Novo pedido
             </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#EFF6FF', borderRadius: '12px', border: '1px solid #BFDBFE' }}>
-              <span style={{ fontSize: '16px' }}>{turnoInfo.icone}</span>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1E3A8A' }}>{turnoInfo.nome}</span>
-            </div>
             
             {urgentCount > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#FEF2F2', borderRadius: '12px', border: '1px solid #FECACA' }}>
-                <span style={{ fontSize: '16px' }}>🚨</span>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Urgentes</span>
                 <span style={{ fontSize: '13px', fontWeight: '700', color: '#991B1B' }}>{urgentCount}</span>
               </div>
             )}
@@ -158,31 +256,39 @@ const AdminToolsPage = () => {
           <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '16px' }}>Quadro de Pedidos</h2>
 
           <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '10px', minHeight: '350px' }}>
-            <KanbanColumn title="A Fazer" count={requests.filter(r => r.status === 'Pendente').length} color="#F59E0B" bgColor="#FFFBEB">
-              {requests.filter(r => r.status === 'Pendente').map(req => (
-                <RequestCard key={req.id} req={req} icon={getSetorIcon(req.setor)}
-                  onNext={() => handleUpdateStatus(req.id, 'Em Andamento')}
-                  onDelete={() => handleDeleteRequest(req.id)}
-                />
-              ))}
-            </KanbanColumn>
+            {loadingRequests ? (
+              <div style={{ padding: '20px', width: '100%', backgroundColor: 'white', borderRadius: '12px', color: '#6B7280', border: '1px solid #E5E7EB' }}>
+                Carregando pedidos...
+              </div>
+            ) : (
+              <>
+                <KanbanColumn title="A Fazer" count={requests.filter(r => r.status === 'Pendente').length} color="#F59E0B" bgColor="#FFFBEB">
+                  {requests.filter(r => r.status === 'Pendente').map(req => (
+                    <RequestCard key={req.id} req={req} tone={getSetorTone(req.setor)}
+                      onNext={() => handleUpdateStatus(req.id, 'Em Andamento')}
+                      onDelete={() => handleDeleteRequest(req.id)}
+                    />
+                  ))}
+                </KanbanColumn>
 
-            <KanbanColumn title="Em Andamento" count={requests.filter(r => r.status === 'Em Andamento').length} color="#3B82F6" bgColor="#EFF6FF">
-              {requests.filter(r => r.status === 'Em Andamento').map(req => (
-                <RequestCard key={req.id} req={req} icon={getSetorIcon(req.setor)}
-                  onNext={() => handleUpdateStatus(req.id, 'Concluído')}
-                  onPrev={() => handleUpdateStatus(req.id, 'Pendente')}
-                />
-              ))}
-            </KanbanColumn>
+                <KanbanColumn title="Em Andamento" count={requests.filter(r => r.status === 'Em Andamento').length} color="#3B82F6" bgColor="#EFF6FF">
+                  {requests.filter(r => r.status === 'Em Andamento').map(req => (
+                    <RequestCard key={req.id} req={req} tone={getSetorTone(req.setor)}
+                      onNext={() => handleUpdateStatus(req.id, 'Concluído')}
+                      onPrev={() => handleUpdateStatus(req.id, 'Pendente')}
+                    />
+                  ))}
+                </KanbanColumn>
 
-            <KanbanColumn title="Concluído" count={requests.filter(r => r.status === 'Concluído').length} color="#10B981" bgColor="#ECFDF5">
-              {requests.filter(r => r.status === 'Concluído').map(req => (
-                <RequestCard key={req.id} req={req} icon={getSetorIcon(req.setor)} isCompleted
-                  onPrev={() => handleUpdateStatus(req.id, 'Em Andamento')}
-                />
-              ))}
-            </KanbanColumn>
+                <KanbanColumn title="Concluído" count={requests.filter(r => r.status === 'Concluído').length} color="#10B981" bgColor="#ECFDF5">
+                  {requests.filter(r => r.status === 'Concluído').map(req => (
+                    <RequestCard key={req.id} req={req} tone={getSetorTone(req.setor)} isCompleted
+                      onPrev={() => handleUpdateStatus(req.id, 'Em Andamento')}
+                    />
+                  ))}
+                </KanbanColumn>
+              </>
+            )}
           </div>
         </section>
 
@@ -249,41 +355,36 @@ const AdminToolsPage = () => {
 
       {/* --- MODAL --- */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', width: '90%', maxWidth: '450px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: '#1F2937' }}>Novo Pedido</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input type="text" value={newRequest.titulo} onChange={e => setNewRequest({...newRequest, titulo: e.target.value})} placeholder="O que precisa ser feito?" style={inputStyle} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <select value={newRequest.setor} onChange={e => setNewRequest({...newRequest, setor: e.target.value})} style={inputStyle}>
-                  <option value="Manutenção">Manutenção</option>
-                  <option value="Limpeza">Limpeza</option>
-                  <option value="Alimentação">Alimentação</option>
-                  <option value="Saúde">Saúde</option>
-                </select>
-                <select value={newRequest.prioridade} onChange={e => setNewRequest({...newRequest, prioridade: e.target.value as Prioridade})} style={inputStyle}>
-                  <option value="Normal">Normal</option>
-                  <option value="Urgente">🔥 Urgente</option>
-                </select>
-              </div>
-              <textarea rows={3} value={newRequest.descricao} onChange={e => setNewRequest({...newRequest, descricao: e.target.value})} placeholder="Detalhes..." style={inputStyle} />
-              <input type="text" value={newRequest.solicitante} onChange={e => setNewRequest({...newRequest, solicitante: e.target.value})} placeholder="Seu Nome" style={inputStyle} />
-            </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-              <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: 'white', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={handleCreateRequest} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#2563EB', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Criar</button>
-            </div>
-          </div>
-        </div>
+        <NovoPedidoModal
+          form={newRequest}
+          onChange={setNewRequest}
+          onClose={() => setShowModal(false)}
+          onSubmit={handleCreateRequest}
+        />
       )}
     </div>
   );
 };
 
 // --- ESTILOS & COMPONENTES ---
-const inputStyle = { width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', boxSizing: 'border-box' as const };
+type KanbanColumnProps = {
+  title: string;
+  count: number;
+  color: string;
+  bgColor: string;
+  children: ReactNode;
+};
 
-const KanbanColumn = ({ title, count, color, bgColor, children }: any) => (
+type RequestCardProps = {
+  req: PedidoOperacional;
+  tone: SetorTone;
+  onNext?: () => void;
+  onPrev?: () => void;
+  onDelete?: () => void;
+  isCompleted?: boolean;
+};
+
+const KanbanColumn = ({ title, count, color, bgColor, children }: KanbanColumnProps) => (
   // FIX 4: Altura dinâmica para preencher o espaço sem forçar layout
   <div style={{ minWidth: '280px', maxWidth: '280px', backgroundColor: '#F9FAFB', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', border: '1px solid #E5E7EB', height: '100%' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: `2px solid ${color}` }}>
@@ -294,20 +395,22 @@ const KanbanColumn = ({ title, count, color, bgColor, children }: any) => (
   </div>
 );
 
-const RequestCard = ({ req, icon, onNext, onPrev, onDelete, isCompleted }: any) => (
-  <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', border: req.prioridade === 'Urgente' && !isCompleted ? '1px solid #FECACA' : '1px solid #E5E7EB', opacity: isCompleted ? 0.8 : 1 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-      <span style={{ fontSize: '16px', backgroundColor: '#F3F4F6', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
-      {req.prioridade === 'Urgente' && !isCompleted && <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>URGENTE</span>}
+const RequestCard = ({ req, tone, onNext, onPrev, onDelete, isCompleted }: RequestCardProps) => (
+  <div style={{ backgroundColor: 'white', borderRadius: '14px', padding: '14px', boxShadow: '0 8px 22px rgba(15,23,42,0.06)', border: req.prioridade === 'Urgente' && !isCompleted ? '1px solid #FECACA' : '1px solid #E5E7EB', opacity: isCompleted ? 0.82 : 1 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
+      <span style={{ fontSize: '10px', fontWeight: '900', color: tone.color, backgroundColor: tone.bg, border: `1px solid ${tone.border}`, padding: '5px 8px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {tone.label}
+      </span>
+      {req.prioridade === 'Urgente' && !isCompleted && <span style={{ fontSize: '9px', fontWeight: '900', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '4px 7px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Urgente</span>}
     </div>
-    <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>{req.titulo}</h4>
-    <p style={{ fontSize: '11px', color: '#6B7280', marginBottom: '10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{req.descricao || 'Sem descrição'}</p>
+    <h4 style={{ fontSize: '14px', lineHeight: '1.25', fontWeight: '800', color: '#111827', marginBottom: '6px' }}>{req.titulo}</h4>
+    <p style={{ fontSize: '12px', lineHeight: '1.45', color: '#6B7280', marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{req.descricao || 'Sem descrição'}</p>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '8px' }}>
-      <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{req.solicitante || req.setor}</div>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {onPrev && <button onClick={onPrev} title="Voltar" style={{ cursor: 'pointer', border: 'none', background: 'none', fontSize: '14px' }}>⬅️</button>}
-        {onDelete && <button onClick={onDelete} title="Excluir" style={{ cursor: 'pointer', border: 'none', background: 'none', fontSize: '14px', color: '#EF4444' }}>🗑️</button>}
-        {onNext && <button onClick={onNext} title="Avançar" style={{ cursor: 'pointer', border: 'none', background: 'none', fontSize: '14px', color: '#3B82F6' }}>➡️</button>}
+      <div style={{ fontSize: '10px', color: '#8A94A6', fontWeight: '700', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.solicitante || req.setor}</div>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        {onPrev && <button onClick={onPrev} title="Voltar" style={{ cursor: 'pointer', border: '1px solid #E5E7EB', background: '#FFFFFF', color: '#475569', borderRadius: '8px', fontSize: '11px', fontWeight: '800', padding: '5px 7px' }}>Voltar</button>}
+        {onDelete && <button onClick={onDelete} title="Excluir" style={{ cursor: 'pointer', border: '1px solid #FECACA', background: '#FEF2F2', color: '#B91C1C', borderRadius: '8px', fontSize: '11px', fontWeight: '800', padding: '5px 7px' }}>Excluir</button>}
+        {onNext && <button onClick={onNext} title="Avançar" style={{ cursor: 'pointer', border: '1px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '8px', fontSize: '11px', fontWeight: '800', padding: '5px 7px' }}>Avançar</button>}
       </div>
     </div>
   </div>

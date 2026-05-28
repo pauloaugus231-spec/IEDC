@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ScheduleModule } from '@nestjs/schedule';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import * as redisStore from 'cache-manager-redis-store';
 
 // Interceptors
@@ -26,6 +26,13 @@ import { RegrasEscalaModule } from './modules/regras-escala/regras-escala.module
 import { PlantoesModule } from './modules/plantoes/plantoes.module';
 import { TriagemModule } from './modules/triagem/triagem.module';
 import { RmaModule } from './modules/rma/rma.module';
+import { CrecheModule } from './modules/creche/creche.module';
+import { LojasModule } from './modules/lojas/lojas.module';
+import { ImpactoSocialModule } from './modules/impacto-social/impacto-social.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RolesGuard } from './auth/roles.guard';
+import { HealthController } from './health.controller';
 
 // Configuração do banco
 import { databaseConfig } from './config/database.config';
@@ -56,6 +63,7 @@ import { databaseConfig } from './config/database.config';
     }),
 
     // Módulos da aplicação
+    AuthModule,
     PessoasModule,
     EstadiasModule,
     BloqueiosModule,
@@ -72,13 +80,24 @@ import { databaseConfig } from './config/database.config';
     PlantoesModule,
     TriagemModule,
     RmaModule,
+    CrecheModule,
+    LojasModule,
+    ImpactoSocialModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [
     // ✅ Registrar interceptor de performance globalmente
     {
       provide: APP_INTERCEPTOR,
       useClass: PerformanceInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })

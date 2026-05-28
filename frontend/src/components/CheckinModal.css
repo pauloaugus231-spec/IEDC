@@ -1,263 +1,481 @@
-:root {
-  --primary-color: #2563eb;
-  --primary-hover: #1d4ed8;
-  --success-color: #10b981;
-  --success-bg: #d1fae5;
-  --danger-color: #ef4444;
-  --blocked-bg: #fee2e2;
-  --neutral-gray: #64748b;
-  --neutral-bg: #f1f5f9;
-  --border-radius: 12px;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
-.modal-overlay {
+.checkin-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  inset: 0;
+  z-index: 2300;
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 20, 38, 0.56);
+  backdrop-filter: blur(8px);
 }
 
-.modal-container {
-  background: white;
-  width: 90%;
-  max-width: 900px;
-  max-height: 90vh;
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+.checkin-modal-container {
   display: flex;
+  width: min(1160px, 100%);
+  max-height: min(92vh, 880px);
   flex-direction: column;
   overflow: hidden;
+  border: 1px solid rgba(0, 65, 170, 0.12);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 30px 90px rgba(8, 20, 38, 0.3);
 }
 
-/* Header */
-.modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+.checkin-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  background-color: #fff;
+  gap: 18px;
+  padding: 24px 28px;
+  background:
+    linear-gradient(135deg, rgba(0, 65, 170, 0.97), rgba(45, 111, 210, 0.92)),
+    url('/iedc/background.png') center/cover;
+  color: #ffffff;
 }
 
-.modal-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #1e293b;
-  font-weight: 600;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #94a3b8;
-  cursor: pointer;
-  transition: color 0.2s;
-  padding: 4px;
-  line-height: 1;
-  border-radius: 4px;
-}
-
-.close-button:hover {
-  color: #ef4444;
-  background-color: #fee2e2;
-}
-
-/* Content */
-.modal-content {
-  padding: 24px;
-  overflow-y: auto;
-  background-color: #f8fafc;
-}
-
-.casa-section {
-  margin-bottom: 32px;
-  background: white;
-  padding: 20px;
-  border-radius: var(--border-radius);
-  border: 1px solid #e2e8f0;
-  box-shadow: var(--shadow-sm);
-}
-
-.casa-section h3 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  color: #334155;
-  font-size: 1rem;
+.checkin-header span {
+  display: block;
+  color: #f7b044;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 2px solid #f1f5f9;
-  padding-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-/* Grid de Camas */
-.camas-grid {
+.checkin-header h2 {
+  margin: 5px 0 0;
+  font-size: 30px;
+  line-height: 1.05;
+}
+
+.checkin-header p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.checkin-header strong {
+  color: #ffffff;
+}
+
+.checkin-close-button {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
-}
-
-.cama-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
   cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-  background-color: white;
-  position: relative;
-  user-select: none;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
 }
 
-/* Estados das Camas */
-/* DISPONIVEL */
-.status-disponivel {
-  background-color: white;
-  border-color: #cbd5e1;
-  color: #334155;
+.checkin-close-button:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
-.status-disponivel:hover {
-  border-color: var(--success-color);
-  background-color: var(--success-bg);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+.checkin-body {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
 }
 
-/* SELECIONADA (Sobrescreve disponível) */
-.cama-item.selected {
-  background-color: #eff6ff;
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
-  transform: translateY(-2px);
+.checkin-summary {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border-right: 1px solid #dfe7f2;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef3f8 100%);
 }
 
-/* OCUPADA */
-.status-ocupada {
-  background-color: #f1f5f9;
-  border-color: transparent;
-  color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.7;
+.checkin-summary-card,
+.checkin-selection {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #dfe7f2;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 16px;
 }
 
-/* BLOQUEADA */
-.status-bloqueada {
-  background-color: var(--blocked-bg);
-  border-color: transparent;
-  color: var(--danger-color);
-  cursor: not-allowed;
+.checkin-summary-card span,
+.checkin-selection span {
+  color: #68778e;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-/* Conteúdo interno da cama */
-.cama-info {
-  text-align: center;
-  margin-top: 8px;
-}
-
-.cama-numero {
-  font-weight: 700;
-  font-size: 1.1rem;
+.checkin-summary-card strong,
+.checkin-selection strong {
+  color: #172033;
+  font-size: 18px;
   line-height: 1.2;
 }
 
-.cama-posicao-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  font-weight: 500;
-  margin-top: 2px;
+.checkin-summary-card small,
+.checkin-selection small {
+  color: #68778e;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
-/* Ícones SVG */
-.bed-icon {
-  width: 32px;
-  height: 32px;
-  margin-bottom: 4px;
+.checkin-selection {
+  margin-top: auto;
+  border-color: #bfd2ee;
+  background: #f0f6ff;
 }
 
-/* Footer */
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid #e2e8f0;
+.checkin-selection.active {
+  border-color: #0041aa;
+  background: #eaf2ff;
+}
+
+.checkin-workspace {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  background-color: #fff;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 22px;
 }
 
-.modal-footer button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 500;
+.checkin-room-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.checkin-room-tabs button {
+  display: grid;
+  gap: 6px;
+  min-height: 112px;
+  border: 1px solid #dfe7f2;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #172033;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.95rem;
+  font: inherit;
+  padding: 14px;
+  text-align: left;
 }
 
-.modal-footer button:disabled {
-  opacity: 0.5;
+.checkin-room-tabs button:hover {
+  border-color: #bfd2ee;
+  background: #f8fbff;
+}
+
+.checkin-room-tabs button.active {
+  border-color: #0041aa;
+  background: #eaf2ff;
+  box-shadow: inset 0 0 0 1px rgba(0, 65, 170, 0.1);
+}
+
+.checkin-room-tabs strong {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.checkin-room-tabs span {
+  color: #68778e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.checkin-room-tabs em {
+  width: fit-content;
+  border-radius: 999px;
+  background: #fff4d9;
+  color: #9c5c00;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  padding: 4px 7px;
+}
+
+.checkin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.checkin-toolbar h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 22px;
+}
+
+.checkin-toolbar p {
+  margin: 4px 0 0;
+  color: #68778e;
+  font-weight: 700;
+}
+
+.checkin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #dfe7f2;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #29354a;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 9px 12px;
+}
+
+.checkin-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #0041aa;
+}
+
+.checkin-beds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 12px;
+}
+
+.checkin-bed-card {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  min-height: 126px;
+  border: 1px solid #cdd8e8;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #29354a;
+  cursor: pointer;
+  font: inherit;
+  padding: 12px;
+  text-align: center;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.checkin-bed-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: #0f9d58;
+  background: #f0fbf5;
+  box-shadow: 0 12px 22px rgba(15, 157, 88, 0.12);
+}
+
+.checkin-bed-card.selected {
+  border-color: #0041aa;
+  background: #eaf2ff;
+  color: #0041aa;
+  box-shadow: 0 0 0 3px rgba(0, 65, 170, 0.12);
+}
+
+.checkin-bed-card:disabled {
   cursor: not-allowed;
 }
 
-.modal-footer button:first-child {
-  background-color: transparent;
-  color: #64748b;
+.checkin-bed-card.status-ocupada {
+  border-color: #e5ecf6;
+  background: #f1f5f9;
+  color: #7a879a;
+  opacity: 0.78;
 }
 
-.modal-footer button:first-child:hover:not(:disabled) {
-  background-color: #f1f5f9;
-  color: #334155;
+.checkin-bed-card.status-bloqueada {
+  border-color: #f4c6c6;
+  background: #fff2f2;
+  color: #b42318;
+  opacity: 0.86;
 }
 
-.confirm-button {
-  background-color: var(--primary-color);
-  color: white;
+.bed-icon {
+  width: 34px;
+  height: 34px;
 }
 
-.confirm-button:hover:not(:disabled) {
-  background-color: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+.checkin-bed-card strong {
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
 }
 
-.error-message {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 16px;
+.checkin-bed-card span {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.checkin-bed-card em {
+  border-radius: 999px;
+  background: rgba(15, 157, 88, 0.1);
+  color: #0b7f45;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  padding: 4px 7px;
+}
+
+.checkin-bed-card.status-ocupada em,
+.checkin-bed-card.status-bloqueada em {
+  background: rgba(104, 119, 142, 0.12);
+  color: currentColor;
+}
+
+.checkin-loading,
+.checkin-empty,
+.checkin-error {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  border: 1px solid #dfe7f2;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #68778e;
+  padding: 42px 20px;
   text-align: center;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.checkin-loading span {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #e5ecf6;
+  border-top-color: #0041aa;
+  border-radius: 999px;
+  animation: checkin-spin 0.9s linear infinite;
 }
 
-@media (max-width: 600px) {
-  .modal-container {
-    width: 95%;
-    height: 95vh;
+@keyframes checkin-spin {
+  to {
+    transform: rotate(360deg);
   }
-  
-  .camas-grid {
-    grid-template-columns: repeat(3, 1fr);
+}
+
+.checkin-empty strong,
+.checkin-loading strong {
+  color: #172033;
+}
+
+.checkin-empty p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.checkin-error {
+  border-color: #f4c6c6;
+  background: #fff2f2;
+  color: #b42318;
+  font-weight: 900;
+}
+
+.checkin-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #dfe7f2;
+  background: #ffffff;
+}
+
+.checkin-secondary-button,
+.checkin-primary-button {
+  min-height: 42px;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 11px 18px;
+}
+
+.checkin-secondary-button {
+  border: 1px solid #d9e1ee;
+  background: #ffffff;
+  color: #29354a;
+}
+
+.checkin-primary-button {
+  border: 1px solid #0041aa;
+  background: linear-gradient(135deg, #0041aa, #4077cf);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(0, 65, 170, 0.18);
+}
+
+.checkin-primary-button:disabled,
+.checkin-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 980px) {
+  .checkin-modal-container {
+    max-height: 96vh;
+  }
+
+  .checkin-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .checkin-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid #dfe7f2;
+  }
+
+  .checkin-selection {
+    margin-top: 0;
+  }
+
+  .checkin-room-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 660px) {
+  .checkin-modal-overlay {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .checkin-modal-container {
+    width: 100%;
+    max-height: none;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .checkin-summary,
+  .checkin-room-tabs,
+  .checkin-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .checkin-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .checkin-beds-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .checkin-footer {
+    position: sticky;
+    bottom: 0;
+  }
+
+  .checkin-primary-button,
+  .checkin-secondary-button {
+    flex: 1;
   }
 }

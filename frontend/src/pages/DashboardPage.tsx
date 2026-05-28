@@ -1,7 +1,22 @@
-import { useState, useEffect } from 'react';
-import { useOcupacaoTotal } from '../api';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Tooltip,
+  type ChartData,
+  type ChartOptions,
+} from 'chart.js';
+import { Chart } from 'react-chartjs-2';
+import { apiFetch, useOcupacaoHistorico, useOcupacaoTotal } from '../api';
 import PessoaCasaModal from '../components/PessoaCasaModal';
 import PresenceFloater from '../components/PresenceFloater';
+import { clearTriagemCensoStorage, getTriagemCensoStorageState } from '../utils';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip);
 
 // --- INTERFACES ---
 interface OcupacaoData {
@@ -9,12 +24,12 @@ interface OcupacaoData {
   casas: { [key: string]: { ocupadas: number; total: number; } };
 }
 
-// Configuração de Labels e Ícones
-const casaConfig: Record<string, { label: string, icon: string }> = {
-  MASCULINA: { label: 'Masculina', icon: '👨' },
-  'MISTA_MULHERES': { label: 'Feminina', icon: '👩' },
-  LGBT: { label: 'LGBT+', icon: '🏳️‍🌈' },
-  IDOSOS: { label: 'Idosos', icon: '👴' },
+// Configuração de labels
+const casaConfig: Record<string, { label: string }> = {
+  MASCULINA: { label: 'Masculina' },
+  'MISTA_MULHERES': { label: 'Feminina' },
+  LGBT: { label: 'LGBT+' },
+  IDOSOS: { label: 'Idosos' },
 };
 
 const DashboardPage = () => {
@@ -36,9 +51,16 @@ const DashboardPage = () => {
 
   // Carregar estado da triagem do localStorage
   useEffect(() => {
-    const hoje = new Date().toISOString().split('T')[0];
-    const lastTriagemDate = localStorage.getItem('lastTriagemDate');
-    if (lastTriagemDate === hoje && localStorage.getItem('triagemEncerrada') === 'true') {
+    const storageState = getTriagemCensoStorageState();
+
+    if (storageState.shouldClear) {
+      clearTriagemCensoStorage();
+      setIsTriagemEncerrada(false);
+      setCensoData(null);
+      return;
+    }
+
+    if (storageState.mode === 'censo') {
       setIsTriagemEncerrada(true);
       const storedCenso = localStorage.getItem('censoData');
       if (storedCenso) {
@@ -48,11 +70,16 @@ const DashboardPage = () => {
           console.error('Erro ao parsear censoData:', e);
         }
       }
+      return;
     }
+
+    setIsTriagemEncerrada(false);
+    setCensoData(null);
   }, []);
 
   // --- HOOKS DE DADOS ---
   const { data: initialOcupacao, loading: initialLoading } = useOcupacaoTotal();
+  const { data: historyData, loading: historicoLoading } = useOcupacaoHistorico(7);
 
   useEffect(() => { if (initialOcupacao) setOcupacao(initialOcupacao); }, [initialOcupacao]);
 
@@ -61,15 +88,13 @@ const DashboardPage = () => {
     const fetchDadosOperacionais = async () => {
       try {
         // 1. Buscar pendentes de presença (Presença não marcada)
-        const resAtivos = await fetch('/api/pessoas/ativos');
-        const ativos = resAtivos.ok ? await resAtivos.json() : [];
+        const ativos = await apiFetch<any[]>('/api/pessoas/ativos').catch(() => []);
         const ativosList = Array.isArray(ativos) ? ativos : [];
         setPendentesCount(ativosList.filter((a: any) => !a.presente).length);
         setTotalAtivosPresenca(ativosList.length);
         
         // 2. Buscar saídas previstas para hoje (estadias que terminam hoje)
-        const resSaidas = await fetch('/api/dashboard/saidas-previstas-hoje');
-        const saidasData = resSaidas.ok ? await resSaidas.json() : { count: 0 };
+        const saidasData = await apiFetch<{ count: number }>('/api/dashboard/saidas-previstas-hoje').catch(() => ({ count: 0 }));
         setCheckoutsHoje(saidasData.count || 0);
 
       } catch (e) { console.error(e); }
@@ -97,57 +122,162 @@ const DashboardPage = () => {
   const totalVagas = ocupacao?.total.total ?? 0;
   const ocupacaoPercent = totalVagas > 0 ? Math.round((totalOcupadas / totalVagas) * 100) : 0;
 
-  // Histórico de Ocupação (últimos 7 dias) - Persistido em localStorage
-  const [historyData, setHistoryData] = useState<{date: string; value: number}[]>([]);
-  
-  useEffect(() => {
-    if (totalOcupadas === 0) return; // Aguardar dados carregarem
-    
-    const hoje = new Date().toISOString().split('T')[0];
-    const storageKey = 'ocupacaoHistorico';
-    
-    // Carregar histórico existente
-    let historico: {date: string; value: number}[] = [];
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) historico = JSON.parse(stored);
-    } catch (e) { console.error('Erro ao carregar histórico:', e); }
-    
-    // Verificar se já salvou hoje
-    const jaSalvouHoje = historico.some(h => h.date === hoje);
-    if (!jaSalvouHoje) {
-      historico.push({ date: hoje, value: totalOcupadas });
-    } else {
-      // Atualizar valor de hoje (caso mude ao longo do dia)
-      historico = historico.map(h => h.date === hoje ? { ...h, value: totalOcupadas } : h);
-    }
-    
-    // Manter apenas os últimos 7 dias
-    historico = historico.slice(-7);
-    localStorage.setItem(storageKey, JSON.stringify(historico));
-    
-    // Preencher dias faltantes para ter sempre 7 barras
-    const ultimos7Dias: {date: string; value: number}[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const data = new Date();
-      data.setDate(data.getDate() - i);
-      const dateStr = data.toISOString().split('T')[0];
-      const existente = historico.find(h => h.date === dateStr);
-      ultimos7Dias.push({ 
-        date: dateStr, 
-        value: existente?.value ?? 0 
-      });
-    }
-    
-    setHistoryData(ultimos7Dias);
-  }, [totalOcupadas]);
+  const maiorCapacidadeHistorica = Math.max(totalVagas, ...historyData.map((item) => item.total), 1);
+  const maiorIngressoHistorico = Math.max(...historyData.map((item) => item.ingressos), 0);
+  const historicoChartKey = historyData
+    .map((item) => `${item.data}-${item.ocupadas}-${item.ingressos}`)
+    .join('|');
 
-  // Labels dos dias da semana
-  const getDayLabel = (dateStr: string) => {
-    const date = new Date(dateStr + 'T12:00:00'); // Evitar problemas de timezone
-    const dias = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-    return dias[date.getDay()];
-  };
+  const historicoChartData = useMemo<ChartData<'bar' | 'line', number[], string>>(
+    () => ({
+      labels: historyData.map((item) => {
+        const date = new Date(`${item.data}T12:00:00`);
+        return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
+      }),
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Ocupação',
+          data: historyData.map((item) => item.ocupadas),
+          yAxisID: 'y',
+          backgroundColor: 'rgba(37, 99, 235, 0.86)',
+          borderColor: '#2563eb',
+          borderRadius: 10,
+          borderSkipped: false,
+          borderWidth: 1,
+          hoverBackgroundColor: '#1d4ed8',
+          maxBarThickness: 42,
+        },
+        {
+          type: 'line',
+          label: 'Capacidade máxima',
+          data: historyData.map((item) => item.total || totalVagas),
+          yAxisID: 'y',
+          borderColor: '#172033',
+          borderDash: [7, 6],
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          tension: 0,
+        },
+        {
+          type: 'line',
+          label: 'Novos ingressos',
+          data: historyData.map((item) => item.ingressos),
+          yAxisID: 'yIngressos',
+          borderColor: '#0f9d58',
+          backgroundColor: '#0f9d58',
+          borderWidth: 3,
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: '#0f9d58',
+          pointBorderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.35,
+        },
+      ],
+    }),
+    [historyData, totalVagas],
+  );
+
+  const historicoChartOptions = useMemo<ChartOptions<'bar' | 'line'>>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart',
+        delay: (context) => {
+          if (context.type !== 'data') return 0;
+          return context.dataIndex * 90 + context.datasetIndex * 140;
+        },
+      },
+      animations: {
+        y: {
+          from: 0,
+          duration: 950,
+          easing: 'easeOutQuart',
+        },
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: '#172033',
+          padding: 12,
+          callbacks: {
+            label: (context) => {
+              const label = context.dataset.label ?? '';
+              if (label === 'Novos ingressos') return `${label}: ${context.parsed.y}`;
+              if (label === 'Capacidade máxima') return `${label}: ${context.parsed.y} camas`;
+              return `${label}: ${context.parsed.y} ocupadas`;
+            },
+            afterBody: (items) => {
+              const point = historyData[items[0]?.dataIndex ?? -1];
+              return point ? [`${point.percentual}% de ocupação no dia`] : [];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          ticks: {
+            color: '#7a879a',
+            font: {
+              size: 11,
+              weight: 700,
+            },
+          },
+        },
+        y: {
+          min: 0,
+          suggestedMax: Math.ceil(maiorCapacidadeHistorica * 1.08),
+          border: {
+            display: false,
+          },
+          grid: {
+            color: 'rgba(104, 119, 142, 0.12)',
+          },
+          ticks: {
+            color: '#7a879a',
+            precision: 0,
+            font: {
+              size: 11,
+              weight: 700,
+            },
+          },
+        },
+        yIngressos: {
+          position: 'right',
+          min: 0,
+          suggestedMax: Math.max(5, maiorIngressoHistorico + 2),
+          border: {
+            display: false,
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+          ticks: {
+            color: '#0f9d58',
+            precision: 0,
+            font: {
+              size: 11,
+              weight: 700,
+            },
+          },
+        },
+      },
+    }),
+    [historyData, maiorCapacidadeHistorica, maiorIngressoHistorico],
+  );
 
   return (
     <div style={{ padding: '24px', backgroundColor: '#F3F4F6', minHeight: '100vh', fontFamily: 'Inter, sans-serif', paddingBottom: '100px' }}>
@@ -166,12 +296,12 @@ const DashboardPage = () => {
         
         {/* COLUNA ESQUERDA: STATUS DAS CASAS (Melhoria 1) */}
         <div style={{ gridColumn: 'span 12' }} className="col-left">
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+             <div className="room-status-grid">
                 {loading && <div>Carregando...</div>}
                 {!loading && ocupacao && Object.entries(ocupacao.casas).map(([key, data]) => {
                     const livres = data.total - data.ocupadas;
                     const style = getStatusColor(livres);
-                    const config = casaConfig[key] || { label: key, icon: '🏠' };
+                    const config = casaConfig[key] || { label: key };
 
                     return (
                     <div
@@ -195,14 +325,9 @@ const DashboardPage = () => {
                         }} />
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ fontSize: '24px', backgroundColor: 'rgba(255,255,255,0.5)', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {config.icon}
-                                </div>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1F2937' }}>{config.label}</h3>
-                                    <span style={{ fontSize: '12px', color: '#6B7280' }}>Capacidade: {data.total}</span>
-                                </div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1F2937' }}>{config.label}</h3>
+                                <span style={{ fontSize: '12px', color: '#6B7280' }}>Capacidade: {data.total}</span>
                             </div>
                             <div style={{ textAlign: 'right' }}>
                                 <span style={{ fontSize: '24px', fontWeight: '800', color: style.text }}>{livres}</span>
@@ -216,52 +341,46 @@ const DashboardPage = () => {
              
              {/* Histórico de Ocupação - Funcional com dados reais */}
              <div style={{ marginTop: '24px', backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#374151', marginBottom: '16px' }}>Histórico de Ocupação (7 Dias)</h3>
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '140px', paddingBottom: '10px' }}>
-                    {historyData.map((item, idx) => {
-                        const isToday = idx === historyData.length - 1;
-                        const barHeight = totalVagas > 0 ? (item.value / totalVagas) * 100 : 0;
-                        
-                        return (
-                        <div key={item.date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
-                             {/* Valor numérico acima da barra */}
-                             <span style={{ 
-                                 fontSize: '11px', 
-                                 fontWeight: isToday ? '700' : '500', 
-                                 color: isToday ? '#2563EB' : '#6B7280',
-                                 marginBottom: '4px'
-                             }}>
-                                 {item.value > 0 ? item.value : '-'}
-                             </span>
-                             
-                             {/* Barra */}
-                             <div 
-                                style={{ 
-                                    width: '60%', 
-                                    backgroundColor: isToday ? '#2563EB' : '#E5E7EB', 
-                                    height: `${Math.max(barHeight, 4)}px`, 
-                                    borderRadius: '4px 4px 0 0',
-                                    transition: 'height 1s',
-                                    minHeight: '4px'
-                                }} 
-                             />
-                             
-                             {/* Label do dia */}
-                             <span style={{ 
-                                 fontSize: '11px', 
-                                 color: isToday ? '#2563EB' : '#6B7280', 
-                                 marginTop: '6px',
-                                 fontWeight: isToday ? '700' : '400'
-                             }}>
-                                 {getDayLabel(item.date)}
-                             </span>
-                        </div>
-                    );})}
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '14px' }}>
+                    <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#374151', margin: 0 }}>Histórico de Ocupação (7 Dias)</h3>
+                        <p style={{ color: '#6B7280', fontSize: '12px', fontWeight: 600, margin: '4px 0 0' }}>
+                            Ocupadas, capacidade máxima e novos ingressos por plantão.
+                        </p>
+                    </div>
+                    <div style={{ color: '#1E40AF', backgroundColor: '#DBEAFE', borderRadius: '999px', fontSize: '11px', fontWeight: 800, padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                        7 dias
+                    </div>
                 </div>
-                
-                {/* Legenda */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>
-                    <span>📊 Capacidade total: <strong style={{color: '#374151'}}>{totalVagas}</strong></span>
+
+                <div style={{ position: 'relative', height: '218px' }}>
+                    {historyData.length > 0 ? (
+                      <Chart<'bar' | 'line', number[], string>
+                        key={historicoChartKey}
+                        type="bar"
+                        data={historicoChartData}
+                        options={historicoChartOptions}
+                      />
+                    ) : (
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700 }}>
+                        {historicoLoading ? 'Carregando histórico...' : 'Sem histórico disponível'}
+                      </div>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '14px', marginTop: '14px', fontSize: '11px', color: '#6B7280', fontWeight: 700 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <i style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#2563EB', display: 'inline-block' }} />
+                        Ocupação
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <i style={{ width: '18px', borderTop: '2px dashed #172033', display: 'inline-block' }} />
+                        Capacidade {totalVagas}
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <i style={{ width: '18px', borderTop: '3px solid #0F9D58', display: 'inline-block' }} />
+                        Novos ingressos
+                    </span>
                 </div>
              </div>
         </div>
@@ -308,20 +427,8 @@ const DashboardPage = () => {
                 boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.1), 0 2px 4px -1px rgba(220, 38, 38, 0.06)'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {/* Ícone e Título */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ 
-                            backgroundColor: '#DC2626', 
-                            width: '64px', 
-                            height: '64px', 
-                            borderRadius: '16px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.3)'
-                        }}>
-                            <span style={{ fontSize: '32px', filter: 'brightness(0) invert(1)' }}>🚪</span>
-                        </div>
+                    {/* Título */}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
                         <div>
                             <div style={{ fontSize: '12px', fontWeight: '600', color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                                 Saídas Previstas
@@ -358,27 +465,6 @@ const DashboardPage = () => {
                         </div>
                     </div>
                 </div>
-                
-                {/* Barra de Informação Adicional */}
-                <div style={{ 
-                    marginTop: '24px', 
-                    paddingTop: '20px', 
-                    borderTop: '2px solid rgba(220, 38, 38, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <div style={{ 
-                        backgroundColor: 'rgba(220, 38, 38, 0.15)', 
-                        padding: '8px 12px', 
-                        borderRadius: '8px',
-                        flex: 1
-                    }}>
-                        <div style={{ fontSize: '11px', color: '#991B1B', fontWeight: '600' }}>
-                            ℹ️ Vagas livres amanhã de manhã
-                        </div>
-                    </div>
-                </div>
             </div>
 
         </div>
@@ -386,13 +472,34 @@ const DashboardPage = () => {
 
       {/* MODAL E FLOATER */}
       {modalOpen && <PessoaCasaModal isOpen={modalOpen} onClose={() => setModalOpen(false)} casa={selectedCasa} casaLabel={selectedCasaLabel} />}
-      <PresenceFloater pendentesCount={pendentesCount} totalCount={totalAtivosPresenca} censoData={censoData} isTriagemEncerrada={isTriagemEncerrada} />
+      <PresenceFloater
+        censoData={censoData}
+        isTriagemEncerrada={isTriagemEncerrada}
+        onCensoExpired={() => {
+          setIsTriagemEncerrada(false);
+          setCensoData(null);
+        }}
+        pendentesCount={pendentesCount}
+        totalCount={totalAtivosPresenca}
+      />
       
       {/* Estilos responsivos inline para grid */}
       <style>{`
+        .room-status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
         @media (min-width: 1024px) {
             .col-left { grid-column: span 8 !important; }
             .col-right { grid-column: span 4 !important; }
+        }
+
+        @media (max-width: 640px) {
+            .room-status-grid {
+                grid-template-columns: 1fr;
+            }
         }
       `}</style>
     </div>

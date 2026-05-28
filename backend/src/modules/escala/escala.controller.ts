@@ -1,8 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { EscalaService } from './escala.service';
 import { Escala } from '../../entities/escala.entity';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @Controller('escala')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
 export class EscalaController {
   constructor(private readonly escalaService: EscalaService) {}
 

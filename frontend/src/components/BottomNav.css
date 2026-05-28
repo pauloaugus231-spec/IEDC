@@ -20,12 +20,12 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: linear-gradient(135deg, #0041AA 0%, #4077CF 100%);
   color: white;
   border-radius: 50px;
   cursor: pointer;
   box-shadow: 
-    0 4px 12px rgba(16, 185, 129, 0.4),
+    0 4px 12px rgba(0, 65, 170, 0.32),
     0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -33,7 +33,7 @@
 .floating-nav.collapsed .nav-toggle:hover {
   transform: scale(1.05);
   box-shadow: 
-    0 6px 20px rgba(16, 185, 129, 0.5),
+    0 6px 20px rgba(0, 65, 170, 0.38),
     0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -99,7 +99,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: linear-gradient(135deg, #0041AA 0%, #4077CF 100%);
   color: white;
 }
 
@@ -163,8 +163,8 @@
 }
 
 .floating-nav .nav-item.active {
-  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
-  color: #059669;
+  background: linear-gradient(135deg, #EAF2FF 0%, #DCEAFF 100%);
+  color: #0041AA;
   font-weight: 600;
 }
 
@@ -173,7 +173,7 @@
   right: 12px;
   width: 8px;
   height: 8px;
-  background: #10B981;
+  background: #F7B044;
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
@@ -189,7 +189,7 @@
 
 /* ========== ESTADO FIXADO ========== */
 .floating-nav.pinned .nav-menu {
-  border: 2px solid #10B981;
+  border: 2px solid #4077CF;
 }
 
 /* ========== RESPONSIVO ========== */

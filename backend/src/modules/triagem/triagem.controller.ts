@@ -1,7 +1,15 @@
 import { Controller, Post, Body, Get } from '@nestjs/common';
 import { TriagemService } from './triagem.service';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @Controller('triagem')
+@Roles(
+  UsuarioRole.GESTORA,
+  UsuarioRole.COORDENADOR_ALBERGUE,
+  UsuarioRole.EQUIPE_TECNICA,
+  UsuarioRole.EDUCADOR_ALBERGUE,
+)
 export class TriagemController {
   constructor(private readonly triagemService: TriagemService) {}
 
@@ -25,10 +33,5 @@ export class TriagemController {
   @Get('novos-cadastros-hoje')
   async getNovosCadastrosHoje() {
     return this.triagemService.getNovosCadastrosHoje();
-  }
-
-  @Get('teste')
-  async teste() {
-    return { message: 'Backend funcionando!', timestamp: new Date().toISOString() };
   }
 }

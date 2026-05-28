@@ -172,25 +172,24 @@
 
 
 :root {
-  --primary: #0A84FF;
-  --primary-hover: #0056CC;
+  --primary: #0041AA;
+  --primary-hover: #02378B;
   --secondary: #34C759;
-  --background: #F2F2F7;
+  --background: #EEF3F8;
   --surface: #FFFFFF;
-  --surface-secondary: #E5E5EA;
+  --surface-secondary: #D9E1EE;
   --surface-primary: #FFFFFF;
   --glass-bg: rgba(255,255,255,0.8);
-  --shadow: 0 4px 20px rgba(0,0,0,0.08);
-  --text-primary: #1C1C1E;
-  --text-secondary: #8E8E93;
+  --shadow: 0 12px 36px rgba(13,40,76,0.08);
+  --text-primary: #172033;
+  --text-secondary: #68778E;
   --border-radius: 14px;
   --radius: 14px;
   --radius-small: 8px;
   --transition: 0.3s;
 }
 
-[
-data-theme="dark"] {
+[data-theme="dark"] {
   --background: #000000;
   --surface: #1C1C1E;
   --surface-secondary: #444857; /* cinza claro, não preto, para donut */

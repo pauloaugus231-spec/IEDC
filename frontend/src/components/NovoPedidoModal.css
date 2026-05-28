@@ -1,0 +1,281 @@
+.pedido-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 20, 38, 0.54);
+  backdrop-filter: blur(8px);
+}
+
+.pedido-modal-container {
+  display: flex;
+  width: min(720px, 100%);
+  max-height: min(92vh, 760px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(0, 65, 170, 0.12);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 30px 90px rgba(8, 20, 38, 0.3);
+  animation: pedido-enter 0.24s ease-out;
+}
+
+@keyframes pedido-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pedido-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 26px;
+  background:
+    linear-gradient(135deg, rgba(0, 65, 170, 0.97), rgba(45, 111, 210, 0.92)),
+    url('/iedc/background.png') center/cover;
+  color: #ffffff;
+}
+
+.pedido-modal-header span {
+  display: block;
+  color: #f7b044;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pedido-modal-header h2 {
+  margin: 4px 0 0;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.pedido-modal-header p {
+  max-width: 560px;
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.pedido-close-btn {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 24px;
+  line-height: 1;
+  padding: 0;
+}
+
+.pedido-close-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.pedido-modal-body {
+  display: grid;
+  gap: 18px;
+  overflow-y: auto;
+  padding: 22px 26px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.pedido-context-card {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #dfe7f2;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 14px 16px;
+}
+
+.pedido-context-card strong {
+  color: #172033;
+  font-size: 14px;
+}
+
+.pedido-context-card p {
+  margin: 0;
+  color: #68778e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pedido-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.pedido-form-group {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pedido-form-group.span-2 {
+  grid-column: 1 / -1;
+}
+
+.pedido-form-group > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #29354a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.pedido-form-group em {
+  color: #dc2626;
+  font-style: normal;
+}
+
+.pedido-form-group input,
+.pedido-form-group select,
+.pedido-form-group textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid #d9e1ee;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+  padding: 11px 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.pedido-form-group textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.pedido-form-group input::placeholder,
+.pedido-form-group textarea::placeholder {
+  color: #9aa7b8;
+}
+
+.pedido-form-group input:focus,
+.pedido-form-group select:focus,
+.pedido-form-group textarea:focus {
+  border-color: #0041aa;
+  box-shadow: 0 0 0 3px rgba(0, 65, 170, 0.12);
+}
+
+.pedido-priority-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pedido-priority-group button {
+  border: 1px solid #d9e1ee;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #29354a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 11px 12px;
+}
+
+.pedido-priority-group button.active {
+  border-color: #0041aa;
+  background: #eaf2ff;
+  color: #0041aa;
+}
+
+.pedido-priority-group button:last-child.active {
+  border-color: #dc2626;
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.pedido-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 26px;
+  border-top: 1px solid #dfe7f2;
+  background: #ffffff;
+}
+
+.pedido-btn-secondary,
+.pedido-btn-primary {
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 11px 18px;
+}
+
+.pedido-btn-secondary {
+  border: 1px solid #d9e1ee;
+  background: #ffffff;
+  color: #29354a;
+}
+
+.pedido-btn-secondary:hover {
+  border-color: #0041aa;
+  color: #0041aa;
+}
+
+.pedido-btn-primary {
+  border: 1px solid #0041aa;
+  background: linear-gradient(135deg, #0041aa, #4077cf);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(0, 65, 170, 0.18);
+}
+
+.pedido-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.03);
+}
+
+.pedido-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+@media (max-width: 680px) {
+  .pedido-modal-overlay {
+    padding: 12px;
+  }
+
+  .pedido-modal-container {
+    max-height: 96vh;
+  }
+
+  .pedido-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pedido-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .pedido-btn-secondary,
+  .pedido-btn-primary {
+    width: 100%;
+  }
+}

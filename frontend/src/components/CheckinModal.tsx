@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../api';
-import './CheckinModal.css';
 import { getNomePrincipal } from '../utils';
+import './CheckinModal.css';
 
-// --- Tipos ---
 type Casa = 'MASCULINA' | 'MISTA_MULHERES' | 'IDOSOS' | 'LGBT';
 type StatusCama = 'DISPONIVEL' | 'OCUPADA' | 'BLOQUEADA';
 
@@ -18,6 +17,11 @@ interface Cama {
 interface Pessoa {
   id: string;
   nome: string;
+  nome_social?: string;
+  tipo_vaga?: string;
+  sexo?: string;
+  genero?: string;
+  lgbt?: boolean;
 }
 
 interface CheckinModalProps {
@@ -33,39 +37,65 @@ const NOME_CASAS: Record<Casa, string> = {
   LGBT: 'Quarto LGBT+',
 };
 
-// --- Componente Auxiliar: Ícone SVG de Beliche ---
-const BunkBedIcon = ({ posicao, status }: { posicao: 'SUPERIOR' | 'INFERIOR'; status: StatusCama }) => {
+function getRecommendedCasa(pessoa: Pessoa): Casa {
+  const tipo = pessoa.tipo_vaga?.toLowerCase();
+  const genero = `${pessoa.genero || ''} ${pessoa.sexo || ''}`.toLowerCase();
+
+  if (tipo === 'lgbt' || pessoa.lgbt) return 'LGBT';
+  if (tipo === 'idoso') return 'IDOSOS';
+  if (tipo === 'feminina' || genero.includes('femin')) return 'MISTA_MULHERES';
+  return 'MASCULINA';
+}
+
+function getPositionLabel(posicao: Cama['posicao']) {
+  return posicao === 'SUPERIOR' ? 'Superior' : 'Inferior';
+}
+
+const BunkBedIcon = ({ posicao, status }: { posicao: Cama['posicao']; status: StatusCama }) => {
   const isOccupied = status !== 'DISPONIVEL';
-  const color = status === 'BLOQUEADA' ? '#ef4444' : (isOccupied ? '#94a3b8' : 'currentColor');
-  
+  const color = status === 'BLOQUEADA' ? '#c92a2a' : (isOccupied ? '#94a3b8' : 'currentColor');
+
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="bed-icon">
-      <path d="M2 10H22" stroke={color} strokeWidth="2" strokeLinecap="round"/>
-      <path d="M2 4V20" stroke={color} strokeWidth="2" strokeLinecap="round"/>
-      <path d="M22 4V20" stroke={color} strokeWidth="2" strokeLinecap="round"/>
-      {/* Cama Superior */}
-      <rect x="4" y="5" width="16" height="4" rx="1" 
-        fill={posicao === 'SUPERIOR' ? color : 'transparent'} 
-        stroke={color} strokeWidth="1.5" 
+    <svg aria-hidden="true" className="bed-icon" fill="none" viewBox="0 0 24 24">
+      <path d="M2 10H22" stroke={color} strokeLinecap="round" strokeWidth="2" />
+      <path d="M2 4V20" stroke={color} strokeLinecap="round" strokeWidth="2" />
+      <path d="M22 4V20" stroke={color} strokeLinecap="round" strokeWidth="2" />
+      <rect
+        fill={posicao === 'SUPERIOR' ? color : 'transparent'}
+        height="4"
         opacity={posicao === 'INFERIOR' ? 0.3 : 1}
+        rx="1"
+        stroke={color}
+        strokeWidth="1.5"
+        width="16"
+        x="4"
+        y="5"
       />
-      {/* Cama Inferior */}
-      <rect x="4" y="14" width="16" height="4" rx="1" 
-        fill={posicao === 'INFERIOR' ? color : 'transparent'} 
-        stroke={color} strokeWidth="1.5"
+      <rect
+        fill={posicao === 'INFERIOR' ? color : 'transparent'}
+        height="4"
         opacity={posicao === 'SUPERIOR' ? 0.3 : 1}
+        rx="1"
+        stroke={color}
+        strokeWidth="1.5"
+        width="16"
+        x="4"
+        y="14"
       />
     </svg>
   );
 };
 
-// --- Componente Principal ---
 const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinSuccess }) => {
   const [camas, setCamas] = useState<Cama[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCamaId, setSelectedCamaId] = useState<string | null>(null);
+  const [selectedCasa, setSelectedCasa] = useState<Casa>(() => getRecommendedCasa(pessoa));
+  const [showUnavailable, setShowUnavailable] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const recommendedCasa = useMemo(() => getRecommendedCasa(pessoa), [pessoa]);
 
   useEffect(() => {
     async function fetchCamas() {
@@ -74,7 +104,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
         const camasData = await apiFetch<Cama[]>('/api/camas');
         setCamas(camasData);
       } catch (err: any) {
-        setError('Falha ao carregar camas. ' + err.message);
+        setError(`Falha ao carregar camas. ${err.message || ''}`.trim());
       } finally {
         setLoading(false);
       }
@@ -82,141 +112,209 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
     fetchCamas();
   }, []);
 
+  const camasPorCasa = useMemo(() => {
+    const grouped = camas.reduce((acc, cama) => {
+      if (!acc[cama.casa]) acc[cama.casa] = [];
+      acc[cama.casa].push(cama);
+      return acc;
+    }, {} as Record<Casa, Cama[]>);
+
+    (Object.keys(grouped) as Casa[]).forEach((casa) => {
+      grouped[casa].sort((a, b) => a.numero - b.numero);
+    });
+
+    return grouped;
+  }, [camas]);
+
+  const casasResumo = useMemo(() => (
+    (Object.keys(NOME_CASAS) as Casa[]).map((casa) => {
+      const lista = camasPorCasa[casa] || [];
+      const livres = lista.filter((cama) => cama.status === 'DISPONIVEL').length;
+      return { casa, total: lista.length, livres };
+    })
+  ), [camasPorCasa]);
+
+  useEffect(() => {
+    if (!camas.length) return;
+    const recomendada = casasResumo.find((item) => item.casa === recommendedCasa && item.livres > 0);
+    const primeiraComVaga = casasResumo.find((item) => item.livres > 0);
+    setSelectedCasa((current) => {
+      const atualTemVaga = casasResumo.find((item) => item.casa === current && item.livres > 0);
+      return atualTemVaga ? current : recomendada?.casa || primeiraComVaga?.casa || recommendedCasa;
+    });
+  }, [camas.length, casasResumo, recommendedCasa]);
+
+  useEffect(() => {
+    setSelectedCamaId(null);
+  }, [selectedCasa, showUnavailable]);
+
+  const camasDaCasa = camasPorCasa[selectedCasa] || [];
+  const camasVisiveis = showUnavailable
+    ? camasDaCasa
+    : camasDaCasa.filter((cama) => cama.status === 'DISPONIVEL');
+  const selectedCama = camas.find((cama) => cama.id === selectedCamaId);
+  const selectedCasaResumo = casasResumo.find((item) => item.casa === selectedCasa);
+
   const handleCheckin = async () => {
     if (!selectedCamaId) return;
-    
+
     setIsSubmitting(true);
     try {
-      const novaEstadia = await apiFetch(`/api/estadias/checkin`, {
+      const novaEstadia = await apiFetch('/api/estadias/checkin', {
         method: 'POST',
         body: JSON.stringify({
           pessoa_id: pessoa.id,
           cama_id: selectedCamaId,
         }),
       });
-      // Pode adicionar um toast/notificação aqui se quiser
       onCheckinSuccess(novaEstadia);
     } catch (err: any) {
-      alert('Erro ao realizar check-in: ' + err.message);
+      setError(`Erro ao realizar check-in: ${err.message || 'tente novamente.'}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Agrupar camas por casa
-  const camasPorCasa = camas.reduce((acc, cama) => {
-    if (!acc[cama.casa]) acc[cama.casa] = [];
-    acc[cama.casa].push(cama);
-    return acc;
-  }, {} as Record<Casa, Cama[]>);
-
-  // Ordenar camas numericamente dentro de cada grupo
-  Object.keys(camasPorCasa).forEach(key => {
-    camasPorCasa[key as Casa].sort((a, b) => a.numero - b.numero);
-  });
-
   return (
-    <div className="modal-overlay">
-      <div className="modal-container">
-        {/* HEADER */}
-        <div className="modal-header">
+    <div className="checkin-modal-overlay">
+      <div className="checkin-modal-container">
+        <header className="checkin-header">
           <div>
-            <h2>Check-in</h2>
-            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
-              Acolhido: <strong style={{color: '#1e293b'}}>{getNomePrincipal(pessoa)}</strong>
-            </span>
+            <span>Entrada no albergue</span>
+            <h2>Iniciar estadia</h2>
+            <p>
+              Pessoa atendida: <strong>{getNomePrincipal(pessoa)}</strong>
+            </p>
           </div>
-          <button onClick={onClose} className="close-button" aria-label="Fechar">&times;</button>
-        </div>
-
-        {/* CONTENT */}
-        <div className="modal-content">
-          {/* LEGENDA */}
-          <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', fontSize: '0.85rem', color: '#475569', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{width: 16, height: 16, borderRadius: 4, border: '1px solid #cbd5e1', background: 'white'}}></div> 
-              Disponível
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{width: 16, height: 16, borderRadius: 4, background: '#eff6ff', border: '1px solid #2563eb'}}></div> 
-              Selecionada
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{width: 16, height: 16, borderRadius: 4, background: '#f1f5f9'}}></div> 
-              Ocupada
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{width: 16, height: 16, borderRadius: 4, background: '#fee2e2'}}></div> 
-              Bloqueada
-            </div>
-          </div>
-
-          {loading && (
-            <div style={{textAlign: 'center', padding: '60px', color: '#64748b'}}>
-              Carregando mapa de camas...
-            </div>
-          )}
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          {!loading && !error && (
-            <div className="casas-container">
-              {Object.entries(camasPorCasa).map(([casa, camasDaCasa]) => {
-                const vagasDisponiveis = camasDaCasa.filter(c => c.status === 'DISPONIVEL').length;
-                
-                return (
-                  <div key={casa} className="casa-section">
-                    <h3>
-                      {NOME_CASAS[casa as Casa]} 
-                      <span style={{fontSize: '0.75rem', fontWeight: '600', color: vagasDisponiveis > 0 ? '#10b981' : '#94a3b8', background: vagasDisponiveis > 0 ? '#d1fae5' : '#f1f5f9', padding: '4px 8px', borderRadius: '20px', textTransform: 'none'}}>
-                        {vagasDisponiveis} vagas livres
-                      </span>
-                    </h3>
-                    <div className="camas-grid">
-                      {camasDaCasa.map(cama => {
-                        const isSelectable = cama.status === 'DISPONIVEL';
-                        const isSelected = selectedCamaId === cama.id;
-                        
-                        return (
-                          <div
-                            key={cama.id}
-                            className={`cama-item status-${cama.status.toLowerCase()} ${isSelected ? 'selected' : ''}`}
-                            onClick={() => isSelectable && setSelectedCamaId(cama.id)}
-                            role={isSelectable ? "button" : "presentation"}
-                            tabIndex={isSelectable ? 0 : -1}
-                            onKeyDown={(e) => {
-                              if (isSelectable && (e.key === 'Enter' || e.key === ' ')) {
-                                setSelectedCamaId(cama.id);
-                              }
-                            }}
-                          >
-                            <BunkBedIcon posicao={cama.posicao} status={cama.status} />
-                            <div className="cama-info">
-                              <div className="cama-numero">{cama.numero}</div>
-                              <div className="cama-posicao-label">{cama.posicao === 'SUPERIOR' ? 'Cima' : 'Baixo'}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* FOOTER */}
-        <div className="modal-footer">
-          <button onClick={onClose} disabled={isSubmitting}>Cancelar</button>
-          <button
-            onClick={handleCheckin}
-            disabled={!selectedCamaId || isSubmitting}
-            className="confirm-button"
-          >
-            {isSubmitting ? 'Confirmando...' : 'Confirmar Check-in'}
+          <button aria-label="Fechar" className="checkin-close-button" onClick={onClose} type="button">
+            ×
           </button>
-        </div>
+        </header>
+
+        <section className="checkin-body">
+          <aside className="checkin-summary">
+            <div className="checkin-summary-card">
+              <span>Quarto sugerido</span>
+              <strong>{NOME_CASAS[recommendedCasa]}</strong>
+              <small>Baseado no cadastro da pessoa.</small>
+            </div>
+
+            <div className="checkin-summary-card">
+              <span>Quarto selecionado</span>
+              <strong>{NOME_CASAS[selectedCasa]}</strong>
+              <small>
+                {selectedCasaResumo?.livres ?? 0} vagas livres de {selectedCasaResumo?.total ?? 0}
+              </small>
+            </div>
+
+            <div className={`checkin-selection ${selectedCama ? 'active' : ''}`}>
+              <span>Cama escolhida</span>
+              {selectedCama ? (
+                <>
+                  <strong>Cama {selectedCama.numero}</strong>
+                  <small>{getPositionLabel(selectedCama.posicao)} · {NOME_CASAS[selectedCama.casa]}</small>
+                </>
+              ) : (
+                <>
+                  <strong>Aguardando seleção</strong>
+                  <small>Escolha uma cama disponível para confirmar.</small>
+                </>
+              )}
+            </div>
+          </aside>
+
+          <div className="checkin-workspace">
+            <div className="checkin-room-tabs" aria-label="Quartos">
+              {casasResumo.map(({ casa, livres, total }) => (
+                <button
+                  className={selectedCasa === casa ? 'active' : ''}
+                  key={casa}
+                  onClick={() => setSelectedCasa(casa)}
+                  type="button"
+                >
+                  <strong>{NOME_CASAS[casa]}</strong>
+                  <span>{livres} livres de {total}</span>
+                  {casa === recommendedCasa && <em>Sugerido</em>}
+                </button>
+              ))}
+            </div>
+
+            <div className="checkin-toolbar">
+              <div>
+                <h3>{NOME_CASAS[selectedCasa]}</h3>
+                <p>
+                  {showUnavailable
+                    ? 'Mostrando todas as camas do quarto.'
+                    : 'Mostrando somente camas disponíveis.'}
+                </p>
+              </div>
+              <label className="checkin-toggle">
+                <input
+                  checked={showUnavailable}
+                  onChange={(event) => setShowUnavailable(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>Ver ocupadas e bloqueadas</span>
+              </label>
+            </div>
+
+            {loading && (
+              <div className="checkin-loading">
+                <span />
+                <strong>Carregando mapa de camas</strong>
+              </div>
+            )}
+
+            {error && <div className="checkin-error">{error}</div>}
+
+            {!loading && !error && camasVisiveis.length === 0 && (
+              <div className="checkin-empty">
+                <strong>Nenhuma cama disponível neste filtro</strong>
+                <p>Troque de quarto ou habilite a visualização de camas ocupadas e bloqueadas.</p>
+              </div>
+            )}
+
+            {!loading && !error && camasVisiveis.length > 0 && (
+              <div className="checkin-beds-grid">
+                {camasVisiveis.map((cama) => {
+                  const isSelectable = cama.status === 'DISPONIVEL';
+                  const isSelected = selectedCamaId === cama.id;
+
+                  return (
+                    <button
+                      className={`checkin-bed-card status-${cama.status.toLowerCase()} ${isSelected ? 'selected' : ''}`}
+                      disabled={!isSelectable}
+                      key={cama.id}
+                      onClick={() => isSelectable && setSelectedCamaId(cama.id)}
+                      type="button"
+                    >
+                      <BunkBedIcon posicao={cama.posicao} status={cama.status} />
+                      <strong>{cama.numero}</strong>
+                      <span>{getPositionLabel(cama.posicao)}</span>
+                      <em>
+                        {cama.status === 'DISPONIVEL' ? 'Disponível' : cama.status === 'OCUPADA' ? 'Ocupada' : 'Bloqueada'}
+                      </em>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="checkin-footer">
+          <button className="checkin-secondary-button" disabled={isSubmitting} onClick={onClose} type="button">
+            Cancelar
+          </button>
+          <button
+            className="checkin-primary-button"
+            disabled={!selectedCamaId || isSubmitting}
+            onClick={handleCheckin}
+            type="button"
+          >
+            {isSubmitting ? 'Confirmando...' : 'Confirmar entrada'}
+          </button>
+        </footer>
       </div>
     </div>
   );

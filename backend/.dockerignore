@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+uploads
+.env
+.env.*
+*.log
+npm-debug.log*
+test_image.jpg
+database/database.sqlite

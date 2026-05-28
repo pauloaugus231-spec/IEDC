@@ -2,8 +2,11 @@ import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/commo
 import { OcorrenciasService } from './ocorrencias.service';
 import { CreateOcorrenciaDto } from './dto/create-ocorrencia.dto';
 import { UpdateOcorrenciaDto } from './dto/update-ocorrencia.dto';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @Controller('ocorrencias')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
 export class OcorrenciasController {
   constructor(private readonly ocorrenciasService: OcorrenciasService) {}
 
@@ -28,11 +31,13 @@ export class OcorrenciasController {
   }
 
   @Patch(':id')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
   update(@Param('id') id: string, @Body() dto: UpdateOcorrenciaDto) {
     return this.ocorrenciasService.update(id, dto);
   }
 
   @Delete(':id')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
   remove(@Param('id') id: string) {
     return this.ocorrenciasService.remove(id);
   }

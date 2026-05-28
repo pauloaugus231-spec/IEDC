@@ -5,6 +5,7 @@ import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, T
 import { Pie, Bar, getElementAtEvent } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { downloadExcelCompatibleTable } from '../utils/spreadsheet';
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -12,6 +13,7 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Le
 const ReportsPage = () => {
   // Dados Brutos
   const [rawData, setRawData] = useState<any[]>([]);
+  const [operacionalResumo, setOperacionalResumo] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Estado do Filtro Drill-down
@@ -33,6 +35,24 @@ const ReportsPage = () => {
   const barChartRef = useRef<any>(null);
 
   // --- 1. CARGA DE DADOS DA API ---
+  const carregarResumoOperacional = async () => {
+    let url = '/api/relatorios/operacional-resumo';
+    const params = new URLSearchParams();
+
+    if (filtrosAvancados.dataInicio && filtrosAvancados.dataFim) {
+      params.set('inicio', filtrosAvancados.dataInicio);
+      params.set('fim', filtrosAvancados.dataFim);
+    }
+
+    const filtrosRel: any = {};
+    if (filtrosAvancados.quarto) filtrosRel.quarto = filtrosAvancados.quarto;
+    if (Object.keys(filtrosRel).length > 0) params.set('filtros', JSON.stringify(filtrosRel));
+    if (params.toString()) url += `?${params.toString()}`;
+
+    const response = await apiFetch(url);
+    setOperacionalResumo(response);
+  };
+
   const carregarDados = async () => {
     setLoading(true);
     try {
@@ -52,6 +72,7 @@ const ReportsPage = () => {
       const response = await apiFetch(url);
       const dados = Array.isArray(response) ? response : (response as any).data || [];
       setRawData(dados);
+      await carregarResumoOperacional();
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       setRawData([]);
@@ -272,10 +293,7 @@ const ReportsPage = () => {
     doc.save('relatorio-albergue.pdf');
   };
 
-  const downloadExcel = async () => {
-    // Import dinâmico para evitar problemas de bundling/interop no carregamento inicial
-    const XLSX = await import('xlsx');
-
+  const downloadExcel = () => {
     const excelData = filteredData.map(row => ({
       Nome: mascararNome(row.nome || row.pessoa_nome),
       CPF: mascararCPF(row.cpf || row.pessoa_cpf),
@@ -285,10 +303,7 @@ const ReportsPage = () => {
       LGBT: (row.lgbt || row.pessoa_lgbt) ? 'Sim' : 'Não',
     }));
 
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Acolhidos');
-    XLSX.writeFile(wb, 'relatorio-acolhidos.xlsx');
+    downloadExcelCompatibleTable(excelData, 'relatorio-acolhidos.xls', 'Acolhidos');
   };
 
   // --- ESTILOS ---
@@ -432,6 +447,38 @@ const ReportsPage = () => {
         <KpiCard title="Média de Idade" value={`${kpis.mediaIdade} Anos`} color="#F59E0B" sub="Da seleção atual" />
         <KpiCard title="LGBT+" value={kpis.lgbtCount} color="#8B5CF6" sub={`${kpis.total > 0 ? Math.round((kpis.lgbtCount / kpis.total) * 100) : 0}% do total`} />
       </div>
+
+      {operacionalResumo && (
+        <div style={{ ...cardStyle, marginBottom: '24px' }}>
+          <h3 style={cardTitleStyle}>
+            Resumo operacional do período
+            <span style={hintStyle}>novos, retornos e faixa etária</span>
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px', marginBottom: '18px' }}>
+            <KpiCard title="Pessoas únicas" value={operacionalResumo.pessoasUnicas ?? 0} color="#2563EB" />
+            <KpiCard title="Acessos/estadias" value={operacionalResumo.acessosPeriodo ?? 0} color="#0F9D58" />
+            <KpiCard title="Novos acessos" value={operacionalResumo.novosAcessos ?? 0} color="#F59E0B" />
+            <KpiCard title="Retornos" value={operacionalResumo.retornos ?? 0} color="#7C3AED" />
+            <KpiCard title="Pernoites estimados" value={operacionalResumo.pernoitesEstimados ?? 0} color="#1F2937" />
+          </div>
+
+          <div style={{ display: 'grid', gap: '10px' }}>
+            {(operacionalResumo.faixaEtaria ?? []).map((item: any) => {
+              const max = Math.max(...(operacionalResumo.faixaEtaria ?? []).map((row: any) => Number(row.total || 0)), 1);
+              const width = Math.round((Number(item.total || 0) / max) * 100);
+              return (
+                <div key={item.faixa} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 42px', alignItems: 'center', gap: '10px' }}>
+                  <strong style={{ color: '#374151', fontSize: '13px' }}>{item.faixa}</strong>
+                  <span style={{ background: '#EEF2F7', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
+                    <i style={{ display: 'block', width: `${width}%`, height: '100%', background: '#2563EB', borderRadius: '999px' }} />
+                  </span>
+                  <em style={{ color: '#111827', fontStyle: 'normal', fontWeight: 800 }}>{item.total}</em>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* GRÁFICOS INTERATIVOS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginBottom: '24px' }}>

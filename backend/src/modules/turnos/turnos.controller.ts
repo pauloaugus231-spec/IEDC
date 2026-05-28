@@ -10,9 +10,12 @@ import {
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { TurnosService, CreateTurnoDto, UpdateTurnoDto } from './turnos.service';
 import { Turno } from '../../entities/turno.entity';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @ApiTags('turnos')
 @Controller('turnos')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
 export class TurnosController {
   constructor(private readonly turnosService: TurnosService) {}
 

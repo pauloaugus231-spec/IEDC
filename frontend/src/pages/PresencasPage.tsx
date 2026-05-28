@@ -1,5 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "../api";
+import {
+  clearTriagemCensoStorage,
+  getOperationalPlantaoKey,
+  getOperationalPlantaoKeyFromValue,
+  getTriagemCensoStorageState,
+} from "../utils";
 
 type Quarto = "Masculino" | "Feminino" | "Idosos" | "LGBT+";
 
@@ -109,21 +115,18 @@ const PresencasPage: React.FC = () => {
   // Verificar se triagem já foi encerrada hoje E monitorar mudança de dia
   useEffect(() => {
     const checkTriagemStatus = () => {
-      const hoje = new Date().toISOString().split('T')[0];
-      const lastTriagemDate = localStorage.getItem('lastTriagemDate');
-      const triagemEncerradaStorage = localStorage.getItem('triagemEncerrada');
+      const plantaoAtual = getOperationalPlantaoKey();
+      const storageState = getTriagemCensoStorageState();
 
-      // Se existe uma data anterior E é diferente de hoje, resetar tudo (novo dia)
-      if (lastTriagemDate && lastTriagemDate !== hoje) {
-        console.log(`🔄 Novo dia detectado (${lastTriagemDate} → ${hoje}) - Resetando sistema`);
-        localStorage.removeItem('triagemEncerrada');
-        localStorage.removeItem('censoData');
-        localStorage.removeItem('lastTriagemDate');
+      // Se existe um plantão anterior, resetar apenas depois das 07h.
+      if (storageState.shouldClear) {
+        console.log(`Novo ciclo operacional detectado (${storageState.storedPlantaoKey} -> ${plantaoAtual}) - resetando censo`);
+        clearTriagemCensoStorage();
         setTriagemEncerrada(false);
         fetchAcolhidos();
       }
-      // Se a data é hoje E triagem foi encerrada, manter bloqueado
-      else if (lastTriagemDate === hoje && triagemEncerradaStorage === 'true') {
+      // Se o plantão é o atual E triagem foi encerrada, manter bloqueado.
+      else if (storageState.mode === 'censo') {
         setTriagemEncerrada(true);
       }
       // Caso contrário (primeira vez ou data foi resetada), desbloquear
@@ -162,13 +165,11 @@ const PresencasPage: React.FC = () => {
         else if (cama?.casa === "LGBT") quarto = "LGBT+";
         
         // Normalizar data de entrada para formato YYYY-MM-DD
-        const dataCheckin = estadiaAtiva?.data_checkin 
-          ? new Date(estadiaAtiva.data_checkin).toISOString().split('T')[0]
-          : "";
+        const dataCheckin = getOperationalPlantaoKeyFromValue(estadiaAtiva?.data_checkin);
         
-        // Novatos (entrada hoje) já vêm com presença confirmada automaticamente
-        const hoje = new Date().toISOString().split('T')[0];
-        const isNovato = dataCheckin === hoje;
+        // Novatos do plantão atual já vêm com presença confirmada automaticamente.
+        const plantaoAtual = getOperationalPlantaoKey();
+        const isNovato = dataCheckin === plantaoAtual;
         const presenteValue = isNovato ? true : (pessoa.presente || false);
         
         return {
@@ -266,10 +267,10 @@ const PresencasPage: React.FC = () => {
     setIsClosing(true);
     
     // Passo 1: Filtrar ausentes (veteranos ausentes - entraram antes de hoje e não marcaram presença)
-    const hoje = new Date().toISOString().split('T')[0];
+    const plantaoAtual = getOperationalPlantaoKey();
     
     const ausentesIds = acolhidos
-      .filter(a => !a.presente && a.data_entrada && a.data_entrada < hoje)
+      .filter(a => !a.presente && a.data_entrada && a.data_entrada < plantaoAtual)
       .map(a => a.id);
     
     if (ausentesIds.length > 0) {
@@ -285,7 +286,7 @@ const PresencasPage: React.FC = () => {
     }
     
     // Passo 2: Calcular censo da noite
-    const ocupacaoFinal = acolhidos.filter(a => a.presente || a.data_entrada === hoje);
+    const ocupacaoFinal = acolhidos.filter(a => a.presente || a.data_entrada === plantaoAtual);
     const total = ocupacaoFinal.length;
     const porQuarto = QUARTOS.reduce((acc, q) => {
       acc[q] = ocupacaoFinal.filter(a => a.quarto === q).length;
@@ -367,7 +368,8 @@ const PresencasPage: React.FC = () => {
 
     // Salvar estado da triagem encerrada no localStorage
     localStorage.setItem('triagemEncerrada', 'true');
-    localStorage.setItem('lastTriagemDate', hoje);
+    localStorage.setItem('lastTriagemDate', plantaoAtual);
+    localStorage.setItem('lastTriagemClosedAt', new Date().toISOString());
     localStorage.setItem('censoData', JSON.stringify(censoPayload));
   };
 
@@ -501,8 +503,8 @@ const PresencasPage: React.FC = () => {
                   </div>
                   <div>
                     {residents.map((a) => {
-                      const hoje = new Date().toISOString().split('T')[0];
-                      const isNovato = a.data_entrada === hoje;
+                      const plantaoAtual = getOperationalPlantaoKey();
+                      const isNovato = a.data_entrada === plantaoAtual;
                       
                       return (
                       <div 

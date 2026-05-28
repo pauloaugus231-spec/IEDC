@@ -1,12 +1,15 @@
-import { Controller, Post, Param, Body, Get, UsePipes, ValidationPipe, Patch } from '@nestjs/common';
+import { Controller, Post, Param, Body, Get, UsePipes, ValidationPipe, Patch, NotFoundException } from '@nestjs/common';
 import { EstadiasService } from './estadias.service';
 import { CheckoutAutomaticoService } from './checkout-automatico.service';
 import { CreateCheckinDto } from './dto/create-checkin.dto';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { CreateProrrogacaoDto } from './dto/create-prorrogacao.dto';
 import { MotivoSaida } from '../../entities/estadia.entity';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @Controller('estadias')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
 export class EstadiasController {
   constructor(
     private readonly estadiasService: EstadiasService,
@@ -37,17 +40,23 @@ export class EstadiasController {
   }
 
   @Post('checkout-automatico')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
   async forcarCheckoutAutomatico() {
+    this.assertMaintenanceRoutesEnabled();
     return this.checkoutAutomaticoService.handleCheckoutAutomatico();
   }
 
   @Get('diagnostico-checkout')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
   async diagnosticarCheckout() {
+    this.assertMaintenanceRoutesEnabled();
     return this.estadiasService.diagnosticarCheckoutPendente();
   }
 
   @Post('forcar-checkout/:pessoa_id')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
   async forcarCheckoutPorPessoa(@Param('pessoa_id') pessoa_id: string) {
+    this.assertMaintenanceRoutesEnabled();
     // Força checkout usando o método testado do service
     try {
       const result = await this.estadiasService.checkout(
@@ -81,12 +90,22 @@ export class EstadiasController {
   }
 
   @Post('corrigir-duplicacoes')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
   async corrigirDuplicacoes() {
+    this.assertMaintenanceRoutesEnabled();
     return this.estadiasService.corrigirDuplicacoes();
   }
 
   @Get('diagnosticar-camas')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
   async diagnosticarCamas() {
+    this.assertMaintenanceRoutesEnabled();
     return this.estadiasService.diagnosticarCamas();
+  }
+
+  private assertMaintenanceRoutesEnabled() {
+    if (process.env.ENABLE_MAINTENANCE_ROUTES !== 'true') {
+      throw new NotFoundException('Rota indisponível.');
+    }
   }
 }

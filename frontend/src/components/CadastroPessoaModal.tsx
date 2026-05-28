@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { apiFetch, withAuthHeaders } from '../api';
 import './CadastroPessoaModal.css';
 
 interface Props {
@@ -21,7 +22,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   // Foto
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
@@ -125,7 +126,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
       2: ['cep', 'endereco', 'cidade', 'uf', 'telefone', 'nomeMae', 'contatoEmergencia'],
       3: ['medicamentos', 'condicoesCronicas', 'alergias', 'observacoes']
     };
-    
+
     const getProgress = (stepNum: number) => {
       const stepFields = fields[stepNum as keyof typeof fields];
       const filled = stepFields.filter(f => form[f as keyof typeof form]?.trim()).length;
@@ -167,8 +168,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
         tipo_vaga: 'masculina'
       };
 
-      const api = await import('../api');
-      const pessoaSalva: any = await api.apiFetch('/api/pessoas', {
+      const pessoaSalva: any = await apiFetch('/api/pessoas', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -180,7 +180,8 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
           formData.append('file', fotoFile);
           await fetch(`/api/pessoas/${pessoaSalva.id}/foto`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: withAuthHeaders(),
           });
         } catch (fotoError) {
           console.error('Erro no upload da foto:', fotoError);
@@ -223,366 +224,386 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   if (!open) return null;
 
   const getNomeExibicao = () => form.nomeSocial?.trim() || form.nome || 'Novo Cadastro';
+  const etapaAtual = stepProgress[step as 1 | 2 | 3];
+  const etapas = [
+    { num: 1, label: 'Identificação', description: 'Dados civis e sociais' },
+    { num: 2, label: 'Contato e vínculos', description: 'Endereço, família e emergência' },
+    { num: 3, label: 'Saúde e observações', description: 'Cuidados, foto e revisão' },
+  ];
 
   return (
     <div className="cadastro-overlay" onClick={handleClose}>
       <div className="cadastro-container" onClick={e => e.stopPropagation()}>
-        
-        {/* HEADER */}
         <div className="cadastro-header">
-          <div className="header-title">
-            <h2>📋 {getNomeExibicao()}</h2>
-            {form.nomeSocial && <span className="nome-social-badge">Nome Social</span>}
+          <div>
+            <span>Cadastro operacional</span>
+            <h2>Novo cadastro</h2>
+            <p>Identificação, contato e informações relevantes para a rotina do albergue.</p>
           </div>
-          <button className="close-btn" onClick={handleClose}>×</button>
+          <button aria-label="Fechar cadastro" className="close-btn" onClick={handleClose} type="button">×</button>
         </div>
 
-        {/* WIZARD STEPS */}
-        <div className="wizard-steps">
-          {[
-            { num: 1, label: 'Identificação', icon: '👤' },
-            { num: 2, label: 'Localização', icon: '📍' },
-            { num: 3, label: 'Saúde', icon: '🏥' }
-          ].map((s, i) => (
-            <div key={s.num} className="step-wrapper">
-              <div 
-                className={`step-item ${step === s.num ? 'active' : ''} ${step > s.num ? 'completed' : ''}`}
-                onClick={() => step > s.num && setStep(s.num)}
+        <div className="cadastro-shell">
+          <aside className="cadastro-aside">
+            <label className="cadastro-photo-card">
+              {fotoPreview ? (
+                <img src={fotoPreview} alt="Preview" className="foto-preview" />
+              ) : (
+                <span>Foto</span>
+              )}
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleFotoSelect}
+              />
+            </label>
+            {fotoPreview && (
+              <button
+                type="button"
+                className="btn-remove-foto"
+                onClick={() => { setFotoPreview(null); setFotoFile(null); }}
               >
-                <div className="step-circle">
-                  {step > s.num ? '✓' : s.icon}
-                </div>
-                <span className="step-label">{s.label}</span>
-                <span className="step-progress">{stepProgress[s.num as 1|2|3]}%</span>
-              </div>
-              {i < 2 && <div className={`step-line ${step > s.num ? 'completed' : ''}`} />}
+                Remover foto
+              </button>
+            )}
+
+            <div className="cadastro-aside-person">
+              <strong>{getNomeExibicao()}</strong>
+              <span>{form.cpf || 'CPF não informado'}</span>
+              {form.nomeSocial && <em>Nome social informado</em>}
             </div>
-          ))}
-        </div>
 
-        {/* PROGRESS BAR */}
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${((step - 1) / 2) * 100}%` }} />
-        </div>
-
-        {/* FORM BODY */}
-        <div className="cadastro-body">
-          
-          {/* STEP 1: IDENTIFICAÇÃO */}
-          {step === 1 && (
-            <div className="step-content">
-              <div className="form-grid">
-                <div className={`form-group full-width ${errors.nome ? 'has-error' : ''}`}>
-                  <label>Nome Civil Completo <span className="required">*</span></label>
-                  <input 
-                    name="nome" 
-                    value={form.nome} 
-                    onChange={handleChange}
-                    placeholder="Nome completo de registro"
-                  />
-                  {errors.nome && <span className="error-text">{errors.nome}</span>}
-                </div>
-
-                <div className="form-group full-width highlight-field">
-                  <label>Nome Social <span className="optional-badge">Opcional</span></label>
-                  <input 
-                    name="nomeSocial" 
-                    value={form.nomeSocial} 
-                    onChange={handleChange}
-                    placeholder="Como a pessoa prefere ser chamada"
-                  />
-                  <span className="field-hint">Será usado como nome principal</span>
-                </div>
-
-                <div className={`form-group ${errors.cpf ? 'has-error' : ''}`}>
-                  <label>CPF</label>
-                  <input 
-                    name="cpf" 
-                    value={form.cpf} 
-                    onChange={handleChange}
-                    placeholder="000.000.000-00"
-                  />
-                  {errors.cpf && <span className="error-text">{errors.cpf}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>RG</label>
-                  <input name="rg" value={form.rg} onChange={handleChange} />
-                </div>
-
-                <div className="form-group">
-                  <label>Data Nascimento</label>
-                  <input 
-                    type="date" 
-                    name="dataNascimento" 
-                    value={form.dataNascimento} 
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className={`form-group ${errors.sexo ? 'has-error' : ''}`}>
-                  <label>Sexo</label>
-                  <select name="sexo" value={form.sexo} onChange={handleChange}>
-                    <option value="">Selecione...</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                  </select>
-                  {errors.sexo && <span className="error-text">{errors.sexo}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>Gênero</label>
-                  <select name="genero" value={form.genero} onChange={handleChange}>
-                    <option value="">Selecione...</option>
-                    <option value="Homem cisgênero">Homem cisgênero</option>
-                    <option value="Mulher cisgênero">Mulher cisgênero</option>
-                    <option value="Homem transgênero">Homem transgênero</option>
-                    <option value="Mulher transgênero">Mulher transgênero</option>
-                    <option value="Travesti">Travesti</option>
-                    <option value="Não binário">Não binário</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Cor/Raça</label>
-                  <select name="cor" value={form.cor} onChange={handleChange}>
-                    <option value="">Selecione...</option>
-                    <option value="Branca">Branca</option>
-                    <option value="Preta">Preta</option>
-                    <option value="Parda">Parda</option>
-                    <option value="Amarela">Amarela</option>
-                    <option value="Indígena">Indígena</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Sexualidade</label>
-                  <select name="sexualidade" value={form.sexualidade} onChange={handleChange}>
-                    <option value="">Selecione...</option>
-                    <option value="Heterossexual">Heterossexual</option>
-                    <option value="Homossexual">Homossexual</option>
-                    <option value="Bissexual">Bissexual</option>
-                    <option value="Assexual">Assexual</option>
-                    <option value="Pansexual">Pansexual</option>
-                  </select>
-                </div>
+            <div className="cadastro-progress-card">
+              <div>
+                <span>Etapa {step} de 3</span>
+                <strong>{etapaAtual}%</strong>
+              </div>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${etapaAtual}%` }} />
               </div>
             </div>
-          )}
 
-          {/* STEP 2: LOCALIZAÇÃO */}
-          {step === 2 && (
-            <div className="step-content">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>
-                    CEP 
-                    {loadingCep && <span className="loading-spinner">⏳</span>}
-                  </label>
-                  <input 
-                    name="cep" 
-                    value={form.cep} 
-                    onChange={handleChange}
-                    onBlur={handleCepBlur}
-                    placeholder="00000-000"
-                  />
-                  <span className="field-hint">Preenche endereço automaticamente</span>
+            <nav className="wizard-steps" aria-label="Etapas do cadastro">
+              {etapas.map((s) => (
+                <button
+                  key={s.num}
+                  type="button"
+                  className={`step-item ${step === s.num ? 'active' : ''} ${step > s.num ? 'completed' : ''}`}
+                  onClick={() => s.num <= step && setStep(s.num)}
+                >
+                  <span>{s.num}</span>
+                  <strong>{s.label}</strong>
+                  <small>{s.description}</small>
+                </button>
+              ))}
+            </nav>
+
+            <p className="cadastro-lgpd-note">
+              Dados pessoais devem ser preenchidos apenas para finalidade institucional e operacional.
+            </p>
+          </aside>
+
+          <section className="cadastro-workspace">
+            <div className="cadastro-body">
+              {step === 1 && (
+                <div className="step-content">
+                  <div className="step-heading">
+                    <span>Etapa 1</span>
+                    <h3>Identificação</h3>
+                    <p>Informe os dados básicos da pessoa atendida. O nome social, quando informado, será priorizado na exibição.</p>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className={`form-group full-width ${errors.nome ? 'has-error' : ''}`}>
+                      <label>Nome civil completo <span className="required">*</span></label>
+                      <input
+                        name="nome"
+                        value={form.nome}
+                        onChange={handleChange}
+                        placeholder="Nome completo de registro"
+                      />
+                      {errors.nome && <span className="error-text">{errors.nome}</span>}
+                    </div>
+
+                    <div className="form-group full-width highlight-field">
+                      <label>Nome social <span className="optional-badge">Opcional</span></label>
+                      <input
+                        name="nomeSocial"
+                        value={form.nomeSocial}
+                        onChange={handleChange}
+                        placeholder="Como a pessoa prefere ser chamada"
+                      />
+                      <span className="field-hint">Será usado como nome principal na operação.</span>
+                    </div>
+
+                    <div className={`form-group ${errors.cpf ? 'has-error' : ''}`}>
+                      <label>CPF</label>
+                      <input
+                        name="cpf"
+                        value={form.cpf}
+                        onChange={handleChange}
+                        placeholder="000.000.000-00"
+                      />
+                      {errors.cpf && <span className="error-text">{errors.cpf}</span>}
+                    </div>
+
+                    <div className="form-group">
+                      <label>RG</label>
+                      <input name="rg" value={form.rg} onChange={handleChange} />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Data de nascimento</label>
+                      <input
+                        type="date"
+                        name="dataNascimento"
+                        value={form.dataNascimento}
+                        onChange={handleChange}
+                      />
+                    </div>
+
+                    <div className={`form-group ${errors.sexo ? 'has-error' : ''}`}>
+                      <label>Sexo</label>
+                      <select name="sexo" value={form.sexo} onChange={handleChange}>
+                        <option value="">Selecione...</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                      </select>
+                      {errors.sexo && <span className="error-text">{errors.sexo}</span>}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Gênero</label>
+                      <select name="genero" value={form.genero} onChange={handleChange}>
+                        <option value="">Selecione...</option>
+                        <option value="Homem cisgênero">Homem cisgênero</option>
+                        <option value="Mulher cisgênero">Mulher cisgênero</option>
+                        <option value="Homem transgênero">Homem transgênero</option>
+                        <option value="Mulher transgênero">Mulher transgênero</option>
+                        <option value="Travesti">Travesti</option>
+                        <option value="Não binário">Não binário</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Cor/raça</label>
+                      <select name="cor" value={form.cor} onChange={handleChange}>
+                        <option value="">Selecione...</option>
+                        <option value="Branca">Branca</option>
+                        <option value="Preta">Preta</option>
+                        <option value="Parda">Parda</option>
+                        <option value="Amarela">Amarela</option>
+                        <option value="Indígena">Indígena</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Sexualidade</label>
+                      <select name="sexualidade" value={form.sexualidade} onChange={handleChange}>
+                        <option value="">Selecione...</option>
+                        <option value="Heterossexual">Heterossexual</option>
+                        <option value="Homossexual">Homossexual</option>
+                        <option value="Bissexual">Bissexual</option>
+                        <option value="Assexual">Assexual</option>
+                        <option value="Pansexual">Pansexual</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                <div className="form-group span-3">
-                  <label>Endereço</label>
-                  <input name="endereco" value={form.endereco} onChange={handleChange} />
+              {step === 2 && (
+                <div className="step-content">
+                  <div className="step-heading">
+                    <span>Etapa 2</span>
+                    <h3>Contato e vínculos</h3>
+                    <p>Registre endereço, telefones e referências familiares para uso operacional.</p>
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>
+                        CEP
+                        {loadingCep && <span className="loading-spinner" />}
+                      </label>
+                      <input
+                        name="cep"
+                        value={form.cep}
+                        onChange={handleChange}
+                        onBlur={handleCepBlur}
+                        placeholder="00000-000"
+                      />
+                      <span className="field-hint">Preenche endereço automaticamente.</span>
+                    </div>
+
+                    <div className="form-group span-3">
+                      <label>Endereço</label>
+                      <input name="endereco" value={form.endereco} onChange={handleChange} />
+                    </div>
+
+                    <div className="form-group span-2">
+                      <label>Cidade</label>
+                      <input name="cidade" value={form.cidade} onChange={handleChange} />
+                    </div>
+
+                    <div className="form-group">
+                      <label>UF</label>
+                      <input
+                        name="uf"
+                        value={form.uf}
+                        onChange={handleChange}
+                        maxLength={2}
+                        style={{ textTransform: 'uppercase' }}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Naturalidade</label>
+                      <input name="naturalidade" value={form.naturalidade} onChange={handleChange} />
+                    </div>
+
+                    <div className="section-divider">
+                      <span>Família e contatos</span>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Telefone</label>
+                      <input
+                        name="telefone"
+                        value={form.telefone}
+                        onChange={handleChange}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Telefone de emergência</label>
+                      <input
+                        name="telefoneEmergencia"
+                        value={form.telefoneEmergencia}
+                        onChange={handleChange}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+
+                    <div className="form-group span-2">
+                      <label>Nome da mãe</label>
+                      <input name="nomeMae" value={form.nomeMae} onChange={handleChange} />
+                    </div>
+
+                    <div className="form-group span-2">
+                      <label>Nome do pai</label>
+                      <input name="nomePai" value={form.nomePai} onChange={handleChange} />
+                    </div>
+
+                    <div className="form-group full-width">
+                      <label>Contato de emergência</label>
+                      <input
+                        name="contatoEmergencia"
+                        value={form.contatoEmergencia}
+                        onChange={handleChange}
+                        placeholder="Ex: Maria Silva (mãe)"
+                      />
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                <div className="form-group span-2">
-                  <label>Cidade</label>
-                  <input name="cidade" value={form.cidade} onChange={handleChange} />
-                </div>
+              {step === 3 && (
+                <div className="step-content">
+                  <div className="step-heading">
+                    <span>Etapa 3</span>
+                    <h3>Saúde e observações</h3>
+                    <p>Registre informações que ajudam a equipe a acolher com segurança e continuidade.</p>
+                  </div>
 
-                <div className="form-group">
-                  <label>UF</label>
-                  <input 
-                    name="uf" 
-                    value={form.uf} 
-                    onChange={handleChange}
-                    maxLength={2}
-                    style={{ textTransform: 'uppercase' }}
-                  />
-                </div>
+                  <div className="saude-fields">
+                    <div className="health-card warning">
+                      <label>Alergias</label>
+                      <textarea
+                        name="alergias"
+                        value={form.alergias}
+                        onChange={handleChange}
+                        rows={2}
+                        placeholder="Medicamentos, alimentos, substâncias..."
+                      />
+                    </div>
 
-                <div className="form-group">
-                  <label>Naturalidade</label>
-                  <input name="naturalidade" value={form.naturalidade} onChange={handleChange} />
-                </div>
+                    <div className="health-card info">
+                      <label>Medicamentos de uso contínuo</label>
+                      <textarea
+                        name="medicamentos"
+                        value={form.medicamentos}
+                        onChange={handleChange}
+                        rows={2}
+                        placeholder="Nome, dosagem e horários..."
+                      />
+                    </div>
 
-                <div className="section-divider">
-                  <span>👨‍👩‍👦 Família e Contatos</span>
-                </div>
+                    <div className="health-card">
+                      <label>Condições crônicas</label>
+                      <textarea
+                        name="condicoesCronicas"
+                        value={form.condicoesCronicas}
+                        onChange={handleChange}
+                        rows={2}
+                        placeholder="Diabetes, hipertensão, etc..."
+                      />
+                    </div>
+                  </div>
 
-                <div className="form-group">
-                  <label>Telefone</label>
-                  <input 
-                    name="telefone" 
-                    value={form.telefone} 
-                    onChange={handleChange}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Tel. Emergência</label>
-                  <input 
-                    name="telefoneEmergencia" 
-                    value={form.telefoneEmergencia} 
-                    onChange={handleChange}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="form-group span-2">
-                  <label>Nome da Mãe</label>
-                  <input name="nomeMae" value={form.nomeMae} onChange={handleChange} />
-                </div>
-
-                <div className="form-group span-2">
-                  <label>Nome do Pai</label>
-                  <input name="nomePai" value={form.nomePai} onChange={handleChange} />
-                </div>
-
-                <div className="form-group full-width">
-                  <label>Contato de Emergência (Nome e parentesco)</label>
-                  <input 
-                    name="contatoEmergencia" 
-                    value={form.contatoEmergencia} 
-                    onChange={handleChange}
-                    placeholder="Ex: Maria Silva (mãe)"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: SAÚDE E FOTO */}
-          {step === 3 && (
-            <div className="step-content">
-              <div className="step3-layout">
-                {/* Área de Foto */}
-                <div className="foto-upload-area">
-                  <label className="foto-upload-label">
-                    {fotoPreview ? (
-                      <img src={fotoPreview} alt="Preview" className="foto-preview" />
-                    ) : (
-                      <div className="foto-placeholder">
-                        <span className="foto-icon">📷</span>
-                        <span>Adicionar Foto</span>
-                      </div>
-                    )}
-                    <input 
-                      type="file" 
-                      hidden 
-                      accept="image/*"
-                      onChange={handleFotoSelect}
-                    />
-                  </label>
-                  {fotoPreview && (
-                    <button 
-                      type="button" 
-                      className="btn-remove-foto"
-                      onClick={() => { setFotoPreview(null); setFotoFile(null); }}
-                    >
-                      🗑️ Remover
-                    </button>
-                  )}
-                </div>
-
-                {/* Campos de Saúde */}
-                <div className="saude-fields">
-                  <div className="health-card warning">
-                    <label>⚠️ Alergias</label>
-                    <textarea 
-                      name="alergias" 
-                      value={form.alergias} 
+                  <div className="form-group full-width">
+                    <label>Observações gerais</label>
+                    <textarea
+                      name="observacoes"
+                      value={form.observacoes}
                       onChange={handleChange}
-                      rows={2}
-                      placeholder="Medicamentos, alimentos, substâncias..."
+                      rows={3}
+                      placeholder="Informações adicionais importantes..."
                     />
                   </div>
 
-                  <div className="health-card info">
-                    <label>💊 Medicamentos de Uso Contínuo</label>
-                    <textarea 
-                      name="medicamentos" 
-                      value={form.medicamentos} 
-                      onChange={handleChange}
-                      rows={2}
-                      placeholder="Nome, dosagem e horários..."
-                    />
-                  </div>
-
-                  <div className="health-card">
-                    <label>🏥 Condições Crônicas</label>
-                    <textarea 
-                      name="condicoesCronicas" 
-                      value={form.condicoesCronicas} 
-                      onChange={handleChange}
-                      rows={2}
-                      placeholder="Diabetes, hipertensão, etc..."
-                    />
+                  <div className="summary-card">
+                    <h4>Resumo do cadastro</h4>
+                    <div className="summary-grid">
+                      <div><strong>Nome:</strong> {getNomeExibicao()}</div>
+                      <div><strong>CPF:</strong> {form.cpf || '-'}</div>
+                      <div><strong>Telefone:</strong> {form.telefone || '-'}</div>
+                      <div><strong>Cidade:</strong> {form.cidade || '-'}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="form-group full-width">
-                <label>📝 Observações Gerais</label>
-                <textarea 
-                  name="observacoes" 
-                  value={form.observacoes} 
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Informações adicionais importantes..."
-                />
-              </div>
-
-              {/* Resumo antes de salvar */}
-              <div className="summary-card">
-                <h4>📋 Resumo do Cadastro</h4>
-                <div className="summary-grid">
-                  <div><strong>Nome:</strong> {getNomeExibicao()}</div>
-                  <div><strong>CPF:</strong> {form.cpf || '-'}</div>
-                  <div><strong>Telefone:</strong> {form.telefone || '-'}</div>
-                  <div><strong>Cidade:</strong> {form.cidade || '-'}</div>
-                </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* FOOTER */}
-        <div className="cadastro-footer">
-          {step > 1 ? (
-            <button type="button" className="btn-secondary" onClick={() => setStep(s => s - 1)}>
-              ← Voltar
-            </button>
-          ) : (
-            <button type="button" className="btn-secondary" onClick={handleClose}>
-              Cancelar
-            </button>
-          )}
-          
-          {step < 3 ? (
-            <button type="button" className="btn-primary" onClick={handleNext}>
-              Próximo →
-            </button>
-          ) : (
-            <button 
-              type="button" 
-              className="btn-primary btn-success"
-              onClick={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? '⏳ Salvando...' : '✅ Finalizar Cadastro'}
-            </button>
-          )}
+            <div className="cadastro-footer">
+              {step > 1 ? (
+                <button type="button" className="btn-secondary" onClick={() => setStep(s => s - 1)}>
+                  Voltar
+                </button>
+              ) : (
+                <button type="button" className="btn-secondary" onClick={handleClose}>
+                  Cancelar
+                </button>
+              )}
+
+              {step < 3 ? (
+                <button type="button" className="btn-primary" onClick={handleNext}>
+                  Continuar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? 'Salvando...' : 'Salvar cadastro'}
+                </button>
+              )}
+            </div>
+          </section>
         </div>
       </div>
     </div>

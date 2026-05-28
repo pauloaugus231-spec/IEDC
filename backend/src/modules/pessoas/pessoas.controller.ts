@@ -19,9 +19,12 @@ import { PessoasService } from './pessoas.service';
 import { CreatePessoaDto } from './dto/create-pessoa.dto';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
+import { Roles } from '../../auth/roles.decorator';
+import { UsuarioRole } from '../../entities/usuario.entity';
 
 @ApiTags('pessoas')
 @Controller('pessoas')
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
 export class PessoasController {
   constructor(private readonly pessoasService: PessoasService) {}
 
@@ -93,6 +96,7 @@ export class PessoasController {
   }
 
   @Delete(':id')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
   @ApiOperation({ summary: 'Excluir pessoa (soft delete)' })
   @ApiResponse({ status: 200, description: 'Pessoa excluída com sucesso' })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
@@ -138,6 +142,7 @@ export class PessoasController {
   }
 
   @Delete(':id/foto')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
   @ApiOperation({ summary: 'Remover foto da pessoa' })
   @ApiResponse({ status: 200, description: 'Foto removida com sucesso' })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })

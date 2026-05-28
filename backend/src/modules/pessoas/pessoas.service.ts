@@ -46,7 +46,7 @@ export class PessoasService {
     if (search) {
       // ✅ OTIMIZADO: ILIKE para busca case-insensitive (usa índice idx_pessoas_nome_trgm)
       queryBuilder.andWhere(
-        '(pessoa.nome ILIKE :search OR pessoa.nome_social ILIKE :search OR pessoa.cpf ILIKE :search)',
+        '(pessoa.nome ILIKE :search OR pessoa.nome_social ILIKE :search OR pessoa.cpf ILIKE :search OR pessoa.nis ILIKE :search)',
         { search: `%${search}%` }
       );
     }
@@ -57,7 +57,7 @@ export class PessoasService {
 
     // ✅ OTIMIZADO: COUNT separado (mais rápido)
     const total = await queryBuilder.getCount();
-    
+
     // ✅ OTIMIZADO: Buscar apenas a página atual
     const data = await queryBuilder
       .orderBy('pessoa.created_at', 'DESC') // Usa índice idx_pessoas_created_at
@@ -90,18 +90,18 @@ export class PessoasService {
 
   async update(id: string, updatePessoaDto: UpdatePessoaDto): Promise<Pessoa> {
     const pessoa = await this.findOne(id);
-    
+
     // Remover campos que não devem ser atualizados diretamente
     const { estadias, bloqueios, created_at, updated_at, id: _, ...dadosPermitidos } = updatePessoaDto as any;
-    
+
     Object.assign(pessoa, dadosPermitidos);
-    
+
     return this.pessoaRepository.save(pessoa);
   }
 
   async remove(id: string): Promise<void> {
     const pessoa = await this.findOne(id);
-    
+
     // Soft delete
     pessoa.ativo = false;
     await this.pessoaRepository.save(pessoa);
@@ -113,14 +113,14 @@ export class PessoasService {
       .leftJoinAndSelect('pessoa.estadias', 'estadia', 'estadia.status = :status', { status: StatusEstadia.ATIVA })
       .leftJoinAndSelect('estadia.cama', 'cama')
       .where('pessoa.ativo = true');
-    
+
     if (query && query.trim()) {
       qb.andWhere(
-        '(pessoa.nome ILIKE :query OR pessoa.nome_social ILIKE :query OR pessoa.cpf ILIKE :query)', 
+        '(pessoa.nome ILIKE :query OR pessoa.nome_social ILIKE :query OR pessoa.cpf ILIKE :query OR pessoa.nis ILIKE :query)',
         { query: `%${query}%` }
       );
     }
-    
+
     qb.take(20).orderBy('pessoa.nome', 'ASC');
     return qb.getMany();
   }
@@ -148,7 +148,7 @@ export class PessoasService {
       bloqueio.data_liberacao_antecipada = new Date();
       bloqueio.liberado_por = funcionario || 'sistema';
       await this.bloqueioRepository.save(bloqueio);
-      
+
       nomesResponsaveis.push(funcionario || 'sistema');
     }
 
@@ -162,7 +162,7 @@ export class PessoasService {
       data_ocorrencia: new Date(),
       criado_por: funcionario || 'sistema',
     });
-    
+
     await this.ocorrenciaRepository.save(ocorrencia);
 
     return this.pessoaRepository.save(pessoa);
@@ -243,11 +243,11 @@ export class PessoasService {
     if (!pessoa) {
       throw new NotFoundException('Pessoa não encontrada');
     }
-    
+
     if (!('presente' in pessoa)) {
       throw new BadRequestException('Campo "presente" não existe na entidade Pessoa. Execute a migration necessária.');
     }
-    
+
     pessoa.presente = presente;
     return this.pessoaRepository.save(pessoa);
   }
