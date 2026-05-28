@@ -33,7 +33,7 @@ nano .env
 docker compose up -d --build
 ```
 
-O primeiro boot pode levar um pouco mais porque aplica a migration inicial e cria usuarios institucionais padrao quando o banco esta vazio.
+O primeiro boot pode levar um pouco mais porque aplica a migration inicial e cria apenas o usuario inicial de suporte quando o banco esta vazio.
 
 Variaveis obrigatorias antes de subir:
 
@@ -46,6 +46,8 @@ IEDC_DEFAULT_PASSWORD=senha_temporaria_para_primeiro_acesso
 Em banco novo, `POSTGRES_PASSWORD` cria a senha inicial do usuario `POSTGRES_USER`.
 Em volume ja existente, trocar essa variavel nao altera a senha gravada no PostgreSQL.
 Nesse caso, ajuste a senha no banco ou mantenha o mesmo segredo antigo no `.env`.
+
+`IEDC_DEFAULT_PASSWORD` define a senha temporaria do usuario `suporte` criado no primeiro boot. Esse usuario deve trocar a senha no primeiro acesso e criar os demais usuarios reais conforme a necessidade institucional.
 
 Acesse:
 

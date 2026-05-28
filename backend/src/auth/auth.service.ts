@@ -50,16 +50,6 @@ type RoleProfile = Pick<Usuario, 'roleLabel' | 'service' | 'serviceLabel' | 'hom
 
 const INITIAL_USERS: InitialUser[] = [
   {
-    login: 'claudia',
-    name: 'Claudia',
-    displayName: 'Claudia',
-    role: UsuarioRole.GESTORA,
-    roleLabel: 'Gestão',
-    service: UsuarioServiceScope.GESTAO,
-    serviceLabel: 'Gestão institucional',
-    homePath: '/gestao',
-  },
-  {
     login: 'suporte',
     name: 'Suporte',
     displayName: 'Suporte',
@@ -68,96 +58,6 @@ const INITIAL_USERS: InitialUser[] = [
     service: UsuarioServiceScope.SUPORTE,
     serviceLabel: 'Suporte institucional',
     homePath: '/suporte/usuarios',
-  },
-  {
-    login: 'coord-albergue',
-    name: 'Coordenação Albergue',
-    displayName: 'Coordenação do Albergue',
-    role: UsuarioRole.COORDENADOR_ALBERGUE,
-    roleLabel: 'Coordenação',
-    service: UsuarioServiceScope.ALBERGUE,
-    serviceLabel: 'Albergue Noturno',
-    homePath: '/albergue',
-  },
-  {
-    login: 'coord-creche',
-    name: 'Coordenação E.E.I.',
-    displayName: 'Coordenação da E.E.I.',
-    role: UsuarioRole.COORDENADOR_CRECHE,
-    roleLabel: 'Coordenação',
-    service: UsuarioServiceScope.CRECHE,
-    serviceLabel: 'E.E.I. Casa do Pequenino',
-    homePath: '/creche',
-  },
-  {
-    login: 'equipe-tecnica',
-    name: 'Equipe Técnica',
-    displayName: 'Equipe Técnica',
-    role: UsuarioRole.EQUIPE_TECNICA,
-    roleLabel: 'Equipe técnica',
-    service: UsuarioServiceScope.INSTITUCIONAL,
-    serviceLabel: 'Atendimento institucional',
-    homePath: '/gestao',
-  },
-  {
-    login: 'educador-albergue',
-    name: 'Educador Albergue',
-    displayName: 'Educador do Albergue',
-    role: UsuarioRole.EDUCADOR_ALBERGUE,
-    roleLabel: 'Educador',
-    service: UsuarioServiceScope.ALBERGUE,
-    serviceLabel: 'Albergue Noturno',
-    homePath: '/albergue',
-  },
-  {
-    login: 'educador-creche',
-    name: 'Educador E.E.I.',
-    displayName: 'Educador da E.E.I.',
-    role: UsuarioRole.EDUCADOR_CRECHE,
-    roleLabel: 'Educador',
-    service: UsuarioServiceScope.CRECHE,
-    serviceLabel: 'E.E.I. Casa do Pequenino',
-    homePath: '/creche',
-  },
-  {
-    login: 'financeiro',
-    name: 'Secretaria / Financeiro',
-    displayName: 'Secretaria / Financeiro',
-    role: UsuarioRole.FINANCEIRO,
-    roleLabel: 'Financeiro',
-    service: UsuarioServiceScope.FINANCEIRO,
-    serviceLabel: 'Secretaria e Financeiro',
-    homePath: '/lojas/secretaria',
-  },
-  {
-    login: 'loja-bazar',
-    name: 'Bazar',
-    displayName: 'Equipe do Bazar',
-    role: UsuarioRole.LOJA_BAZAR,
-    roleLabel: 'Loja',
-    service: UsuarioServiceScope.BAZAR,
-    serviceLabel: 'Bazar',
-    homePath: '/lojas/bazar',
-  },
-  {
-    login: 'loja-brecho',
-    name: 'Brechó',
-    displayName: 'Equipe do Brechó',
-    role: UsuarioRole.LOJA_BRECHO,
-    roleLabel: 'Loja',
-    service: UsuarioServiceScope.BRECHO,
-    serviceLabel: 'Brechó',
-    homePath: '/lojas/brecho',
-  },
-  {
-    login: 'loja-feirao',
-    name: 'Feirão',
-    displayName: 'Equipe do Feirão',
-    role: UsuarioRole.LOJA_FEIRAO,
-    roleLabel: 'Loja',
-    service: UsuarioServiceScope.FEIRAO,
-    serviceLabel: 'Feirão',
-    homePath: '/lojas/feirao',
   },
 ];
 
@@ -396,7 +296,7 @@ export class AuthService implements OnModuleInit {
     const defaultPassword = process.env.IEDC_DEFAULT_PASSWORD;
 
     if (!defaultPassword) {
-      throw new Error('IEDC_DEFAULT_PASSWORD precisa ser definido para criar os usuários iniciais.');
+      throw new Error('IEDC_DEFAULT_PASSWORD precisa ser definido para criar o usuário inicial de suporte.');
     }
 
     const passwordHash = await this.hashPassword(defaultPassword);
@@ -415,7 +315,7 @@ export class AuthService implements OnModuleInit {
       })),
     );
 
-    console.warn('Usuários iniciais ausentes criados. Troque as senhas antes da implantação real.');
+    console.warn('Usuário inicial de suporte criado. Troque a senha antes da implantação real.');
   }
 
   private async findUserEntity(id: string): Promise<Usuario> {

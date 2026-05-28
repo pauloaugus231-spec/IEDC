@@ -55,6 +55,7 @@ O Vite foi atualizado para remover vulnerabilidades do dev server.
 - Semeadura ficticia de lojas, clientes, comandas e pagamentos foi removida.
 - Semeadura de impacto social fica desabilitada por padrao via `ENABLE_DEMO_SEED=false`.
 - Senha inicial deixou de ter fallback de demo e agora exige `IEDC_DEFAULT_PASSWORD`.
+- Primeiro boot em banco novo cria apenas o usuario `suporte`; demais usuarios devem ser criados pelo suporte.
 - `JWT_SECRET` passou a ser obrigatorio em producao.
 - Configuracao de banco passou a falhar cedo em producao quando variaveis obrigatorias nao existem.
 - Notificacoes de triagem deixaram de usar destino hardcoded; agora dependem de variaveis de ambiente.

@@ -7,6 +7,12 @@
 3. Se o sistema solicitar troca de senha, defina uma senha definitiva antes de usar qualquer modulo.
 4. Use o menu lateral para navegar apenas pelos modulos do seu perfil.
 
+## Primeiro boot no servidor
+
+Em banco novo, o sistema cria apenas o usuario `suporte`, usando a senha temporaria definida em `IEDC_DEFAULT_PASSWORD` no `.env`.
+
+Depois de trocar a propria senha, o suporte cria os demais usuarios reais conforme a necessidade institucional.
+
 ## Suporte
 
 Entrada: `/suporte/usuarios`.
