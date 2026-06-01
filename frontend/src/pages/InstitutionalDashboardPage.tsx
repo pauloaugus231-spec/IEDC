@@ -23,6 +23,7 @@ import {
   type LojasPeriodo,
   type OcupacaoPeriodo,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Filler, Legend);
@@ -481,6 +482,12 @@ const InstitutionalDashboardPage = () => {
   return (
     <main className="executive-dashboard">
       <section className="executive-content">
+        <PageHeader
+          className="executive-page-head"
+          eyebrow="Gestão institucional"
+          title="Visão integrada da instituição"
+          description="Leia Albergue, E.E.I. e Lojas em uma mesma mesa de decisão, mantendo a autonomia operacional de cada serviço."
+        />
         <section className="executive-chart-grid">
           <article className="executive-chart-panel executive-chart-panel-main">
             <div className="executive-chart-header">
@@ -541,28 +548,12 @@ const InstitutionalDashboardPage = () => {
           </aside>
         </section>
 
-        <section className="executive-kpis">
-          <article>
-            <span>Total cadastros</span>
-            <strong>{pessoasAcompanhadas}</strong>
-            <small>{totalAdultosCadastrados} adultos no albergue e {totalCriancas} crianças na E.E.I.</small>
-          </article>
-          <article>
-            <span>Pernoites mês</span>
-            <strong>{pernoitesMes}</strong>
-            <small>Estimativa baseada nas estadias ativas do albergue</small>
-          </article>
-          <article>
-            <span>Pendências cadastrais</span>
-            <strong>{pendenciasNis}</strong>
-            <small>NIS ou informação essencial a revisar</small>
-          </article>
-          <article>
-            <span>Ingressos do período</span>
-            <strong>{ingressosPeriodo}</strong>
-            <small>Base comparativa para aferição mensal</small>
-          </article>
-        </section>
+        <MetricGrid className="executive-kpis">
+          <MetricCard label="Total cadastros" value={pessoasAcompanhadas} detail={`${totalAdultosCadastrados} adultos no albergue e ${totalCriancas} crianças na E.E.I.`} />
+          <MetricCard label="Pernoites mês" value={pernoitesMes} detail="Estimativa baseada nas estadias ativas do albergue" />
+          <MetricCard label="Pendências cadastrais" value={pendenciasNis} detail="NIS ou informação essencial a revisar" tone={pendenciasNis ? 'warning' : 'default'} />
+          <MetricCard label="Ingressos do período" value={ingressosPeriodo} detail="Base comparativa para aferição mensal" />
+        </MetricGrid>
 
         <section className="executive-commerce-block">
           <div className="executive-commerce-heading">
@@ -673,7 +664,6 @@ const InstitutionalDashboardPage = () => {
           <article className="executive-panel">
             <div className="executive-section-title">
               <h2>Atividades recentes</h2>
-              <Link to="/gestao">Auditoria</Link>
             </div>
             <div className="executive-activity-list">
               {activities.map((activity) => (

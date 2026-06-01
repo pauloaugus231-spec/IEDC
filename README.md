@@ -41,7 +41,19 @@ Antes de novos modulos, a prioridade e fechar a V1 oficial local:
 3. QA por perfil.
 4. Docker validado.
 5. Backup e restauracao documentados.
-6. Commit/tag estavel.
+6. Bootstrap institucional com apenas `suporte` no primeiro boot.
+7. Commit/tag estavel.
+
+Tag tecnica da V1 oficial:
+
+```text
+v1.0.0-iedc
+```
+
+O titulo humano da release pode ser `v1.0.0 iedc`.
+
+Em banco novo, o backend cria somente o usuario `suporte`, usando `IEDC_DEFAULT_PASSWORD`
+do `.env` do servidor. O `.env` real nunca deve ser versionado.
 
 ## Arquivo historico
 
@@ -55,3 +67,4 @@ Documentos de frentes removidas ou fora do escopo ficam em:
 - `docs/manuais/V1_MANUAL_CURTO_POR_PERFIL.md`
 - `docs/operacao/backup-restauracao.md`
 - `docs/release/V1_BASELINE_2026-05-28.md`
+- `docs/release/V1_RELEASE_IEDC_2026-06-01.md`

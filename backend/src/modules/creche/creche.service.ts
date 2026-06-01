@@ -2,6 +2,92 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 
+interface CrecheResponsavelPayload {
+  nome?: string;
+  parentesco?: string;
+  cpf?: string;
+  rg?: string;
+  telefone?: string;
+  telefoneAlternativo?: string;
+  email?: string;
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  trabalho?: string;
+  responsavelPrincipal?: boolean;
+  autorizadoRetirada?: boolean;
+  observacoes?: string;
+}
+
+interface CreateCriancaPayload {
+  codigo?: string;
+  nome?: string;
+  cpf?: string;
+  rg?: string;
+  nis?: string;
+  dataNascimento?: string;
+  dataIngresso?: string;
+  turmaId?: string;
+  status?: string;
+  sexo?: string;
+  genero?: string;
+  racaCor?: string;
+  naturalidade?: string;
+  endereco?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  escolaOrigem?: string;
+  alergias?: string;
+  condicoesSaude?: string;
+  medicamentos?: string;
+  autorizacaoImagem?: boolean;
+  observacoes?: string;
+  responsaveis?: CrecheResponsavelPayload[];
+  responsavel?: CrecheResponsavelPayload;
+}
+
+interface FrequenciaRegistroPayload {
+  criancaId?: string;
+  presente?: boolean;
+  justificativa?: string;
+}
+
+interface SaveFrequenciaTurmaPayload {
+  turmaId?: string;
+  data?: string;
+  registros?: FrequenciaRegistroPayload[];
+  registradoPor?: string;
+}
+
+interface AcompanhamentoPayload {
+  tipo?: string;
+  status?: string;
+  descricao?: string;
+  responsavel?: string;
+  data?: string;
+}
+
+interface ProfessoraPayload {
+  nome?: string;
+  telefone?: string;
+  email?: string;
+  funcao?: string;
+  status?: string;
+  observacoes?: string;
+}
+
+interface TurmaProfessoraPayload {
+  professoraId?: string | null;
+}
+
+interface CriancaTurmaPayload {
+  turmaId?: string;
+}
+
 function getPeriodoMes(inicio?: string, fim?: string) {
   const hoje = new Date();
   const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -80,12 +166,17 @@ function normalizeFuncaoProfissional(funcao?: string | null) {
   return encontrada || 'Regente';
 }
 
-function firstReturnedRow<T = any>(result: any): T | undefined {
-  if (Array.isArray(result?.[0])) {
-    return result[0][0] as T | undefined;
+function firstReturnedRow<T = Record<string, unknown>>(result: unknown): T | undefined {
+  if (!Array.isArray(result)) {
+    return undefined;
   }
 
-  return result?.[0] as T | undefined;
+  const first = result[0];
+  if (Array.isArray(first)) {
+    return first[0] as T | undefined;
+  }
+
+  return first as T | undefined;
 }
 
 const EEI_TURMA_ORDER_SQL = `
@@ -406,7 +497,7 @@ export class CrecheService {
   async getCriancas(filters?: { search?: string; turmaId?: string; status?: string }) {
     await this.ensureEstruturaEei();
 
-    const params: any[] = [];
+    const params: string[] = [];
     const where = ['1 = 1'];
 
     if (filters?.search) {
@@ -458,7 +549,7 @@ export class CrecheService {
     );
   }
 
-  async createCrianca(body: any) {
+  async createCrianca(body: CreateCriancaPayload) {
     await this.ensureEstruturaEei();
 
     if (!body?.nome || !body?.cpf || !body?.dataNascimento || !body?.turmaId) {
@@ -803,15 +894,16 @@ export class CrecheService {
     };
   }
 
-  async saveFrequenciaTurma(body: any) {
+  async saveFrequenciaTurma(body: SaveFrequenciaTurmaPayload) {
     await this.ensureEstruturaEei();
 
-    if (!body?.turmaId || !body?.data || !Array.isArray(body.registros)) {
+    const registros = body.registros;
+    if (!body?.turmaId || !body?.data || !Array.isArray(registros)) {
       throw new BadRequestException('Turma, data e registros de frequência são obrigatórios.');
     }
 
     await this.dataSource.transaction(async (manager) => {
-      for (const registro of body.registros) {
+      for (const registro of registros) {
         await manager.query(
           `
             INSERT INTO creche_frequencias (
@@ -849,7 +941,7 @@ export class CrecheService {
     return this.getFrequenciaTurma(body.turmaId, body.data);
   }
 
-  async createAcompanhamento(codigo: string, body: any) {
+  async createAcompanhamento(codigo: string, body: AcompanhamentoPayload) {
     await this.ensureEstruturaEei();
     await this.ensureAcompanhamentosTable();
 
@@ -939,7 +1031,7 @@ export class CrecheService {
     );
   }
 
-  async createProfessora(body: any) {
+  async createProfessora(body: ProfessoraPayload) {
     await this.ensureEstruturaEei();
 
     if (!body?.nome) {
@@ -985,7 +1077,7 @@ export class CrecheService {
     return professora;
   }
 
-  async updateProfessora(id: string, body: any) {
+  async updateProfessora(id: string, body: ProfessoraPayload) {
     await this.ensureEstruturaEei();
 
     if (!body?.nome) {
@@ -1025,7 +1117,7 @@ export class CrecheService {
     return professora;
   }
 
-  async updateTurmaProfessora(id: string, body: any) {
+  async updateTurmaProfessora(id: string, body: TurmaProfessoraPayload) {
     await this.ensureEstruturaEei();
 
     const turmaResult = await this.dataSource.query(
@@ -1046,7 +1138,7 @@ export class CrecheService {
     return this.getTurmaDetalhe(id);
   }
 
-  async updateCriancaTurma(codigo: string, body: any) {
+  async updateCriancaTurma(codigo: string, body: CriancaTurmaPayload) {
     await this.ensureEstruturaEei();
 
     if (!body?.turmaId) {

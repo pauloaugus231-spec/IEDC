@@ -31,7 +31,7 @@ export class PlantoesController {
     @Query('colaborador_id') colaboradorId?: string,
     @Query('turno_id') turnoId?: string,
   ): Promise<PlantaoDto[]> {
-    let filters: PlantaoFilters = {
+    const filters: PlantaoFilters = {
       data_inicio: dataInicio,
       data_fim: dataFim,
       colaborador_id: colaboradorId,

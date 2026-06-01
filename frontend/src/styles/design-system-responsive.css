@@ -1,0 +1,232 @@
+@media (min-width: 1024px) {
+  .albergue-dashboard-column-main {
+    grid-column: span 8;
+  }
+
+  .albergue-dashboard-column-side {
+    grid-column: span 4;
+  }
+}
+
+@media (max-width: 1040px) {
+  .ds-metric-grid.metrics-grid,
+  .ds-metric-grid.creche-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rma-metrics.ds-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scale-calendar-toolbar,
+  .scale-calendar-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 760px) {
+  .institutional-notifications,
+  .notification-trigger {
+    width: 100%;
+  }
+
+  .notification-trigger {
+    justify-content: center;
+  }
+
+  .notification-panel {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    left: 14px;
+    width: auto;
+    max-height: calc(100dvh - 28px);
+    margin-top: 0;
+  }
+
+  .ds-admin-surface.page-band {
+    padding: 18px;
+  }
+
+  .ds-page-head.creche-dashboard-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ds-page-head .creche-head-actions,
+  .ds-button.creche-head-link,
+  .ds-button.institutional-button {
+    width: 100%;
+  }
+
+  .ds-metric-grid.metrics-grid,
+  .ds-metric-grid.creche-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .albergue-room-grid,
+  .albergue-filter-grid,
+  .scale-form-row,
+  .rma-date-grid,
+  .rma-metrics.ds-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .albergue-report-actions,
+  .scale-calendar-actions,
+  .scale-modal-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .albergue-report-actions .ds-button,
+  .scale-calendar-actions .ds-button,
+  .scale-modal-actions .ds-button {
+    width: 100%;
+  }
+
+  .albergue-report-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .albergue-exit-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .albergue-exit-number {
+    text-align: left;
+  }
+
+  .scale-unit-filter {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .scale-filter-button {
+    flex: 1 1 auto;
+  }
+
+  .scale-calendar-grid {
+    min-width: 760px;
+  }
+
+  .scale-manager-page .ds-panel {
+    overflow-x: auto;
+  }
+
+  .presence-filterbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .presence-filterbar input,
+  .presence-filterbar select,
+  .presence-filterbar .ds-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .presence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .presence-room-head,
+  .presence-resident-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .presence-resident-row {
+    cursor: default;
+  }
+
+  .presence-check {
+    align-self: flex-end;
+  }
+
+  .presence-census-preview > div,
+  .presence-census-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .presence-modal-actions,
+  .presence-footer-content,
+  .presence-footer-content > div:first-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .presence-floater-button {
+    right: 16px;
+    left: 16px;
+    bottom: 24px;
+    min-width: auto;
+    padding: 8px 14px;
+  }
+
+  .admin-kanban-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-scale-track {
+    grid-auto-flow: row;
+    grid-auto-columns: initial;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-period-switch {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .admin-period-button {
+    flex: 1 1 auto;
+  }
+
+  .admin-request-foot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-request-owner {
+    max-width: none;
+  }
+
+  .admin-request-actions {
+    justify-content: flex-start;
+  }
+
+  .rma-result-banner {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .rma-result-banner > strong {
+    text-align: left;
+  }
+
+  .rma-primary-action,
+  .rma-reset-action {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-button,
+  .ds-shell-link,
+  .ds-nav-item,
+  .ds-nav-subitem,
+  .ds-row-action,
+  .ds-form input,
+  .ds-form select,
+  .ds-toolbar input,
+  .ds-toolbar select,
+  .albergue-room-card,
+  .scale-model-fields,
+  .albergue-ring-progress {
+    transition: none !important;
+    animation: none !important;
+  }
+}

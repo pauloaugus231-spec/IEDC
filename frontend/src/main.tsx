@@ -2,18 +2,29 @@ import React, { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { normalizeErrorPayload, sendFrontendErrorReport } from './observability/frontendErrors'
 
-if (import.meta.env.DEV) {
-  window.addEventListener('error', (event) => {
-    console.error('[boot] erro capturado', {
-      message: event.message,
-      file: event.filename,
-      line: event.lineno,
-      column: event.colno,
-      error: event.error,
-    });
+window.addEventListener('error', (event) => {
+  const payload = normalizeErrorPayload(event.error || event.message, 'window.error', {
+    file: event.filename,
+    line: event.lineno,
+    column: event.colno,
   });
-}
+  sendFrontendErrorReport(payload);
+
+  if (import.meta.env.DEV) {
+    console.error('[boot] erro capturado', payload);
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const payload = normalizeErrorPayload(event.reason, 'window.unhandledrejection');
+  sendFrontendErrorReport(payload);
+
+  if (import.meta.env.DEV) {
+    console.error('[boot] promessa rejeitada sem tratamento', payload);
+  }
+});
 
 class RootErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -25,7 +36,12 @@ class RootErrorBoundary extends React.Component<
     return { error };
   }
 
-  componentDidCatch(error: unknown) {
+  componentDidCatch(error: unknown, info: React.ErrorInfo) {
+    sendFrontendErrorReport({
+      ...normalizeErrorPayload(error, 'react.error_boundary'),
+      componentStack: info.componentStack || undefined,
+    });
+
     if (import.meta.env.DEV) {
       console.error('[boot] Erro em runtime (capturado pelo ErrorBoundary):', error);
     }
@@ -35,9 +51,16 @@ class RootErrorBoundary extends React.Component<
     if (this.state.error) {
       const err = this.state.error as any;
       return (
-        <pre style={{ whiteSpace: 'pre-wrap', padding: 16, color: '#b91c1c' }}>
-          {import.meta.env.DEV ? String(err?.stack || err) : 'Não foi possível carregar esta tela.'}
-        </pre>
+        <main className="root-error-shell" role="alert">
+          <section>
+            <p>Sistema Dias da Cruz</p>
+            <h1>Não foi possível carregar esta tela.</h1>
+            <span>
+              O erro foi registrado para análise técnica. Atualize a página; se persistir, acione o suporte.
+            </span>
+            {import.meta.env.DEV ? <pre>{String(err?.stack || err)}</pre> : null}
+          </section>
+        </main>
       );
     }
     return this.props.children;

@@ -68,6 +68,16 @@ docker image prune -f
 
 Se a nova versao trouxer migrations, elas rodam automaticamente com `DB_MIGRATIONS_RUN=true`. Antes de atualizar o servidor, valide a versao no Mac ou em um ambiente de teste com banco descartavel.
 
+Para atualizacao controlada, com backup antes do pull e healthcheck depois do deploy:
+
+```bash
+sudo PROJECT_DIR=/opt/iedc IEDC_UPDATE_BRANCH=main /opt/iedc/ops/deploy/update-from-repository.sh
+```
+
+Documentacao completa:
+
+`ops/deploy/ATUALIZACAO_AUTOMATICA.md`
+
 ## Logs
 
 ```bash

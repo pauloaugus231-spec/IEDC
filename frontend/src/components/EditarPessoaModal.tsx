@@ -3,9 +3,9 @@ import FotoUpload from './FotoUpload';
 import './EditarPessoaModal.css';
 
 interface EditarPessoaModalProps {
-  pessoa: any;
+  pessoa: PessoaForm;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: PessoaPayload) => void | Promise<void>;
 }
 
 type EditTab = 'identificacao' | 'identidade' | 'contatos' | 'saude';
@@ -37,6 +37,38 @@ const TAB_CONFIG: Array<{ id: EditTab; label: string; description: string; field
   },
 ];
 
+interface PessoaForm {
+  id: string;
+  nome?: string | null;
+  nome_social?: string | null;
+  cpf?: string | null;
+  rg?: string | null;
+  nis?: string | null;
+  data_nascimento?: string | null;
+  naturalidade?: string | null;
+  telefone?: string | null;
+  sexo?: string | null;
+  genero?: string | null;
+  cor?: string | null;
+  raca?: string | null;
+  sexualidade?: string | null;
+  endereco?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  cep?: string | null;
+  nome_mae?: string | null;
+  nome_pai?: string | null;
+  contato_emergencia?: string | null;
+  telefone_emergencia?: string | null;
+  tipo_vaga?: string | null;
+  observacoes?: string | null;
+  alergias?: string | null;
+  condicoes_cronicas?: string | null;
+  medicamentos_uso_continuo?: string | null;
+  lgbt?: boolean | null;
+  foto_url?: string | null;
+}
+
 const EDITABLE_FIELDS = [
   'nome',
   'nome_social',
@@ -66,9 +98,24 @@ const EDITABLE_FIELDS = [
   'medicamentos_uso_continuo',
   'lgbt',
   'foto_url',
-];
+] as const satisfies ReadonlyArray<keyof Omit<PessoaForm, 'id'>>;
 
-function normalizePessoa(pessoa: any) {
+type EditableField = typeof EDITABLE_FIELDS[number];
+type PessoaPayload = Partial<Record<EditableField, string | boolean | null>>;
+type ComparablePayload = Partial<Record<EditableField, string | boolean>>;
+
+interface ViaCepResponse {
+  erro?: boolean;
+  logradouro?: string;
+  localidade?: string;
+  uf?: string;
+}
+
+function isEditableField(name: string): name is EditableField {
+  return (EDITABLE_FIELDS as readonly string[]).includes(name);
+}
+
+function normalizePessoa(pessoa: PessoaForm): PessoaForm {
   return {
     ...pessoa,
     data_nascimento: pessoa?.data_nascimento ? String(pessoa.data_nascimento).slice(0, 10) : '',
@@ -76,8 +123,8 @@ function normalizePessoa(pessoa: any) {
   };
 }
 
-function editablePayload(form: any) {
-  return EDITABLE_FIELDS.reduce((payload: Record<string, any>, field) => {
+function editablePayload(form: PessoaForm): PessoaPayload {
+  return EDITABLE_FIELDS.reduce<PessoaPayload>((payload, field) => {
     const value = form[field];
     if (field === 'tipo_vaga' && value === '') return payload;
     payload[field] = value === '' ? null : value;
@@ -85,10 +132,9 @@ function editablePayload(form: any) {
   }, {});
 }
 
-function cleanComparable(payload: Record<string, any>) {
-  return Object.keys(payload)
-    .sort()
-    .reduce((acc: Record<string, any>, key) => {
+function cleanComparable(payload: PessoaPayload) {
+  return EDITABLE_FIELDS
+    .reduce<ComparablePayload>((acc, key) => {
       acc[key] = payload[key] ?? '';
       return acc;
     }, {});
@@ -159,12 +205,13 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
 
   const getFieldError = (name: string) => {
     if (!touched[name]) return '';
+    if (!isEditableField(name)) return '';
     const validate = validations[name];
     return validate ? validate(String(form[name] || '')) : '';
   };
 
   const getTabProgress = (tab: EditTab) => {
-    const tabFields = TAB_CONFIG.find((item) => item.id === tab)?.fields || [];
+    const tabFields = (TAB_CONFIG.find((item) => item.id === tab)?.fields || []) as EditableField[];
     const filled = tabFields.filter((field) => {
       const value = form[field];
       return typeof value === 'boolean' ? value : Boolean(String(value || '').trim());
@@ -173,7 +220,7 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
   };
 
   const completionPercent = useMemo(() => {
-    const allFields = TAB_CONFIG.flatMap((tab) => tab.fields);
+    const allFields = TAB_CONFIG.flatMap((tab) => tab.fields) as EditableField[];
     const filled = allFields.filter((field) => {
       const value = form[field];
       return typeof value === 'boolean' ? value : Boolean(String(value || '').trim());
@@ -203,7 +250,8 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
       if (name === 'uf') finalValue = rawValue.toUpperCase().substring(0, 2);
     }
 
-    setForm((previous: any) => ({ ...previous, [name]: finalValue }));
+    if (!isEditableField(name)) return;
+    setForm((previous) => ({ ...previous, [name]: finalValue }));
   }, []);
 
   const handleBlur = (name: string) => {
@@ -219,12 +267,12 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
     setCepError('');
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      const data = await response.json();
+      const data = await response.json() as ViaCepResponse;
       if (data.erro) {
         setCepError('CEP não encontrado');
         return;
       }
-      setForm((previous: any) => ({
+      setForm((previous) => ({
         ...previous,
         endereco: data.logradouro || previous.endereco,
         cidade: data.localidade || previous.cidade,
@@ -246,10 +294,12 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const errors = ['nome', 'cpf', 'nis', 'cep'].filter((field) => validations[field](String(form[field] || '')));
+    const validationFields = ['nome', 'cpf', 'nis', 'cep'] as const satisfies readonly EditableField[];
+    const errors = validationFields.filter((field) => validations[field](String(form[field] || '')));
     if (errors.length) {
       setTouched((previous) => errors.reduce((acc, field) => ({ ...acc, [field]: true }), previous));
-      const firstTab = TAB_CONFIG.find((tab) => tab.fields.some((field) => errors.includes(field)));
+      const errorFields = new Set<string>(errors);
+      const firstTab = TAB_CONFIG.find((tab) => tab.fields.some((field) => errorFields.has(field)));
       if (firstTab) setActiveTab(firstTab.id);
       return;
     }
@@ -288,7 +338,7 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
           <aside className="edit-person-aside">
             <FotoUpload
               fotoUrl={form.foto_url}
-              onFotoUpdate={(url) => setForm((previous: any) => ({ ...previous, foto_url: url }))}
+              onFotoUpdate={(url) => setForm((previous) => ({ ...previous, foto_url: url }))}
               pessoaId={pessoa.id}
             />
 
@@ -303,9 +353,7 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
                 <span>Cadastro preenchido</span>
                 <strong>{completionPercent}%</strong>
               </div>
-              <div className="edit-progress-track">
-                <div style={{ width: `${completionPercent}%` }} />
-              </div>
+              <progress className="edit-progress-track" value={completionPercent} max={100} aria-label="Cadastro preenchido" />
             </div>
 
             <div className={`edit-person-card afericao ${pendingAfericao.length ? 'warning' : 'complete'}`}>

@@ -231,8 +231,10 @@ function completeDistribution(items: ImpactoSocialCount[], order: string[]) {
   });
 }
 
-function completeChartHeight(items: ImpactoSocialCount[]) {
-  return Math.max(360, items.length * 54);
+function completeChartSizeClass(items: ImpactoSocialCount[]) {
+  if (items.length >= 10) return 'bars-xl';
+  if (items.length >= 8) return 'bars-lg';
+  return 'bars-md';
 }
 
 function compactChartLabel(label: string, maxLength = 42) {
@@ -650,7 +652,7 @@ const ImpactoSocialAlberguePage = () => {
               <span>O que contribuiu para a ausência de moradia estável</span>
             </div>
           </div>
-          <div className="impact-chart-canvas full-bars" style={{ minHeight: completeChartHeight(fatores) }}>
+          <div className={`impact-chart-canvas full-bars ${completeChartSizeClass(fatores)}`}>
             <PremiumCompleteDistribution color="#0041aa" items={fatores} />
           </div>
         </article>
@@ -662,7 +664,7 @@ const ImpactoSocialAlberguePage = () => {
               <span>Horizontes apontados após o atendimento</span>
             </div>
           </div>
-          <div className="impact-chart-canvas full-bars" style={{ minHeight: completeChartHeight(proximosPassos) }}>
+          <div className={`impact-chart-canvas full-bars ${completeChartSizeClass(proximosPassos)}`}>
             <PremiumCompleteDistribution color="#2d6fd2" items={proximosPassos} />
           </div>
         </article>
@@ -676,7 +678,7 @@ const ImpactoSocialAlberguePage = () => {
               <span>Recorte do tempo informado em situação de rua ou instabilidade habitacional</span>
             </div>
           </div>
-          <div className="impact-chart-canvas full-bars" style={{ minHeight: completeChartHeight(tempoSemMoradia) }}>
+          <div className={`impact-chart-canvas full-bars ${completeChartSizeClass(tempoSemMoradia)}`}>
             <PremiumCompleteDistribution color="#18a058" items={tempoSemMoradia} />
           </div>
         </article>
@@ -688,7 +690,7 @@ const ImpactoSocialAlberguePage = () => {
               <span>Situação de rua, trânsito, migração e demais perfis informados</span>
             </div>
           </div>
-          <div className="impact-chart-canvas full-bars" style={{ minHeight: completeChartHeight(situacaoTerritorial) }}>
+          <div className={`impact-chart-canvas full-bars ${completeChartSizeClass(situacaoTerritorial)}`}>
             <PremiumCompleteDistribution color="#f6a623" items={situacaoTerritorial} unit="perfis" />
           </div>
         </article>

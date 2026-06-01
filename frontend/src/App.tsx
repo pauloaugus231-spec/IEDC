@@ -1,37 +1,48 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import PessoaProfilePage from './pages/PessoaProfilePage';
 import './styles/theme.css';
-import DashboardPage from './pages/DashboardPage';
-import SearchPage from './pages/SearchPage';
-import AdminToolsPage from './pages/AdminToolsPage';
-import ScaleManagerPage from './pages/ScaleManagerPage';
-import PresencasPage from './pages/PresencasPage';
-import ConferenciaRMAPage from './pages/ConferenciaRMAPage';
-import ReportsPage from './pages/ReportsPage';
-import ImpactoSocialAlberguePage from './pages/ImpactoSocialAlberguePage';
 import Layout from './components/Layout';
 import LoginPage from './components/LoginPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import InstitutionalDashboardPage from './pages/InstitutionalDashboardPage';
-import CrecheDashboardPage from './pages/CrecheDashboardPage';
-import CrecheReportsPage from './pages/CrecheReportsPage';
-import CrecheChildrenPage from './pages/CrecheChildrenPage';
-import CrecheChildProfilePage from './pages/CrecheChildProfilePage';
-import CrecheFrequencyPage from './pages/CrecheFrequencyPage';
-import CrecheClassPage from './pages/CrecheClassPage';
-import CrecheTeachersPage from './pages/CrecheTeachersPage';
-import LojasSecretariaPage from './pages/LojasSecretariaPage';
-import LojasStorePage from './pages/LojasStorePage';
-import SupportUsersPage from './pages/SupportUsersPage';
-import MyAccountPage from './pages/MyAccountPage';
 import type { DemoUser } from './context/AuthContext';
+
+const PessoaProfilePage = lazy(() => import('./pages/PessoaProfilePage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const PresencasPage = lazy(() => import('./pages/PresencasPage'));
+const ConferenciaRMAPage = lazy(() => import('./pages/ConferenciaRMAPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const ImpactoSocialAlberguePage = lazy(() => import('./pages/ImpactoSocialAlberguePage'));
+const InstitutionalDashboardPage = lazy(() => import('./pages/InstitutionalDashboardPage'));
+const CrecheDashboardPage = lazy(() => import('./pages/CrecheDashboardPage'));
+const CrecheReportsPage = lazy(() => import('./pages/CrecheReportsPage'));
+const CrecheChildrenPage = lazy(() => import('./pages/CrecheChildrenPage'));
+const CrecheChildProfilePage = lazy(() => import('./pages/CrecheChildProfilePage'));
+const CrecheFrequencyPage = lazy(() => import('./pages/CrecheFrequencyPage'));
+const CrecheClassPage = lazy(() => import('./pages/CrecheClassPage'));
+const CrecheTeachersPage = lazy(() => import('./pages/CrecheTeachersPage'));
+const LojasSecretariaPage = lazy(() => import('./pages/LojasSecretariaPage'));
+const LojasStorePage = lazy(() => import('./pages/LojasStorePage'));
+const FinancialReportPage = lazy(() => import('./pages/FinancialReportPage'));
+const SupportUsersPage = lazy(() => import('./pages/SupportUsersPage'));
+const SupportAuditPage = lazy(() => import('./pages/SupportAuditPage'));
+const SupportSystemHealthPage = lazy(() => import('./pages/SupportSystemHealthPage'));
+const MyAccountPage = lazy(() => import('./pages/MyAccountPage'));
+const DataQualityPage = lazy(() => import('./pages/DataQualityPage'));
 
 function NotFound() {
   return (
     <div style={{ textAlign: 'center', marginTop: 64 }}>
       <h1>Página não encontrada</h1>
       <p>Verifique o endereço ou volte para o <a href="/gestao">Dashboard</a>.</p>
+    </div>
+  );
+}
+
+function RouteFallback() {
+  return (
+    <div className="route-loading" role="status">
+      Carregando módulo...
     </div>
   );
 }
@@ -52,7 +63,11 @@ function ProtectedLayout({ children }: { children: ReactNode }) {
     return <Navigate replace to={currentUser.homePath} />;
   }
 
-  return <Layout>{children}</Layout>;
+  return (
+    <Layout>
+      <Suspense fallback={<RouteFallback />}>{children}</Suspense>
+    </Layout>
+  );
 }
 
 function canAccessPath(user: DemoUser, pathname: string) {
@@ -62,6 +77,22 @@ function canAccessPath(user: DemoUser, pathname: string) {
 
   if (pathname.startsWith('/suporte')) {
     return user.role === 'suporte';
+  }
+
+  if (pathname.includes('/auditoria')) {
+    return false;
+  }
+
+  if (pathname === '/albergue/relatorios') {
+    return user.role === 'gestora' || user.role === 'equipe_tecnica' || user.role === 'coordenador_albergue';
+  }
+
+  if (pathname === '/creche/relatorios') {
+    return user.role === 'gestora' || user.role === 'equipe_tecnica' || user.role === 'coordenador_creche';
+  }
+
+  if (pathname === '/lojas/secretaria/relatorio-executivo') {
+    return user.role === 'gestora' || user.role === 'financeiro';
   }
 
   if (user.role === 'suporte') {
@@ -97,15 +128,15 @@ function canAccessPath(user: DemoUser, pathname: string) {
   }
 
   if (user.role === 'loja_bazar') {
-    return pathname === '/lojas/bazar' || pathname.startsWith('/lojas/bazar/');
+    return pathname === '/lojas/bazar' || pathname === '/lojas/bazar/produtos';
   }
 
   if (user.role === 'loja_brecho') {
-    return pathname === '/lojas/brecho' || pathname.startsWith('/lojas/brecho/');
+    return pathname === '/lojas/brecho' || pathname === '/lojas/brecho/produtos';
   }
 
   if (user.role === 'loja_feirao') {
-    return pathname === '/lojas/feirao' || pathname.startsWith('/lojas/feirao/');
+    return pathname === '/lojas/feirao' || pathname === '/lojas/feirao/produtos';
   }
 
   return false;
@@ -147,6 +178,22 @@ function AppRoutes() {
         )}
       />
       <Route
+        path="/suporte/auditoria"
+        element={(
+          <ProtectedLayout>
+            <SupportAuditPage />
+          </ProtectedLayout>
+        )}
+      />
+      <Route
+        path="/suporte/saude"
+        element={(
+          <ProtectedLayout>
+            <SupportSystemHealthPage />
+          </ProtectedLayout>
+        )}
+      />
+      <Route
         path="/lojas"
         element={<HomeRedirect />}
       />
@@ -171,6 +218,22 @@ function AppRoutes() {
         element={(
           <ProtectedLayout>
             <LojasSecretariaPage mode="historico" />
+          </ProtectedLayout>
+        )}
+      />
+      <Route
+        path="/lojas/secretaria/relatorio-executivo"
+        element={(
+          <ProtectedLayout>
+            <FinancialReportPage />
+          </ProtectedLayout>
+        )}
+      />
+      <Route
+        path="/lojas/secretaria/qualidade-dados"
+        element={(
+          <ProtectedLayout>
+            <DataQualityPage area="financeiro" />
           </ProtectedLayout>
         )}
       />
@@ -207,6 +270,15 @@ function AppRoutes() {
         )}
       />
       <Route
+        path="/gestao/qualidade-dados"
+        element={(
+          <ProtectedLayout>
+            <DataQualityPage />
+          </ProtectedLayout>
+        )}
+      />
+      <Route path="/gestao/relatorios" element={<Navigate replace to="/gestao" />} />
+      <Route
         path="/creche"
         element={(
           <ProtectedLayout>
@@ -219,6 +291,15 @@ function AppRoutes() {
         element={(
           <ProtectedLayout>
             <CrecheReportsPage />
+          </ProtectedLayout>
+        )}
+      />
+      <Route path="/creche/relatorio-executivo" element={<Navigate replace to="/creche/relatorios" />} />
+      <Route
+        path="/creche/qualidade-dados"
+        element={(
+          <ProtectedLayout>
+            <DataQualityPage area="creche" />
           </ProtectedLayout>
         )}
       />
@@ -296,6 +377,15 @@ function AppRoutes() {
           </ProtectedLayout>
         )}
       />
+      <Route path="/albergue/relatorio-executivo" element={<Navigate replace to="/albergue/relatorios" />} />
+      <Route
+        path="/albergue/qualidade-dados"
+        element={(
+          <ProtectedLayout>
+            <DataQualityPage area="albergue" />
+          </ProtectedLayout>
+        )}
+      />
       <Route path="/relatorios" element={<Navigate replace to="/albergue/relatorios" />} />
       <Route
         path="/albergue/impacto-social"
@@ -305,24 +395,10 @@ function AppRoutes() {
           </ProtectedLayout>
         )}
       />
-      <Route
-        path="/albergue/admin"
-        element={(
-          <ProtectedLayout>
-            <AdminToolsPage />
-          </ProtectedLayout>
-        )}
-      />
-      <Route path="/admin" element={<Navigate replace to="/albergue/admin" />} />
-      <Route
-        path="/albergue/escala"
-        element={(
-          <ProtectedLayout>
-            <ScaleManagerPage />
-          </ProtectedLayout>
-        )}
-      />
-      <Route path="/escala" element={<Navigate replace to="/albergue/escala" />} />
+      <Route path="/albergue/admin" element={<Navigate replace to="/albergue" />} />
+      <Route path="/admin" element={<Navigate replace to="/albergue" />} />
+      <Route path="/albergue/escala" element={<Navigate replace to="/albergue" />} />
+      <Route path="/escala" element={<Navigate replace to="/albergue" />} />
       <Route
         path="/albergue/presencas"
         element={(

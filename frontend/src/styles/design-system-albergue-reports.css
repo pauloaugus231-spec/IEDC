@@ -1,0 +1,368 @@
+.albergue-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.albergue-chart-head h3 {
+  margin: 0;
+  color: var(--iedc-text);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.albergue-chart-head p {
+  margin: 4px 0 0;
+  color: var(--iedc-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.albergue-chart-period {
+  border-radius: 999px;
+  background: var(--iedc-blue-100);
+  color: var(--iedc-blue-900);
+  font-size: 11px;
+  font-weight: 950;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.albergue-chart-canvas,
+.albergue-report-chart-box {
+  position: relative;
+  height: 280px;
+}
+
+.albergue-chart-canvas {
+  height: 218px;
+}
+
+.albergue-report-chart-box.centered {
+  display: flex;
+  justify-content: center;
+}
+
+.albergue-empty-state {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  color: var(--iedc-muted);
+  font-weight: 850;
+  text-align: center;
+}
+
+.albergue-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  color: var(--iedc-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.albergue-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot,
+.legend-line {
+  display: inline-block;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legend-dot.occupancy {
+  background: #2563eb;
+}
+
+.legend-line {
+  width: 18px;
+}
+
+.legend-line.capacity {
+  border-top: 2px dashed var(--iedc-text);
+}
+
+.legend-line.entries {
+  border-top: 3px solid var(--iedc-green-700);
+}
+
+.albergue-occupancy-card {
+  margin-bottom: 22px;
+  padding: 24px;
+  background: linear-gradient(180deg, #172033, #0f172a);
+  color: #ffffff;
+  text-align: center;
+}
+
+.albergue-widget-label {
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.albergue-occupancy-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 16px;
+}
+
+.albergue-ring-svg {
+  transform: rotate(-90deg);
+}
+
+.albergue-ring-progress {
+  transition: stroke-dashoffset 1s ease-out;
+}
+
+.albergue-ring-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.albergue-occupancy-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.albergue-occupancy-stats span {
+  display: block;
+  opacity: 0.64;
+}
+
+.albergue-occupancy-stats strong {
+  display: block;
+}
+
+.albergue-occupancy-stats .success {
+  color: #34d399;
+}
+
+.albergue-exit-card {
+  border-color: rgba(180, 35, 24, 0.22);
+  background: linear-gradient(135deg, #fff5f5 0%, #fee4e2 100%);
+  padding: 28px;
+}
+
+.albergue-exit-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.albergue-widget-label.danger {
+  margin-bottom: 4px;
+  color: var(--iedc-red-700);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.albergue-exit-title {
+  color: #7f1d1d;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.albergue-exit-subtitle {
+  margin-top: 4px;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.albergue-exit-number {
+  text-align: right;
+}
+
+.albergue-exit-number strong {
+  display: block;
+  color: var(--iedc-red-700);
+  font-size: 64px;
+  line-height: 0.95;
+}
+
+.albergue-exit-number span {
+  display: block;
+  margin-top: 8px;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.albergue-report-actions,
+.scale-calendar-actions,
+.scale-modal-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.albergue-filter-panel {
+  margin-bottom: 20px;
+}
+
+.albergue-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+  gap: 16px;
+}
+
+.albergue-filter-grid label,
+.scale-form label,
+.scale-model-box > label {
+  display: block;
+  margin-bottom: 5px;
+  color: #29354a;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.albergue-filter-grid input,
+.albergue-filter-grid select,
+.scale-input {
+  width: 100%;
+  border: 1px solid var(--iedc-line);
+  border-radius: var(--iedc-radius-sm);
+  background: var(--iedc-surface);
+  color: var(--iedc-text);
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.albergue-filter-grid input:focus,
+.albergue-filter-grid select:focus,
+.scale-input:focus {
+  border-color: var(--iedc-blue-600);
+  box-shadow: var(--iedc-focus);
+  outline: none;
+}
+
+.albergue-summary-grid.ds-metric-grid.metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  margin-top: 0;
+}
+
+.albergue-age-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.albergue-age-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+}
+
+.albergue-age-row strong {
+  color: #374151;
+  font-size: 13px;
+}
+
+.albergue-age-row span {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef2f7;
+}
+
+.albergue-age-row i {
+  display: block;
+  width: var(--age-width, 0%);
+  height: 100%;
+  border-radius: 999px;
+  background: var(--iedc-blue-800);
+}
+
+.albergue-age-row em {
+  color: var(--iedc-text);
+  font-style: normal;
+  font-weight: 950;
+}
+
+.albergue-report-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 22px;
+  margin-bottom: 22px;
+}
+
+.albergue-report-table {
+  max-height: 420px;
+}
+
+.albergue-report-table .report-table {
+  min-width: 600px;
+}
+
+.albergue-report-table .report-table td:first-child {
+  color: var(--iedc-text);
+  font-weight: 850;
+}
+
+.albergue-report-table .report-table td:nth-child(2) {
+  color: var(--iedc-muted);
+}
+
+.albergue-report-badge,
+.albergue-identity-tag,
+.scale-unit-badge,
+.scale-model-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.albergue-report-badge {
+  background: var(--iedc-blue-050);
+  color: var(--iedc-blue-800);
+}
+
+.albergue-identity-tag {
+  margin-right: 6px;
+  background: var(--iedc-green-100);
+  color: var(--iedc-green-700);
+}
+
+.albergue-table-empty {
+  padding: 42px !important;
+  color: var(--iedc-muted);
+  text-align: center;
+}
+
+.albergue-report-footer {
+  margin-top: 28px;
+  color: var(--iedc-subtle);
+  font-size: 12px;
+  text-align: center;
+}

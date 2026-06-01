@@ -5,6 +5,7 @@ import { Bar, Pie, getElementAtEvent } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCrecheAfericao } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import { downloadExcelCompatibleTable } from '../utils/spreadsheet';
 import '../styles/institutional.css';
 
@@ -339,16 +340,13 @@ const CrecheReportsPage = () => {
 
   return (
     <main className="page-band creche-reports-page">
-      <section className="creche-dashboard-head creche-reports-head">
-        <div>
-          <p className="institutional-eyebrow">E.E.I. Casa do Pequenino</p>
-          <h1>Relatórios da E.E.I.</h1>
-          <p>
-            Área técnica para gerar aferição, frequência e prestação de contas da E.E.I.,
-            seguindo a mesma lógica operacional dos relatórios do albergue.
-          </p>
-        </div>
-        <div className="report-actions">
+      <PageHeader
+        className="creche-reports-head"
+        eyebrow="E.E.I. Casa do Pequenino"
+        title="Relatórios da E.E.I."
+        description="Área técnica para gerar aferição, frequência e prestação de contas da E.E.I., seguindo a mesma lógica operacional dos relatórios do albergue."
+        actions={(
+          <div className="report-actions">
           <a href="#previa-afericao">Ver prévia</a>
           {drillDown && (
             <button className="report-button secondary" onClick={() => setDrillDown(null)} type="button">
@@ -369,31 +367,16 @@ const CrecheReportsPage = () => {
           >
             {lgpdMode ? 'LGPD ativo' : 'Modo LGPD'}
           </button>
-        </div>
-      </section>
+          </div>
+        )}
+      />
 
-      <section className="metrics-grid">
-        <article className="metric-card">
-          <span>Total de crianças</span>
-          <strong>{afericao.length}</strong>
-          <small>{turmas || 0} turmas disponíveis para conferência</small>
-        </article>
-        <article className="metric-card">
-          <span>Seleção atual</span>
-          <strong>{filteredAfericao.length}</strong>
-          <small>{drillDown ? `Filtrado por ${drillDown.valor}` : `${responsaveis} responsáveis na seleção`}</small>
-        </article>
-        <article className="metric-card">
-          <span>Média de idade</span>
-          <strong>{mediaIdade}</strong>
-          <small>Anos na seleção atual</small>
-        </article>
-        <article className="metric-card">
-          <span>Pendências NIS</span>
-          <strong>{pendencias}</strong>
-          <small>Documentos a completar</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Total de crianças" value={afericao.length} detail={`${turmas || 0} turmas disponíveis para conferência`} />
+        <MetricCard label="Seleção atual" value={filteredAfericao.length} detail={drillDown ? `Filtrado por ${drillDown.valor}` : `${responsaveis} responsáveis na seleção`} />
+        <MetricCard label="Média de idade" value={mediaIdade} detail="Anos na seleção atual" />
+        <MetricCard label="Pendências NIS" value={pendencias} detail="Documentos a completar" tone="warning" />
+      </MetricGrid>
 
       <section className="report-analytics-grid">
         <article className="report-card">
@@ -491,7 +474,7 @@ const CrecheReportsPage = () => {
           </div>
         </div>
 
-        <div className="report-table-wrap">
+        <div className="report-table-wrap ds-table-shell">
           <table className="report-table">
             <thead>
               <tr>

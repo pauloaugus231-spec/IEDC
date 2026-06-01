@@ -43,28 +43,9 @@ const Toast = ({ message, type = 'success', show, onClose, duration = 3500 }: To
       className={`toast glass-card${show ? ' show' : ''} ${type}`}
       role="alert"
       aria-live="assertive"
-      style={{
-        position: 'fixed',
-        right: 24,
-        bottom: 32,
-        minWidth: 0,
-        maxWidth: 320,
-        padding: '0.5em 1.1em',
-        borderRadius: 10,
-        boxShadow: '0 4px 24px #0002',
-        background: 'rgba(30,30,30,0.92)',
-        color: '#fff',
-        fontSize: 14,
-        display: show ? 'flex' : 'none',
-        alignItems: 'center',
-        gap: 8,
-        zIndex: 9999,
-        opacity: show ? 1 : 0,
-        transition: 'opacity 0.3s',
-      }}
     >
       {icons[type]}
-      <div className="toast-message" style={{ padding: 0, margin: 0 }}>{message}</div>
+      <div className="toast-message">{message}</div>
     </div>
   );
 };

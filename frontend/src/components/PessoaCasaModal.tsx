@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPessoasByCasa, apiFetch } from '../api';
 import { getNomePrincipal } from '../utils';
@@ -169,7 +169,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     // Se cama ocupada, pedir confirmação
     if (camaOcupada) {
       const confirmou = window.confirm(
-        `⚠️ TROCA MÚTUA\n\nA cama ${camaNumero} está ocupada por ${ocupanteNome}.\n\nDeseja realizar a troca mútua entre os dois hóspedes?\n\n• O hóspede atual irá para a cama ${camaNumero}\n• ${ocupanteNome} virá para a cama atual`
+        `TROCA MÚTUA\n\nA cama ${camaNumero} está ocupada por ${ocupanteNome}.\n\nDeseja realizar a troca mútua entre os dois hóspedes?\n\n• O hóspede atual irá para a cama ${camaNumero}\n• ${ocupanteNome} virá para a cama atual`
       );
       if (!confirmou) return;
     }
@@ -261,14 +261,14 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
         {/* Feedback Toast */}
         {feedback && (
           <div className={`feedback-toast ${feedback.tipo}`}>
-            {feedback.tipo === 'success' ? '✅' : '❌'} {feedback.msg}
+            <strong>{feedback.tipo === 'success' ? 'Sucesso' : 'Erro'}:</strong> {feedback.msg}
           </div>
         )}
 
         {/* Header Moderno */}
         <div className="modal-header-modern">
           <div className="header-left">
-            <h2>🏠 {casaLabel}</h2>
+            <h2>{casaLabel}</h2>
             <div className="stats-pills">
               <span className="pill occupied">{stats.ocupadas} ocupadas</span>
               <span className="pill free">{stats.total - stats.ocupadas} livres</span>
@@ -284,19 +284,18 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                 onClick={() => setViewMode('cards')}
                 title="Visualização em cards"
               >
-                🏠
+                Cards
               </button>
               <button 
                 className={`toggle-btn ${viewMode === 'lista' ? 'active' : ''}`}
                 onClick={() => setViewMode('lista')}
                 title="Lista para exportação"
               >
-                📋
+                Lista
               </button>
             </div>
 
             <div className="search-box">
-              <span>🔍</span>
               <input 
                 type="text" 
                 placeholder="Buscar nome ou cama..." 
@@ -328,7 +327,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
             <div className="lista-export-container">
               <div className="lista-header">
                 <div className="lista-info">
-                  <span className="lista-count">📋 {pessoasOcupadas.length} pessoas hospedadas</span>
+                  <span className="lista-count">{pessoasOcupadas.length} pessoas hospedadas</span>
                   <span className="lista-hint">Clique no CPF para copiar individualmente</span>
                 </div>
                 <button 
@@ -336,23 +335,22 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                   onClick={handleCopyAll}
                   disabled={pessoasOcupadas.length === 0}
                 >
-                  📑 Copiar Tudo
+                  Copiar tudo
                 </button>
               </div>
 
               {pessoasOcupadas.length === 0 ? (
                 <div className="empty-state-modern">
-                  <span>📭</span>
                   <p>{filtro ? 'Nenhuma pessoa encontrada' : 'Nenhuma pessoa hospedada'}</p>
                 </div>
               ) : (
                 <table className="lista-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '50px' }}>Cama</th>
+                      <th className="cama-col">Cama</th>
                       <th>Nome</th>
-                      <th style={{ width: '150px' }}>CPF</th>
-                      <th style={{ width: '50px' }}></th>
+                      <th className="cpf-col">CPF</th>
+                      <th className="action-col"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -362,7 +360,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                           <span className="cama-badge">{pessoa.cama}</span>
                         </td>
                         <td className="nome-cell">
-                          {pessoa.lgbt && <span className="lgbt-badge-small">🏳️‍🌈</span>}
+                          {pessoa.lgbt && <span className="lgbt-badge-small">LGBT+</span>}
                           {pessoa.nome}
                         </td>
                         <td className="cpf-cell">
@@ -379,7 +377,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                               onClick={() => handleCopyCpf(pessoa.cpf!)}
                               title="Copiar CPF"
                             >
-                              📋
+                              Copiar
                             </button>
                           )}
                         </td>
@@ -391,7 +389,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
             </div>
           ) : camasFiltradas.length === 0 ? (
             <div className="empty-state-modern">
-              <span>🛏️</span>
               <p>{filtro ? 'Nenhuma cama encontrada' : 'Nenhuma cama neste quarto'}</p>
             </div>
           ) : (
@@ -401,6 +398,10 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                 const info = ocupada ? calcularEstadiaInfo(cama.estadia!.data_checkin, cama.estadia!.data_limite) : null;
                 const isEditing = acaoAtiva?.id === cama.id;
                 const vencido = info && info.restantes <= 0;
+                const progressStyle = info ? {
+                  '--bed-progress-width': `${Math.min(info.percent, 100)}%`,
+                  '--bed-progress-color': getProgressColor(info.percent),
+                } as CSSProperties : undefined;
 
                 return (
                   <div 
@@ -409,7 +410,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                   >
                     {/* Topo do Card */}
                     <div className="bed-header">
-                      <span className="bed-number">🛏️ {cama.numero}</span>
+                      <span className="bed-number">Cama {cama.numero}</span>
                       <span className="bed-position">{cama.posicao}</span>
                     </div>
 
@@ -433,7 +434,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                           title="Clique para ver perfil"
                         >
                           <div className="occupant-name">
-                            {cama.estadia?.pessoa?.lgbt && <span className="lgbt-badge">🏳️‍🌈</span>}
+                            {cama.estadia?.pessoa?.lgbt && <span className="lgbt-badge">LGBT+</span>}
                             {getNomePrincipal(cama.estadia?.pessoa)}
                           </div>
                         </div>
@@ -443,14 +444,11 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                           <div className="progress-track">
                             <div 
                               className="progress-fill" 
-                              style={{ 
-                                width: `${Math.min(info!.percent, 100)}%`, 
-                                backgroundColor: getProgressColor(info!.percent) 
-                              }}
+                              style={progressStyle}
                             />
                           </div>
                           <span className={`days-badge ${vencido ? 'expired' : ''}`}>
-                            {vencido ? '⚠️ Vencido!' : `${info!.restantes}d`}
+                            {vencido ? 'Vencido' : `${info!.restantes}d`}
                           </span>
                         </div>
 
@@ -459,7 +457,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                           <div className="inline-action-panel">
                             {acaoAtiva.tipo === 'PRORROGAR' ? (
                               <>
-                                <div className="action-title">⏰ Prorrogar Estadia</div>
+                                <div className="action-title">Prorrogar estadia</div>
                                 <div className="days-stepper">
                                   <button onClick={() => setProrrogacaoDias(p => Math.max(1, p-1))}>−</button>
                                   <span>{prorrogacaoDias} dias</span>
@@ -482,7 +480,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                               </>
                             ) : (
                               <>
-                                <div className="action-title">🔄 Trocar de Cama</div>
+                                <div className="action-title">Trocar de cama</div>
                                 <select 
                                   value={casaDestinoSelect} 
                                   onChange={(e) => {
@@ -507,7 +505,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                         {/* Camas Livres */}
                                         {camasDestino.filter(c => !c.estadia).length > 0 && (
                                           <>
-                                            <div className="camas-section-label">✅ Camas Livres</div>
+                                            <div className="camas-section-label">Camas livres</div>
                                             {camasDestino.filter(c => !c.estadia).map(cd => (
                                               <button 
                                                 key={cd.id} 
@@ -523,7 +521,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                         {/* Camas Ocupadas */}
                                         {camasDestino.filter(c => c.estadia && c.id !== cama.id).length > 0 && (
                                           <>
-                                            <div className="camas-section-label ocupadas">🔄 Troca Mútua (Ocupadas)</div>
+                                            <div className="camas-section-label ocupadas">Troca mútua (ocupadas)</div>
                                             {camasDestino.filter(c => c.estadia && c.id !== cama.id).map(cd => {
                                               const nomeOcupante = cd.estadia?.pessoa?.nome || 'Ocupante';
                                               return (
@@ -561,7 +559,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                 setProrrogacaoDias(7);
                               }}
                             >
-                              ⏰
+                              Prorrogar
                             </button>
                             <button 
                               className="action-btn swap" 
@@ -573,7 +571,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                 setCamasDestino([]);
                               }}
                             >
-                              🔄
+                              Trocar
                             </button>
                             <button 
                               className="action-btn checkout" 
@@ -585,7 +583,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                 if (pessoaId) handleCheckout(pessoaId, nome);
                               }}
                             >
-                              🚪
+                              Checkout
                             </button>
                           </div>
                         )}

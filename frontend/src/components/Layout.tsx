@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import CadastroPessoaModal from './CadastroPessoaModal';
 import Toast from './Toast';
 import type { ToastType } from './Toast';
+import { useNotificacoes, type NotificacaoNivel } from '../api';
 import { useAuth, type DemoUser, type UserRole } from '../context/AuthContext';
 import '../styles/theme.css';
 import '../styles/institutional.css';
+import '../styles/design-system.css';
 
 interface LayoutProps {
   children: ReactNode;
@@ -44,16 +46,47 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
     title: 'Institucional',
     items: [
       {
+        type: 'group',
         label: 'Visão institucional',
         to: '/gestao',
         roles: ['gestora', 'equipe_tecnica'],
-        end: true,
+        children: [
+          {
+            label: 'Painel institucional',
+            to: '/gestao',
+            roles: ['gestora', 'equipe_tecnica'],
+            end: true,
+          },
+          {
+            label: 'Qualidade de dados',
+            to: '/gestao/qualidade-dados',
+            roles: ['gestora', 'equipe_tecnica'],
+          },
+        ],
       },
       {
-        label: 'Usuários e suporte',
+        type: 'group',
+        label: 'Suporte',
         to: '/suporte/usuarios',
         roles: ['suporte'],
-        end: true,
+        children: [
+          {
+            label: 'Usuários',
+            to: '/suporte/usuarios',
+            roles: ['suporte'],
+            end: true,
+          },
+          {
+            label: 'Auditoria',
+            to: '/suporte/auditoria',
+            roles: ['suporte'],
+          },
+          {
+            label: 'Saúde do sistema',
+            to: '/suporte/saude',
+            roles: ['suporte'],
+          },
+        ],
       },
       {
         type: 'group',
@@ -78,24 +111,14 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica'],
           },
           {
-            label: 'Impacto social',
-            to: '/albergue/impacto-social',
+            label: 'Qualidade de dados',
+            to: '/albergue/qualidade-dados',
             roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
           },
           {
-            label: 'Aferição',
-            to: '/albergue/conferencia-rma',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica'],
-          },
-          {
-            label: 'Escala',
-            to: '/albergue/escala',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica'],
-          },
-          {
-            label: 'Admin',
-            to: '/albergue/admin',
-            roles: ['gestora'],
+            label: 'Impacto social',
+            to: '/albergue/impacto-social',
+            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
           },
         ],
       },
@@ -126,6 +149,11 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
           },
           {
+            label: 'Qualidade de dados',
+            to: '/creche/qualidade-dados',
+            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
+          },
+          {
             label: 'Relatórios',
             to: '/creche/relatorios',
             roles: ['gestora', 'coordenador_creche', 'equipe_tecnica'],
@@ -134,7 +162,7 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
       },
       {
         type: 'group',
-        label: 'Lojas',
+        label: 'Financeiro',
         to: '/lojas/secretaria',
         roles: ['gestora', 'equipe_tecnica', 'financeiro'],
         children: [
@@ -154,6 +182,16 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             to: '/lojas/secretaria/historico',
             roles: ['equipe_tecnica', 'financeiro'],
           },
+          {
+            label: 'Relatório financeiro',
+            to: '/lojas/secretaria/relatorio-executivo',
+            roles: ['gestora', 'financeiro'],
+          },
+          {
+            label: 'Qualidade de dados',
+            to: '/lojas/secretaria/qualidade-dados',
+            roles: ['equipe_tecnica', 'financeiro'],
+          },
         ],
       },
       {
@@ -165,11 +203,6 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
           {
             label: 'Produtos da loja',
             to: '/lojas/bazar/produtos',
-            roles: ['loja_bazar'],
-          },
-          {
-            label: 'Histórico da loja',
-            to: '/lojas/bazar/historico',
             roles: ['loja_bazar'],
           },
         ],
@@ -185,11 +218,6 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             to: '/lojas/brecho/produtos',
             roles: ['loja_brecho'],
           },
-          {
-            label: 'Histórico da loja',
-            to: '/lojas/brecho/historico',
-            roles: ['loja_brecho'],
-          },
         ],
       },
       {
@@ -203,11 +231,6 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             to: '/lojas/feirao/produtos',
             roles: ['loja_feirao'],
           },
-          {
-            label: 'Histórico da loja',
-            to: '/lojas/feirao/historico',
-            roles: ['loja_feirao'],
-          },
         ],
       },
     ],
@@ -218,12 +241,32 @@ function canUseItem(user: DemoUser | null, item: SidebarItem) {
   return Boolean(user && item.roles.includes(user.role));
 }
 
+function notificationNivelLabel(nivel: NotificacaoNivel) {
+  const labels: Record<NotificacaoNivel, string> = {
+    critico: 'Crítico',
+    atencao: 'Atenção',
+    info: 'Informativo',
+    sucesso: 'Resolvido',
+  };
+
+  return labels[nivel];
+}
+
 const Layout = ({ children }: LayoutProps) => {
   const { currentUser, logout } = useAuth();
+  const {
+    data: notificacoes,
+    loading: loadingNotificacoes,
+    error: notificacoesError,
+    dismissNotification,
+  } = useNotificacoes(Boolean(currentUser));
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: ToastType }>({ message: '', type: 'success' });
   const [showToast, setShowToast] = useState(false);
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [dismissingNotificationId, setDismissingNotificationId] = useState<string | null>(null);
 
   // Modal cadastro pessoa
   const [openCadastro, setOpenCadastro] = useState(false);
@@ -242,10 +285,53 @@ const Layout = ({ children }: LayoutProps) => {
   const canOpenCadastro = Boolean(
     currentUser && ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'].includes(currentUser.role),
   );
+  const notificationItems = notificacoes?.items ?? [];
+  const notificationCount = notificacoes?.unreadCount ?? 0;
+
+  const handleDismissNotification = useCallback(async (id: string) => {
+    setDismissingNotificationId(id);
+
+    try {
+      await dismissNotification(id);
+      showToastMsg('Aviso encerrado para hoje.', 'success');
+    } catch {
+      showToastMsg('Não foi possível encerrar o aviso agora.', 'error');
+    } finally {
+      setDismissingNotificationId(null);
+    }
+  }, [dismissNotification, showToastMsg]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (notificationsRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      setNotificationsOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [notificationsOpen]);
 
   return (
-    <div className="institutional-shell">
-      <header className="institutional-header">
+    <div className="institutional-shell ds-app-shell">
+      <header className="institutional-header ds-topbar">
         <Link className="institutional-brand" to={currentUser?.homePath ?? '/gestao'}>
           <img
             className="institutional-navbar-logo"
@@ -254,22 +340,102 @@ const Layout = ({ children }: LayoutProps) => {
           />
         </Link>
 
-        <div className="institutional-session">
+        <div className="institutional-session ds-session">
+          <div className="institutional-notifications" ref={notificationsRef}>
+            <button
+              aria-expanded={notificationsOpen}
+              aria-haspopup="dialog"
+              className={`notification-trigger ${notificationsOpen ? 'active' : ''}`}
+              onClick={() => setNotificationsOpen((open) => !open)}
+              type="button"
+            >
+              <span className="notification-trigger-dot" aria-hidden="true" />
+              <span>Avisos</span>
+              {notificationCount > 0 ? (
+                <strong aria-label={`${notificationCount} aviso(s) exigem atenção`}>{notificationCount}</strong>
+              ) : null}
+            </button>
+
+            {notificationsOpen ? (
+              <section className="notification-panel" role="dialog" aria-label="Avisos institucionais">
+                <header className="notification-panel-head">
+                  <div>
+                    <strong>Avisos institucionais</strong>
+                    <span>{notificacoes?.scopeLabel ?? 'Carregando escopo'}</span>
+                  </div>
+                  <button
+                    aria-label="Fechar avisos"
+                    className="notification-close"
+                    onClick={() => setNotificationsOpen(false)}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </header>
+
+                {notificacoes?.receiptPolicy ? (
+                  <div className="notification-policy">
+                    <strong>{notificacoes.receiptPolicy.title}</strong>
+                    <p>{notificacoes.receiptPolicy.description}</p>
+                  </div>
+                ) : null}
+
+                <div className="notification-list">
+                  {loadingNotificacoes ? (
+                    <div className="notification-empty" role="status">Carregando avisos...</div>
+                  ) : notificacoesError ? (
+                    <div className="notification-empty warning">{notificacoesError}</div>
+                  ) : notificationItems.length ? (
+                    notificationItems.map((item) => (
+                      <article className={`notification-item ${item.nivel}`} key={item.id}>
+                        <div className="notification-item-top">
+                          <span className={`notification-pill ${item.nivel}`}>{notificationNivelLabel(item.nivel)}</span>
+                          <small>{item.area}</small>
+                        </div>
+                        <strong>{item.title}</strong>
+                        <p>{item.description}</p>
+                        <div className="notification-item-actions">
+                          {item.href && item.actionLabel ? (
+                            <Link className="notification-action" onClick={() => setNotificationsOpen(false)} to={item.href}>
+                              {item.actionLabel}
+                            </Link>
+                          ) : null}
+                          <button
+                            className="notification-dismiss"
+                            disabled={dismissingNotificationId === item.id}
+                            onClick={() => void handleDismissNotification(item.id)}
+                            type="button"
+                          >
+                            {dismissingNotificationId === item.id ? 'Encerrando...' : 'Encerrar'}
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="notification-empty">
+                      <strong>Tudo em ordem</strong>
+                      <span>Nenhuma pendência relevante para o seu perfil agora.</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : null}
+          </div>
           <div className="session-user">
             <strong>Olá, {currentUser?.displayName ?? 'equipe'}</strong>
             <span>{currentUser?.roleLabel ?? 'Usuário'}</span>
           </div>
-          <Link className="account-link" to="/minha-conta">
+          <Link className="account-link ds-shell-link" to="/minha-conta">
             Minha conta
           </Link>
-          <button className="logout-button" onClick={logout} type="button">
+          <button className="logout-button ds-shell-link" onClick={logout} type="button">
             Sair
           </button>
         </div>
       </header>
 
-      <div className="institutional-body">
-        <aside className="executive-sidebar" aria-label="Navegação principal">
+      <div className="institutional-body ds-workspace-frame">
+        <aside className="executive-sidebar ds-sidebar" aria-label="Navegação principal">
           <div className="executive-sidebar-head">
             <div className="executive-sidebar-title">
               <strong>{currentUser?.serviceLabel ?? 'Gestão integrada'}</strong>
@@ -285,7 +451,7 @@ const Layout = ({ children }: LayoutProps) => {
             }
 
             return (
-              <nav className="executive-nav-section" key={section.title}>
+              <nav className="executive-nav-section ds-nav-section" key={section.title}>
                 <p>{section.title}</p>
                 {availableItems.map((item) => {
                   if (item.type === 'group') {
@@ -294,7 +460,7 @@ const Layout = ({ children }: LayoutProps) => {
                     return (
                       <div className="executive-nav-group" key={item.label}>
                         <NavLink
-                          className={({ isActive }) => `executive-nav-item executive-nav-parent ${isActive ? 'active' : ''}`}
+                          className={({ isActive }) => `executive-nav-item executive-nav-parent ds-nav-item ${isActive ? 'active' : ''}`}
                           to={item.to}
                         >
                           <span>
@@ -304,12 +470,12 @@ const Layout = ({ children }: LayoutProps) => {
                         </NavLink>
 
                         {groupItems.length ? (
-                          <div className="executive-nav-submenu" role="menu" aria-label={`${item.label}: atalhos`}>
+                          <div className="executive-nav-submenu ds-nav-submenu" role="menu" aria-label={`${item.label}: atalhos`}>
                             {groupItems.map((child) => {
                               if (child.type === 'action') {
                                 return (
                                   <button
-                                    className="executive-nav-subitem"
+                                    className="executive-nav-subitem ds-nav-subitem"
                                     key={child.label}
                                     onClick={() => {
                                       if (child.action === 'novoCadastro') {
@@ -327,7 +493,7 @@ const Layout = ({ children }: LayoutProps) => {
 
                               return (
                                 <NavLink
-                                  className={({ isActive }) => `executive-nav-subitem ${isActive ? 'active' : ''}`}
+                                  className={({ isActive }) => `executive-nav-subitem ds-nav-subitem ${isActive ? 'active' : ''}`}
                                   end={child.end}
                                   key={child.label}
                                   role="menuitem"
@@ -347,7 +513,7 @@ const Layout = ({ children }: LayoutProps) => {
                   if (item.type === 'action') {
                     return (
                       <button
-                        className="executive-nav-item"
+                        className="executive-nav-item ds-nav-item"
                         key={item.label}
                         onClick={() => {
                           if (item.action === 'novoCadastro') {
@@ -366,7 +532,7 @@ const Layout = ({ children }: LayoutProps) => {
 
                   return (
                     <NavLink
-                      className={({ isActive }) => `executive-nav-item ${isActive ? 'active' : ''}`}
+                      className={({ isActive }) => `executive-nav-item ds-nav-item ${isActive ? 'active' : ''}`}
                       end={item.end}
                       key={item.label}
                       to={item.to}
@@ -382,7 +548,7 @@ const Layout = ({ children }: LayoutProps) => {
             );
           })}
 
-          <div className="executive-founder-box">
+          <div className="executive-founder-box ds-governance-note">
             <strong>Construção conjunta</strong>
             <p>
               Navegação local por perfil, preservando a separação entre Gestão,
@@ -391,7 +557,7 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </aside>
 
-        <div className="institutional-main">
+        <div className="institutional-main ds-main-region">
           {children}
         </div>
       </div>

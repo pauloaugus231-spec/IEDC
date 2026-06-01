@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkoutPessoa, useHospedes, useTodasPessoas } from '../api';
+import { checkoutPessoa, type PessoaApi, type PessoaEstadiaResumo, useHospedes, useTodasPessoas } from '../api';
 import CadastroPessoaModal from '../components/CadastroPessoaModal';
 import CheckinModal from '../components/CheckinModal';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import FotoPreview from '../components/FotoPreview';
 import { getNomePrincipal } from '../utils';
 import '../styles/institutional.css';
@@ -43,19 +44,23 @@ function getCasaLabel(value?: string | null) {
   return value ? labels[value] || value : null;
 }
 
-function getActiveStay(pessoa: any) {
+function getActiveStay(pessoa: PessoaApi): PessoaEstadiaResumo | null {
   return Array.isArray(pessoa.estadias) ? pessoa.estadias[0] : null;
 }
 
-function getPersonStatus(pessoa: any) {
+function getPersonStatus(pessoa: PessoaApi) {
   if (pessoa.status_cadastro === 'ativa') return 'Hospedado';
   if (pessoa.liberacao_antecipada) return 'Liberado';
   if (pessoa.status_cadastro === 'aprovado') return 'Aprovado';
   return 'Inativo';
 }
 
-function canCheckin(pessoa: any) {
+function canCheckin(pessoa: PessoaApi) {
   return pessoa.status_cadastro === 'aprovado' || (pessoa.status_cadastro === 'inativo' && pessoa.liberacao_antecipada);
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro inesperado.';
 }
 
 const SearchPage = () => {
@@ -64,7 +69,7 @@ const SearchPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos');
   const [visibleCount, setVisibleCount] = useState(24);
   const [reload, setReload] = useState(0);
-  const [pessoaParaCheckin, setPessoaParaCheckin] = useState<any | null>(null);
+  const [pessoaParaCheckin, setPessoaParaCheckin] = useState<PessoaApi | null>(null);
   const [cadastroOpen, setCadastroOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -75,13 +80,13 @@ const SearchPage = () => {
     setVisibleCount(24);
   }, [debouncedSearch, statusFilter]);
 
-  (window as any).reloadTodasPessoas = () => setReload((current) => current + 1);
+  window.reloadTodasPessoas = () => setReload((current) => current + 1);
 
   const stats = useMemo(() => {
     const total = todasPessoas?.length ?? 0;
-    const hospedados = todasPessoas?.filter((p: any) => p.status_cadastro === 'ativa').length ?? 0;
-    const aprovados = todasPessoas?.filter((p: any) => p.status_cadastro === 'aprovado').length ?? 0;
-    const liberados = todasPessoas?.filter((p: any) => p.liberacao_antecipada).length ?? 0;
+    const hospedados = todasPessoas?.filter((pessoa) => pessoa.status_cadastro === 'ativa').length ?? 0;
+    const aprovados = todasPessoas?.filter((pessoa) => pessoa.status_cadastro === 'aprovado').length ?? 0;
+    const liberados = todasPessoas?.filter((pessoa) => pessoa.liberacao_antecipada).length ?? 0;
 
     return { total, hospedados, aprovados, liberados };
   }, [todasPessoas]);
@@ -91,15 +96,15 @@ const SearchPage = () => {
     setReload((current) => current + 1);
   };
 
-  const handleCheckout = async (pessoa: any) => {
+  const handleCheckout = async (pessoa: PessoaApi) => {
     if (!window.confirm(`Realizar saída de ${getNomePrincipal(pessoa)}?`)) return;
 
     try {
       await checkoutPessoa(pessoa.id);
-      (window as any).showToast?.('Saída registrada com sucesso.', 'success');
+      window.showToast?.('Saída registrada com sucesso.', 'success');
       setReload((current) => current + 1);
-    } catch (err: any) {
-      (window as any).showToast?.(err.message, 'error');
+    } catch (err: unknown) {
+      window.showToast?.(getErrorMessage(err), 'error');
     }
   };
 
@@ -108,7 +113,7 @@ const SearchPage = () => {
     if (!baseList) return [];
 
     return baseList
-      .filter((p: any) => {
+      .filter((p) => {
         if (statusFilter === 'todos') return true;
         if (statusFilter === 'hospedados') return p.status_cadastro === 'ativa';
         if (statusFilter === 'aprovados') return p.status_cadastro === 'aprovado';
@@ -116,7 +121,7 @@ const SearchPage = () => {
         if (statusFilter === 'inativos') return p.status_cadastro === 'inativo' && !p.liberacao_antecipada;
         return true;
       })
-      .sort((a: any, b: any) => (
+      .sort((a, b) => (
         (getNomePrincipal(a) || '').toLowerCase().localeCompare((getNomePrincipal(b) || '').toLowerCase())
       ));
   }, [debouncedSearch, pessoasBusca, todasPessoas, statusFilter]);
@@ -127,44 +132,29 @@ const SearchPage = () => {
 
   return (
     <main className="page-band people-search-page">
-      <section className="people-search-head">
-        <div>
-          <p className="institutional-eyebrow">Albergue Noturno</p>
-          <h1>Buscar pessoas</h1>
-          <p>Localize cadastros, veja status de estadia e execute entrada ou saída com clareza.</p>
-        </div>
-        <div className="people-search-actions">
+      <PageHeader
+        className="people-search-head"
+        eyebrow="Albergue Noturno"
+        title="Buscar pessoas"
+        description="Localize cadastros, veja status de estadia e execute entrada ou saída com clareza."
+        actions={(
+          <>
           <button className="report-button secondary" onClick={() => setReload((current) => current + 1)} type="button">
             Atualizar
           </button>
           <button className="report-button" onClick={() => setCadastroOpen(true)} type="button">
             Novo cadastro
           </button>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      <section className="people-search-kpis">
-        <article>
-          <span>Total cadastrados</span>
-          <strong>{stats.total}</strong>
-          <small>Base ativa do albergue</small>
-        </article>
-        <article>
-          <span>Hospedados agora</span>
-          <strong>{stats.hospedados}</strong>
-          <small>Com estadia ativa</small>
-        </article>
-        <article>
-          <span>Aprovados</span>
-          <strong>{stats.aprovados}</strong>
-          <small>Disponíveis para entrada</small>
-        </article>
-        <article>
-          <span>Liberados</span>
-          <strong>{stats.liberados}</strong>
-          <small>Com liberação antecipada</small>
-        </article>
-      </section>
+      <MetricGrid className="people-search-kpis">
+        <MetricCard label="Total cadastrados" value={stats.total} detail="Base ativa do albergue" />
+        <MetricCard label="Hospedados agora" value={stats.hospedados} detail="Com estadia ativa" tone="success" />
+        <MetricCard label="Aprovados" value={stats.aprovados} detail="Disponíveis para entrada" />
+        <MetricCard label="Liberados" value={stats.liberados} detail="Com liberação antecipada" tone="warning" />
+      </MetricGrid>
 
       <section className="people-search-panel">
         <div className="people-search-box">
@@ -227,7 +217,7 @@ const SearchPage = () => {
       )}
 
       <section className="people-card-list">
-        {listaVisivel.map((pessoa: any) => {
+        {listaVisivel.map((pessoa) => {
           const activeStay = getActiveStay(pessoa);
           const casa = getCasaLabel(activeStay?.cama?.casa);
           const dataEntrada = formatDate(activeStay?.data_checkin);
@@ -297,7 +287,7 @@ const SearchPage = () => {
       <CadastroPessoaModal
         onClose={() => setCadastroOpen(false)}
         onSuccess={() => {
-          (window as any).showToast?.('Pessoa cadastrada com sucesso.', 'success');
+          window.showToast?.('Pessoa cadastrada com sucesso.', 'success');
           setReload((current) => current + 1);
         }}
         open={cadastroOpen}
@@ -306,14 +296,21 @@ const SearchPage = () => {
   );
 };
 
-const FilterChip = ({ label, active, onClick, count }: any) => (
+interface FilterChipProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  count?: number;
+}
+
+const FilterChip = ({ label, active, onClick, count }: FilterChipProps) => (
   <button className={`people-filter-chip ${active ? 'active' : ''}`} onClick={onClick} type="button">
     <span>{label}</span>
     {count !== undefined && <em>{count}</em>}
   </button>
 );
 
-const StatusBadge = ({ pessoa }: { pessoa: any }) => {
+const StatusBadge = ({ pessoa }: { pessoa: PessoaApi }) => {
   const status = getPersonStatus(pessoa);
   const className = status.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 

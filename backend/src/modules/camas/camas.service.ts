@@ -2,7 +2,6 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cama, Casa, PosicaoCama, StatusCama } from '../../entities/cama.entity';
-import { Estadia, StatusEstadia } from '../../entities/estadia.entity';
 
 @Injectable()
 export class CamasService implements OnModuleInit {

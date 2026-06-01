@@ -111,12 +111,15 @@
 }
 
 .pin-btn {
+  display: inline-grid;
+  width: 30px;
+  height: 28px;
+  place-items: center;
   background: rgba(255, 255, 255, 0.2);
   border: none;
   border-radius: 6px;
-  padding: 4px 8px;
+  color: currentColor;
   cursor: pointer;
-  font-size: 12px;
   transition: all 0.2s;
 }
 
@@ -126,6 +129,7 @@
 
 .pin-btn.active {
   background: white;
+  color: #0041AA;
   transform: rotate(45deg);
 }
 

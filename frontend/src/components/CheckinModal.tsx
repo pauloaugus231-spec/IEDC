@@ -17,17 +17,17 @@ interface Cama {
 interface Pessoa {
   id: string;
   nome: string;
-  nome_social?: string;
-  tipo_vaga?: string;
-  sexo?: string;
-  genero?: string;
+  nome_social?: string | null;
+  tipo_vaga?: string | null;
+  sexo?: string | null;
+  genero?: string | null;
   lgbt?: boolean;
 }
 
 interface CheckinModalProps {
   pessoa: Pessoa;
   onClose: () => void;
-  onCheckinSuccess: (estadia: any) => void;
+  onCheckinSuccess: (estadia: unknown) => void;
 }
 
 const NOME_CASAS: Record<Casa, string> = {
@@ -49,6 +49,10 @@ function getRecommendedCasa(pessoa: Pessoa): Casa {
 
 function getPositionLabel(posicao: Cama['posicao']) {
   return posicao === 'SUPERIOR' ? 'Superior' : 'Inferior';
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '';
 }
 
 const BunkBedIcon = ({ posicao, status }: { posicao: Cama['posicao']; status: StatusCama }) => {
@@ -103,8 +107,8 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
         setLoading(true);
         const camasData = await apiFetch<Cama[]>('/api/camas');
         setCamas(camasData);
-      } catch (err: any) {
-        setError(`Falha ao carregar camas. ${err.message || ''}`.trim());
+      } catch (err: unknown) {
+        setError(`Falha ao carregar camas. ${getErrorMessage(err)}`.trim());
       } finally {
         setLoading(false);
       }
@@ -168,8 +172,8 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
         }),
       });
       onCheckinSuccess(novaEstadia);
-    } catch (err: any) {
-      setError(`Erro ao realizar check-in: ${err.message || 'tente novamente.'}`);
+    } catch (err: unknown) {
+      setError(`Erro ao realizar check-in: ${getErrorMessage(err) || 'tente novamente.'}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Pessoa } from '../../entities/pessoa.entity';
 import { Estadia, StatusEstadia } from '../../entities/estadia.entity';
@@ -26,7 +26,8 @@ export class RmaService {
   async lerArquivoGesuas(file: Express.Multer.File): Promise<PessoaGesuas[]> {
     try {
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(file.buffer as any);
+      const workbookData = Uint8Array.from(file.buffer).buffer as Parameters<typeof workbook.xlsx.load>[0];
+      await workbook.xlsx.load(workbookData);
 
       const worksheet = workbook.worksheets[0];
       if (!worksheet) {

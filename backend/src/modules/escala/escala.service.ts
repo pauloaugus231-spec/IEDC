@@ -86,7 +86,7 @@ export class EscalaService {
     }
   }
 
-  async gerarEscalaMensal(mes: number, ano: number): Promise<{ message: string; plantaoesGerados: number }> {
+  async gerarEscalaMensal(_mes: number, _ano: number): Promise<{ message: string; plantaoesGerados: number }> {
     throw new Error('Método antigo removido. Use gerarEscalaAutomatica.');
   }
 
@@ -127,10 +127,6 @@ export class EscalaService {
     for (let data = new Date(primeiroDia); data <= ultimoDia; data.setDate(data.getDate() + 1)) {
       const dataAtual = new Date(data);
       // Formatar data como YYYY-MM-DD sem conversão de timezone
-      const ano = dataAtual.getFullYear();
-      const mesStr = String(dataAtual.getMonth() + 1).padStart(2, '0');
-      const diaStr = String(dataAtual.getDate()).padStart(2, '0');
-      const dataISO = `${ano}-${mesStr}-${diaStr}`;
       const diaSemana = dataAtual.getDay(); // 0=Dom, 1=Seg, ..., 6=Sáb
 
       // ========================================
@@ -182,14 +178,14 @@ export class EscalaService {
           
           if (typeof volante.dias_semanais === 'string') {
             try {
-              const parsed = JSON.parse(volante.dias_semanais);
+              const parsed: unknown = JSON.parse(volante.dias_semanais);
               // Converter strings para números (pode vir como ["1","2","3","4","5"])
-              diasSemanais = Array.isArray(parsed) ? parsed.map((d: any) => Number(d)) : [1, 2, 3, 4, 5];
+              diasSemanais = Array.isArray(parsed) ? parsed.map((d) => Number(d)) : [1, 2, 3, 4, 5];
             } catch {
               diasSemanais = [1, 2, 3, 4, 5]; // Seg-Sex por padrão
             }
           } else if (Array.isArray(volante.dias_semanais)) {
-            diasSemanais = (volante.dias_semanais as any[]).map((d: any) => Number(d));
+            diasSemanais = (volante.dias_semanais as unknown[]).map((d) => Number(d));
           } else {
             diasSemanais = [1, 2, 3, 4, 5]; // Seg-Sex por padrão
           }

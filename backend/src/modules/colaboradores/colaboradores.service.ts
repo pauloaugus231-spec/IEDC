@@ -29,6 +29,14 @@ export interface UpdateColaboradorDto {
   revezamento_fds?: string;
 }
 
+export type ColaboradorResponse = Omit<Colaborador, 'dias_semanais'> & {
+  dias_semanais: number[];
+};
+
+type ColaboradorPersistInput = Omit<Partial<Colaborador>, 'dias_semanais'> & {
+  dias_semanais?: string | null;
+};
+
 @Injectable()
 export class ColaboradoresService {
   constructor(
@@ -36,68 +44,72 @@ export class ColaboradoresService {
     private colaboradorRepository: Repository<Colaborador>,
   ) {}
 
-  async create(createColaboradorDto: CreateColaboradorDto): Promise<Colaborador> {
-    // Converter array dias_semanais para JSON string se necessário
-    const dto = { ...createColaboradorDto };
-    if (dto.dias_semanais && Array.isArray(dto.dias_semanais)) {
-      (dto as any).dias_semanais = JSON.stringify(dto.dias_semanais);
-    }
-
+  async create(createColaboradorDto: CreateColaboradorDto): Promise<ColaboradorResponse> {
+    const dto = this.toPersistInput(createColaboradorDto);
     const colaborador = this.colaboradorRepository.create(dto as Partial<Colaborador>);
-    return this.colaboradorRepository.save(colaborador);
+    return this.toResponse(await this.colaboradorRepository.save(colaborador));
   }
 
-  async findAll(): Promise<Colaborador[]> {
+  async findAll(): Promise<ColaboradorResponse[]> {
     const colaboradores = await this.colaboradorRepository.find({
       order: { created_at: 'DESC' },
     });
 
-    // Converter string JSON dias_semanais de volta para array
-    return colaboradores.map(colab => {
-      if (colab.dias_semanais && typeof colab.dias_semanais === 'string') {
-        try {
-          (colab as any).dias_semanais = JSON.parse(colab.dias_semanais);
-        } catch (error) {
-          (colab as any).dias_semanais = [];
-        }
-      }
-      return colab;
-    });
+    return colaboradores.map((colaborador) => this.toResponse(colaborador));
   }
 
-  async findOne(id: string): Promise<Colaborador> {
+  async findOne(id: string): Promise<ColaboradorResponse> {
+    return this.toResponse(await this.findEntity(id));
+  }
+
+  async update(id: string, updateColaboradorDto: UpdateColaboradorDto): Promise<ColaboradorResponse> {
+    const colaborador = await this.findEntity(id);
+    Object.assign(colaborador, this.toPersistInput(updateColaboradorDto));
+    return this.toResponse(await this.colaboradorRepository.save(colaborador));
+  }
+
+  async remove(id: string): Promise<void> {
+    const colaborador = await this.findEntity(id);
+    await this.colaboradorRepository.remove(colaborador);
+  }
+
+  private async findEntity(id: string): Promise<Colaborador> {
     const colaborador = await this.colaboradorRepository.findOne({ where: { id } });
     if (!colaborador) {
       throw new NotFoundException(`Colaborador com ID ${id} não encontrado`);
     }
 
-    // Converter string JSON dias_semanais de volta para array
-    if (colaborador.dias_semanais && typeof colaborador.dias_semanais === 'string') {
-      try {
-        (colaborador as any).dias_semanais = JSON.parse(colaborador.dias_semanais);
-      } catch (error) {
-        (colaborador as any).dias_semanais = [];
-      }
-    }
-
     return colaborador;
   }
 
-  async update(id: string, updateColaboradorDto: UpdateColaboradorDto): Promise<Colaborador> {
-    const colaborador = await this.findOne(id);
-
-    // Converter array dias_semanais para JSON string se necessário
-    const dto = { ...updateColaboradorDto };
-    if (dto.dias_semanais && Array.isArray(dto.dias_semanais)) {
-      (dto as any).dias_semanais = JSON.stringify(dto.dias_semanais);
-    }
-
-    Object.assign(colaborador, dto);
-    return this.colaboradorRepository.save(colaborador);
+  private toPersistInput(dto: CreateColaboradorDto | UpdateColaboradorDto): ColaboradorPersistInput {
+    const { dias_semanais, ...rest } = dto;
+    return {
+      ...rest,
+      ...(Array.isArray(dias_semanais) ? { dias_semanais: JSON.stringify(dias_semanais) } : {}),
+    };
   }
 
-  async remove(id: string): Promise<void> {
-    const colaborador = await this.findOne(id);
-    await this.colaboradorRepository.remove(colaborador);
+  private toResponse(colaborador: Colaborador): ColaboradorResponse {
+    const { dias_semanais, ...rest } = colaborador;
+    return {
+      ...rest,
+      dias_semanais: this.parseDiasSemanais(dias_semanais),
+    };
+  }
+
+  private parseDiasSemanais(value: string | null): number[] {
+    if (!value) {
+      return [];
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed)
+        ? parsed.map((dia) => Number(dia)).filter((dia) => Number.isFinite(dia))
+        : [];
+    } catch {
+      return [];
+    }
   }
 }

@@ -4,6 +4,15 @@ import { LojasService } from './lojas.service';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { AuthRequest, AuthUser } from '../../auth/auth.types';
+import {
+  AdicionarItemDto,
+  AtualizarStatusComandaDto,
+  ClienteDto,
+  ConfirmarRetiradaDto,
+  CriarComandaDto,
+  ProdutoDto,
+  RegistrarPagamentoDto,
+} from './dto/lojas-operacao.dto';
 
 @Controller('lojas')
 @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO, UsuarioRole.LOJA_BAZAR, UsuarioRole.LOJA_BRECHO, UsuarioRole.LOJA_FEIRAO)
@@ -14,6 +23,22 @@ export class LojasController {
   @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
   getDashboard(@Query('periodo') periodo?: string) {
     return this.lojasService.getDashboard(periodo);
+  }
+
+  @Get('relatorio-financeiro')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.FINANCEIRO)
+  getRelatorioFinanceiro(@Query('periodo') periodo?: string) {
+    return this.lojasService.getRelatorioFinanceiro(periodo);
+  }
+
+  @Get('relatorio-financeiro/drilldown')
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.FINANCEIRO)
+  getRelatorioFinanceiroDrilldown(
+    @Query('periodo') periodo?: string,
+    @Query('dimension') dimension?: string,
+    @Query('key') key?: string,
+  ) {
+    return this.lojasService.getRelatorioFinanceiroDrilldown(periodo, dimension, key);
   }
 
   @Get('lojas')
@@ -27,13 +52,13 @@ export class LojasController {
   }
 
   @Post('produtos')
-  createProduto(@Req() req: AuthRequest, @Body() body: any) {
+  createProduto(@Req() req: AuthRequest, @Body() body: ProdutoDto) {
     const lojaSlug = this.resolveLojaScope(req.user, body?.lojaSlug);
     return this.lojasService.createProduto({ ...body, lojaSlug });
   }
 
   @Patch('produtos/:id')
-  updateProduto(@Req() req: AuthRequest, @Param('id') id: string, @Body() body: any) {
+  updateProduto(@Req() req: AuthRequest, @Param('id') id: string, @Body() body: ProdutoDto) {
     return this.lojasService.updateProduto(id, {
       ...body,
       lojaSlugPermitido: this.getLojaPermitida(req.user),
@@ -46,12 +71,12 @@ export class LojasController {
   }
 
   @Post('clientes')
-  createCliente(@Body() body: any) {
+  createCliente(@Body() body: ClienteDto) {
     return this.lojasService.createCliente(body);
   }
 
   @Patch('clientes/:id')
-  updateCliente(@Param('id') id: string, @Body() body: any) {
+  updateCliente(@Param('id') id: string, @Body() body: ClienteDto) {
     return this.lojasService.updateCliente(id, body);
   }
 
@@ -86,15 +111,19 @@ export class LojasController {
     @Query('lojaSlug') lojaSlug?: string,
     @Query('periodo') periodo?: string,
   ) {
+    if (this.getLojaPermitida(req.user) && status === 'recentes') {
+      throw new ForbiddenException('A loja não acessa histórico financeiro por período.');
+    }
+
     return this.lojasService.getComandas({
       status,
       lojaSlug: this.resolveLojaScope(req.user, lojaSlug),
       periodo,
-    });
+    }).then((comandas) => this.maskComandasForStore(req.user, comandas));
   }
 
   @Post('comandas')
-  createComanda(@Body() body: any) {
+  createComanda(@Body() body: CriarComandaDto) {
     return this.lojasService.createComanda(body);
   }
 
@@ -104,7 +133,7 @@ export class LojasController {
   }
 
   @Post('comandas/:id/itens')
-  addItem(@Req() req: AuthRequest, @Param('id') id: string, @Body() body: any) {
+  addItem(@Req() req: AuthRequest, @Param('id') id: string, @Body() body: AdicionarItemDto) {
     const lojaSlug = this.resolveLojaScope(req.user, body?.lojaSlug);
     return this.lojasService.addItem(id, { ...body, lojaSlug });
   }
@@ -116,13 +145,13 @@ export class LojasController {
 
   @Post('comandas/:id/pagamentos')
   @Roles(UsuarioRole.FINANCEIRO)
-  registrarPagamento(@Param('id') id: string, @Body() body: any) {
+  registrarPagamento(@Param('id') id: string, @Body() body: RegistrarPagamentoDto) {
     return this.lojasService.registrarPagamento(id, body);
   }
 
   @Patch('comandas/:id/status')
   @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
-  updateStatus(@Param('id') id: string, @Body() body: any) {
+  updateStatus(@Param('id') id: string, @Body() body: AtualizarStatusComandaDto) {
     return this.lojasService.updateStatus(id, body);
   }
 
@@ -137,11 +166,11 @@ export class LojasController {
       lojaSlug: this.resolveLojaScope(req.user, lojaSlug),
       status,
       periodo,
-    });
+    }).then((retiradas) => this.maskRetiradasForStore(req.user, retiradas));
   }
 
   @Patch('retiradas/:id/confirmar')
-  confirmarRetirada(@Req() req: AuthRequest, @Param('id') id: string, @Body() body: any) {
+  confirmarRetirada(@Req() req: AuthRequest, @Param('id') id: string, @Body() body: ConfirmarRetiradaDto) {
     return this.lojasService.confirmarRetirada(id, {
       ...body,
       lojaSlugPermitido: this.getLojaPermitida(req.user),
@@ -167,5 +196,30 @@ export class LojasController {
     }
 
     return lojaPermitida;
+  }
+
+  private maskRetiradasForStore(user: AuthUser | undefined, retiradas: Awaited<ReturnType<LojasService['getRetiradas']>>) {
+    if (!this.getLojaPermitida(user)) {
+      return retiradas;
+    }
+
+    return retiradas.map((retirada) => ({
+      ...retirada,
+      total: 0,
+    }));
+  }
+
+  private maskComandasForStore(user: AuthUser | undefined, comandas: Awaited<ReturnType<LojasService['getComandas']>>) {
+    if (!this.getLojaPermitida(user)) {
+      return comandas;
+    }
+
+    return comandas.map((comanda) => ({
+      ...comanda,
+      total: 0,
+      pago: 0,
+      saldo: 0,
+      totalLoja: 0,
+    }));
   }
 }

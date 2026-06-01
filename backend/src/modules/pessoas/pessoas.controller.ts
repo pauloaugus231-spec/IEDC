@@ -8,19 +8,20 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   UseInterceptors,
   UploadedFile,
-  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PessoasService } from './pessoas.service';
 import { CreatePessoaDto } from './dto/create-pessoa.dto';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
+import { FILE_LIMITS } from '../../common/upload/file-validation';
+import { UpdatePresencaDto } from './dto/update-presenca.dto';
+import { LiberarAntecipadamenteDto } from './dto/liberar-antecipadamente.dto';
 
 @ApiTags('pessoas')
 @Controller('pessoas')
@@ -110,7 +111,7 @@ export class PessoasController {
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
   async updatePresenca(
     @Param('id') id: string,
-    @Body() { presente }: { presente: boolean },
+    @Body() { presente }: UpdatePresencaDto,
   ): Promise<Pessoa> {
     return this.pessoasService.updatePresenca(id, presente);
   }
@@ -121,13 +122,13 @@ export class PessoasController {
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
   async liberarAntecipadamente(
     @Param('id') id: string,
-    @Body() body: { funcionario?: string }
+    @Body() body: LiberarAntecipadamenteDto
   ): Promise<Pessoa> {
     return this.pessoasService.liberarAntecipadamente(id, body?.funcionario);
   }
 
   @Post(':id/foto')
-  @UseInterceptors(FileInterceptor('foto'))
+  @UseInterceptors(FileInterceptor('foto', { limits: { fileSize: FILE_LIMITS.pessoaFoto } }))
   @ApiOperation({ summary: 'Upload de foto da pessoa' })
   @ApiResponse({ status: 200, description: 'Foto enviada com sucesso' })
   @ApiResponse({ status: 400, description: 'Arquivo inválido' })
@@ -135,9 +136,6 @@ export class PessoasController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<Pessoa> {
-    if (!file) {
-      throw new BadRequestException('Nenhum arquivo enviado');
-    }
     return this.pessoasService.uploadFoto(id, file);
   }
 

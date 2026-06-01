@@ -1,8 +1,12 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { AuthService } from './auth.service';
+import { AuthUser } from './auth.types';
 import { UsuarioRole, UsuarioServiceScope } from '../entities/usuario.entity';
 
-function createContext(request: Record<string, any>): ExecutionContext {
+function createContext(request: Record<string, unknown>): ExecutionContext {
   return {
     getHandler: jest.fn(),
     getClass: jest.fn(),
@@ -12,7 +16,7 @@ function createContext(request: Record<string, any>): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-function createGuard(user: Record<string, any>) {
+function createGuard(user: AuthUser) {
   const reflector = {
     getAllAndOverride: jest.fn().mockReturnValue(false),
   };
@@ -23,10 +27,14 @@ function createGuard(user: Record<string, any>) {
     findAuthUserById: jest.fn().mockResolvedValue(user),
   };
 
-  return new JwtAuthGuard(reflector as any, jwtService as any, authService as any);
+  return new JwtAuthGuard(
+    reflector as unknown as Reflector,
+    jwtService as unknown as JwtService,
+    authService as unknown as AuthService,
+  );
 }
 
-function createUser(mustChangePassword: boolean) {
+function createUser(mustChangePassword: boolean): AuthUser {
   return {
     id: 'claudia',
     uuid: 'user-id',

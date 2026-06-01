@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { changeOwnPassword } from '../api';
+import { PageHeader, Panel } from '../components/DesignSystem';
 import { useAuth } from '../context/AuthContext';
 import '../styles/institutional.css';
+import '../styles/design-system.css';
 
 const MyAccountPage = () => {
   const { currentUser, refreshCurrentUser } = useAuth();
@@ -46,22 +48,17 @@ const MyAccountPage = () => {
   };
 
   return (
-    <main className="page-band account-page">
-      <section className="creche-dashboard-head">
-        <div>
-          <p className="institutional-eyebrow">Minha conta</p>
-          <h1>Configurações de acesso</h1>
-          <p>
-            Atualize sua senha e confira o perfil institucional ativo. Segurança simples, sem teatro: cada pessoa
-            responde pelo próprio acesso.
-          </p>
-        </div>
-        {!currentUser?.mustChangePassword ? (
-          <Link className="creche-head-link secondary" to={currentUser?.homePath ?? '/gestao'}>
+    <main className="page-band account-page ds-admin-surface">
+      <PageHeader
+        eyebrow="Minha conta"
+        title="Configurações de acesso"
+        description="Atualize sua senha e confira o perfil institucional ativo. Cada pessoa responde pelo próprio acesso."
+        actions={!currentUser?.mustChangePassword ? (
+          <Link className="creche-head-link secondary ds-button" to={currentUser?.homePath ?? '/gestao'}>
             Voltar ao painel
           </Link>
         ) : null}
-      </section>
+      />
 
       {currentUser?.mustChangePassword ? (
         <p className="institutional-note warning">
@@ -71,16 +68,13 @@ const MyAccountPage = () => {
       {error ? <p className="institutional-note danger">{error}</p> : null}
       {notice ? <p className="institutional-note success">{notice}</p> : null}
 
-      <section className="account-grid">
-        <article className="support-panel account-summary">
-          <div className="creche-panel-head">
-            <div>
-              <h2 className="section-title">Identidade do perfil</h2>
-              <span>Dados usados para sessão e permissões.</span>
-            </div>
-          </div>
-
-          <dl className="account-definition-list">
+      <section className="account-grid ds-admin-grid">
+        <Panel
+          className="account-summary"
+          title="Identidade do perfil"
+          subtitle="Dados usados para sessão e permissões."
+        >
+          <dl className="account-definition-list ds-definition-list">
             <div>
               <dt>Nome</dt>
               <dd>{currentUser?.displayName}</dd>
@@ -102,17 +96,14 @@ const MyAccountPage = () => {
               <dd>{currentUser?.mustChangePassword ? 'Troca obrigatória' : 'Atualizada'}</dd>
             </div>
           </dl>
-        </article>
+        </Panel>
 
-        <article className="support-panel account-password-panel">
-          <div className="creche-panel-head">
-            <div>
-              <h2 className="section-title">Alterar senha</h2>
-              <span>Use uma senha própria. Suporte só redefine temporariamente.</span>
-            </div>
-          </div>
-
-          <form className="support-form" onSubmit={handleSubmit}>
+        <Panel
+          className="account-password-panel"
+          title="Alterar senha"
+          subtitle="Use uma senha própria. Suporte só redefine temporariamente."
+        >
+          <form className="support-form ds-form" onSubmit={handleSubmit}>
             <label>
               Senha atual
               <input
@@ -146,11 +137,11 @@ const MyAccountPage = () => {
               />
             </label>
 
-            <button className="institutional-button" disabled={saving} type="submit">
+            <button className="institutional-button ds-button" disabled={saving} type="submit">
               {saving ? 'Atualizando...' : 'Atualizar senha'}
             </button>
           </form>
-        </article>
+        </Panel>
       </section>
     </main>
   );

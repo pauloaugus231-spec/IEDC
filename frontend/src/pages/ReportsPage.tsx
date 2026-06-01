@@ -1,23 +1,80 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
 import { apiFetch } from '../api';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
-import { Pie, Bar, getElementAtEvent } from 'react-chartjs-2';
+import type { ActiveElement, Chart, ChartEvent } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { MetricCard, MetricGrid, PageHeader, Panel, TableShell } from '../components/DesignSystem';
 import { downloadExcelCompatibleTable } from '../utils/spreadsheet';
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
+interface ReportRow {
+  nome?: string | null;
+  pessoa_nome?: string | null;
+  cpf?: string | null;
+  pessoa_cpf?: string | null;
+  nis?: string | null;
+  pessoa_nis?: string | null;
+  data_nascimento?: string | null;
+  pessoa_data_nascimento?: string | null;
+  genero?: string | null;
+  pessoa_genero?: string | null;
+  cor?: string | null;
+  pessoa_cor?: string | null;
+  raca?: string | null;
+  pessoa_raca?: string | null;
+  lgbt?: boolean | null;
+  pessoa_lgbt?: boolean | null;
+}
+
+interface OperationalAgeRange {
+  faixa: string;
+  total: number | string | null;
+}
+
+interface OperationalSummary {
+  pessoasUnicas?: number | null;
+  acessosPeriodo?: number | null;
+  novosAcessos?: number | null;
+  retornos?: number | null;
+  pernoitesEstimados?: number | null;
+  faixaEtaria?: OperationalAgeRange[] | null;
+}
+
+type DrillDown = {
+  tipo: 'cor' | 'genero';
+  valor: string;
+};
+
+type RelatorioFiltros = Partial<Record<'quarto', string>>;
+
+type CustomReportResponse = ReportRow[] | {
+  data?: ReportRow[];
+};
+
+function normalizeReportRows(response: CustomReportResponse): ReportRow[] {
+  if (Array.isArray(response)) return response;
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+function updateCanvasCursor(event: ChartEvent, chartElement: ActiveElement[]) {
+  const target = event.native?.target;
+  if (target instanceof HTMLElement) {
+    target.style.cursor = chartElement.length ? 'pointer' : 'default';
+  }
+}
+
 const ReportsPage = () => {
   // Dados Brutos
-  const [rawData, setRawData] = useState<any[]>([]);
-  const [operacionalResumo, setOperacionalResumo] = useState<any | null>(null);
+  const [rawData, setRawData] = useState<ReportRow[]>([]);
+  const [operacionalResumo, setOperacionalResumo] = useState<OperationalSummary | null>(null);
   const [loading, setLoading] = useState(false);
   
   // Estado do Filtro Drill-down
-  const [drillDown, setDrillDown] = useState<{ tipo: string, valor: any } | null>(null);
+  const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
   
   // LGPD - Máscara de dados sensíveis
   const [lgpdMode, setLgpdMode] = useState(false);
@@ -31,8 +88,8 @@ const ReportsPage = () => {
   const [showFiltrosAvancados, setShowFiltrosAvancados] = useState(false);
   
   // Referências para os gráficos
-  const pieChartRef = useRef<any>(null);
-  const barChartRef = useRef<any>(null);
+  const pieChartRef = useRef<Chart<'pie'> | null>(null);
+  const barChartRef = useRef<Chart<'bar'> | null>(null);
 
   // --- 1. CARGA DE DADOS DA API ---
   const carregarResumoOperacional = async () => {
@@ -44,12 +101,12 @@ const ReportsPage = () => {
       params.set('fim', filtrosAvancados.dataFim);
     }
 
-    const filtrosRel: any = {};
+    const filtrosRel: RelatorioFiltros = {};
     if (filtrosAvancados.quarto) filtrosRel.quarto = filtrosAvancados.quarto;
     if (Object.keys(filtrosRel).length > 0) params.set('filtros', JSON.stringify(filtrosRel));
     if (params.toString()) url += `?${params.toString()}`;
 
-    const response = await apiFetch(url);
+    const response = await apiFetch<OperationalSummary>(url);
     setOperacionalResumo(response);
   };
 
@@ -62,15 +119,15 @@ const ReportsPage = () => {
         url += `&inicio=${filtrosAvancados.dataInicio}&fim=${filtrosAvancados.dataFim}`;
       }
       
-      const filtrosRel: any = {};
+      const filtrosRel: RelatorioFiltros = {};
       if (filtrosAvancados.quarto) filtrosRel.quarto = filtrosAvancados.quarto;
       
       if (Object.keys(filtrosRel).length > 0) {
         url += `&filtros=${JSON.stringify(filtrosRel)}`;
       }
       
-      const response = await apiFetch(url);
-      const dados = Array.isArray(response) ? response : (response as any).data || [];
+      const response = await apiFetch<CustomReportResponse>(url);
+      const dados = normalizeReportRows(response);
       setRawData(dados);
       await carregarResumoOperacional();
     } catch (error) {
@@ -235,25 +292,35 @@ const ReportsPage = () => {
 
   // --- 4. HANDLERS DE CLIQUE (DRILL-DOWN) ---
 
-  const handlePieClick = (event: any) => {
+  const handlePieClick = (event: MouseEvent<HTMLCanvasElement>) => {
     if (!pieChartRef.current) return;
-    const element = getElementAtEvent(pieChartRef.current, event);
+    const element = pieChartRef.current.getElementsAtEventForMode(
+      event.nativeEvent,
+      'nearest',
+      { intersect: true },
+      false,
+    );
     if (!element.length) return;
 
     const corClicada = coresOrdenadas[element[0].index]?.[0];
     if (corClicada) applyFilter('cor', corClicada);
   };
 
-  const handleBarClick = (event: any) => {
+  const handleBarClick = (event: MouseEvent<HTMLCanvasElement>) => {
     if (!barChartRef.current) return;
-    const element = getElementAtEvent(barChartRef.current, event);
+    const element = barChartRef.current.getElementsAtEventForMode(
+      event.nativeEvent,
+      'nearest',
+      { intersect: true },
+      false,
+    );
     if (!element.length) return;
 
     const generoClicado = chartGeneroData.labels[element[0].index];
     applyFilter('genero', generoClicado);
   };
 
-  const applyFilter = (tipo: string, valor: any) => {
+  const applyFilter = (tipo: DrillDown['tipo'], valor: string) => {
     if (drillDown?.tipo === tipo && drillDown?.valor === valor) {
       setDrillDown(null);
     } else {
@@ -271,7 +338,7 @@ const ReportsPage = () => {
       doc.text(`Filtro aplicado: ${drillDown.tipo} = ${drillDown.valor}`, 14, 28);
     }
     if (lgpdMode) {
-      doc.text('⚠️ Dados anonimizados conforme LGPD', 14, drillDown ? 34 : 28);
+      doc.text('Dados anonimizados conforme LGPD.', 14, drillDown ? 34 : 28);
     }
 
     const tableRows = filteredData.map(row => [
@@ -306,115 +373,71 @@ const ReportsPage = () => {
     downloadExcelCompatibleTable(excelData, 'relatorio-acolhidos.xls', 'Acolhidos');
   };
 
-  // --- ESTILOS ---
-  const cardStyle: React.CSSProperties = { backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' };
-  const cardTitleStyle: React.CSSProperties = { fontSize: '16px', fontWeight: '700', color: '#1F2937', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
-  const hintStyle: React.CSSProperties = { fontSize: '11px', fontWeight: 'normal', color: '#6B7280', backgroundColor: '#F3F4F6', padding: '2px 8px', borderRadius: '10px' };
-
   return (
-    <div style={{ backgroundColor: '#F3F4F6', minHeight: '100vh', padding: '24px', fontFamily: 'Inter, sans-serif', paddingBottom: '100px' }}>
-      
-      {/* HEADER */}
-      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#111827', margin: 0 }}>Dashboard Analítico</h1>
-          <p style={{ color: '#6B7280', margin: '4px 0 0' }}>Clique nos gráficos para filtrar os dados (Drill-down)</p>
-        </div>
-        
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Botão Conferência RMA */}
-          <Link 
-            to="/conferencia-rma"
-            style={{ 
-              backgroundColor: '#10B981', 
-              color: 'white', 
-              border: 'none', 
-              padding: '8px 16px', 
-              borderRadius: '8px', 
-              cursor: 'pointer', 
-              fontWeight: '600',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-            }}
-          >
-            📊 Conferência RMA
-          </Link>
-          
-          {/* Toggle LGPD */}
+    <main className="page-band albergue-reports-page">
+      <PageHeader
+        eyebrow="Albergue Noturno"
+        title="Dashboard analítico"
+        description="Leitura gerencial de perfil, recortes e movimentação do período. Os gráficos funcionam como filtros operacionais."
+        actions={(
+          <div className="albergue-report-actions">
           <button 
             onClick={() => setLgpdMode(!lgpdMode)}
             title={lgpdMode ? 'Clique para mostrar dados completos' : 'Clique para ocultar dados sensíveis (LGPD)'}
-            style={{ 
-              backgroundColor: lgpdMode ? '#7C3AED' : '#E5E7EB', 
-              color: lgpdMode ? 'white' : '#374151', 
-              border: 'none', 
-              padding: '8px 16px', 
-              borderRadius: '8px', 
-              cursor: 'pointer', 
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: lgpdMode ? '0 2px 4px rgba(124, 58, 237, 0.3)' : 'none'
-            }}
+            className={`ds-button ${lgpdMode ? 'active' : 'secondary'}`}
           >
-            {lgpdMode ? '🔒' : '🔓'} LGPD
+            {lgpdMode ? 'LGPD ativa' : 'Anonimizar LGPD'}
           </button>
           
           {drillDown && (
             <button 
               onClick={() => setDrillDown(null)}
-              style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)' }}
+              className="ds-button danger"
             >
-              ✕ Limpar: {drillDown.valor}
+              Limpar filtro: {drillDown.valor}
             </button>
           )}
           <button 
             onClick={() => setShowFiltrosAvancados(!showFiltrosAvancados)}
-            style={{ backgroundColor: showFiltrosAvancados ? '#1F2937' : '#E5E7EB', color: showFiltrosAvancados ? 'white' : '#374151', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+            className={`ds-button ${showFiltrosAvancados ? 'active' : 'secondary'}`}
           >
-            ⚙️ Filtros
+            {showFiltrosAvancados ? 'Ocultar filtros' : 'Filtrar dados'}
           </button>
-          <button onClick={downloadPDF} style={{ backgroundColor: '#1F2937', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
-            📄 PDF
+          <button onClick={downloadPDF} className="ds-button secondary">
+            Baixar PDF
           </button>
-          <button onClick={downloadExcel} style={{ backgroundColor: '#16A34A', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
-            📊 Excel
+          <button onClick={downloadExcel} className="ds-button secondary">
+            Baixar Excel
           </button>
-        </div>
-      </header>
+          </div>
+        )}
+      />
 
       {/* FILTROS AVANÇADOS (COLAPSÁVEL) */}
       {showFiltrosAvancados && (
-        <div style={{ ...cardStyle, marginBottom: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', alignItems: 'end' }}>
+        <Panel className="albergue-filter-panel" title="Filtros do relatório" subtitle="Use para recortar período e casa sem perder a leitura executiva.">
+          <div className="albergue-filter-grid">
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '4px' }}>Data Início</label>
+              <label>Data início</label>
               <input 
                 type="date" 
                 value={filtrosAvancados.dataInicio}
                 onChange={e => setFiltrosAvancados(prev => ({ ...prev, dataInicio: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '14px' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '4px' }}>Data Fim</label>
+              <label>Data fim</label>
               <input 
                 type="date" 
                 value={filtrosAvancados.dataFim}
                 onChange={e => setFiltrosAvancados(prev => ({ ...prev, dataFim: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '14px' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '4px' }}>Quarto/Casa</label>
+              <label>Quarto/Casa</label>
               <select 
                 value={filtrosAvancados.quarto}
                 onChange={e => setFiltrosAvancados(prev => ({ ...prev, quarto: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '14px', backgroundColor: 'white' }}
               >
                 <option value="">Todos</option>
                 <option value="MASCULINA">Masculino</option>
@@ -426,70 +449,69 @@ const ReportsPage = () => {
             <button 
               onClick={carregarDados}
               disabled={loading}
-              style={{ backgroundColor: '#2563EB', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              className="ds-button"
             >
               {loading ? 'Carregando...' : 'Aplicar'}
             </button>
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* KPIS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <KpiCard title="Total Cadastros" value={kpis.total} color="#3B82F6" />
-        <KpiCard 
-          title="Seleção Atual" 
-          value={kpis.filtrado} 
-          sub={drillDown ? `Filtrado por ${drillDown.valor}` : 'Sem filtros'} 
-          color={drillDown ? '#10B981' : '#9CA3AF'} 
-          isActive={!!drillDown}
+      <MetricGrid>
+        <MetricCard label="Total de cadastros" value={kpis.total} detail="Base carregada" />
+        <MetricCard
+          label="Seleção atual"
+          value={kpis.filtrado}
+          detail={drillDown ? `Filtrado por ${drillDown.valor}` : 'Sem filtros'}
+          tone={drillDown ? 'success' : 'muted'}
         />
-        <KpiCard title="Média de Idade" value={`${kpis.mediaIdade} Anos`} color="#F59E0B" sub="Da seleção atual" />
-        <KpiCard title="LGBT+" value={kpis.lgbtCount} color="#8B5CF6" sub={`${kpis.total > 0 ? Math.round((kpis.lgbtCount / kpis.total) * 100) : 0}% do total`} />
-      </div>
+        <MetricCard label="Média de idade" value={`${kpis.mediaIdade} anos`} detail="Seleção atual" tone="warning" />
+        <MetricCard label="LGBT+" value={kpis.lgbtCount} detail={`${kpis.total > 0 ? Math.round((kpis.lgbtCount / kpis.total) * 100) : 0}% do total`} />
+      </MetricGrid>
 
       {operacionalResumo && (
-        <div style={{ ...cardStyle, marginBottom: '24px' }}>
-          <h3 style={cardTitleStyle}>
-            Resumo operacional do período
-            <span style={hintStyle}>novos, retornos e faixa etária</span>
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px', marginBottom: '18px' }}>
-            <KpiCard title="Pessoas únicas" value={operacionalResumo.pessoasUnicas ?? 0} color="#2563EB" />
-            <KpiCard title="Acessos/estadias" value={operacionalResumo.acessosPeriodo ?? 0} color="#0F9D58" />
-            <KpiCard title="Novos acessos" value={operacionalResumo.novosAcessos ?? 0} color="#F59E0B" />
-            <KpiCard title="Retornos" value={operacionalResumo.retornos ?? 0} color="#7C3AED" />
-            <KpiCard title="Pernoites estimados" value={operacionalResumo.pernoitesEstimados ?? 0} color="#1F2937" />
-          </div>
+        <Panel
+          className="albergue-operational-summary"
+          title="Resumo operacional do período"
+          subtitle="Novos acessos, retornos, pernoites e faixa etária."
+        >
+          <MetricGrid className="albergue-summary-grid">
+            <MetricCard label="Pessoas únicas" value={operacionalResumo.pessoasUnicas ?? 0} />
+            <MetricCard label="Acessos/estadias" value={operacionalResumo.acessosPeriodo ?? 0} tone="success" />
+            <MetricCard label="Novos acessos" value={operacionalResumo.novosAcessos ?? 0} tone="warning" />
+            <MetricCard label="Retornos" value={operacionalResumo.retornos ?? 0} />
+            <MetricCard label="Pernoites estimados" value={operacionalResumo.pernoitesEstimados ?? 0} />
+          </MetricGrid>
 
-          <div style={{ display: 'grid', gap: '10px' }}>
-            {(operacionalResumo.faixaEtaria ?? []).map((item: any) => {
-              const max = Math.max(...(operacionalResumo.faixaEtaria ?? []).map((row: any) => Number(row.total || 0)), 1);
+          <div className="albergue-age-bars">
+            {(operacionalResumo.faixaEtaria ?? []).map((item) => {
+              const max = Math.max(...(operacionalResumo.faixaEtaria ?? []).map((row) => Number(row.total || 0)), 1);
               const width = Math.round((Number(item.total || 0) / max) * 100);
+              const ageBarStyle = { '--age-width': `${width}%` } as CSSProperties;
               return (
-                <div key={item.faixa} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 42px', alignItems: 'center', gap: '10px' }}>
-                  <strong style={{ color: '#374151', fontSize: '13px' }}>{item.faixa}</strong>
-                  <span style={{ background: '#EEF2F7', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
-                    <i style={{ display: 'block', width: `${width}%`, height: '100%', background: '#2563EB', borderRadius: '999px' }} />
+                <div key={item.faixa} className="albergue-age-row">
+                  <strong>{item.faixa}</strong>
+                  <span>
+                    <i style={ageBarStyle} />
                   </span>
-                  <em style={{ color: '#111827', fontStyle: 'normal', fontWeight: 800 }}>{item.total}</em>
+                  <em>{item.total}</em>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* GRÁFICOS INTERATIVOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+      <div className="albergue-report-chart-grid">
         
         {/* GRÁFICO: GÊNERO */}
-        <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>
-            Por Gênero
-            <span style={hintStyle}>🖱️ Clique nas barras</span>
-          </h3>
-          <div style={{ height: '280px' }}>
+        <Panel
+          title="Por gênero"
+          actions={<span className="ds-hint">Clique nas barras</span>}
+        >
+          <div className="albergue-report-chart-box">
             {Object.keys(contagemGenero).length > 0 ? (
               <Bar 
                 ref={barChartRef}
@@ -503,28 +525,23 @@ const ReportsPage = () => {
                     y: { beginAtZero: true, grid: { color: '#F3F4F6' } },
                     x: { grid: { display: false } }
                   },
-                  onHover: (event: any, chartElement: any) => { 
-                    if (event.native?.target) {
-                      (event.native.target as HTMLElement).style.cursor = chartElement.length ? 'pointer' : 'default'; 
-                    }
-                  }
+                  onHover: updateCanvasCursor
                 }} 
               />
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
+              <div className="albergue-empty-state">
                 {loading ? 'Carregando...' : 'Sem dados disponíveis'}
               </div>
             )}
           </div>
-        </div>
+        </Panel>
 
         {/* GRÁFICO: COR/RAÇA */}
-        <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>
-            Por Cor/Raça
-            <span style={hintStyle}>🖱️ Clique nas fatias</span>
-          </h3>
-          <div style={{ height: '280px', display: 'flex', justifyContent: 'center' }}>
+        <Panel
+          title="Por cor/raça"
+          actions={<span className="ds-hint">Clique nas fatias</span>}
+        >
+          <div className="albergue-report-chart-box centered">
             {coresOrdenadas.length > 0 ? (
               <Pie 
                 ref={pieChartRef}
@@ -534,40 +551,31 @@ const ReportsPage = () => {
                   responsive: true, 
                   maintainAspectRatio: false,
                   plugins: { legend: { position: 'right' } },
-                  onHover: (event: any, chartElement: any) => { 
-                    if (event.native?.target) {
-                      (event.native.target as HTMLElement).style.cursor = chartElement.length ? 'pointer' : 'default'; 
-                    }
-                  }
+                  onHover: updateCanvasCursor
                 }} 
               />
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9CA3AF' }}>
+              <div className="albergue-empty-state">
                 {loading ? 'Carregando...' : 'Sem dados disponíveis'}
               </div>
             )}
           </div>
-        </div>
+        </Panel>
       </div>
 
       {/* TABELA DE DADOS */}
-      <div style={cardStyle}>
-        <h3 style={cardTitleStyle}>
-          Listagem Detalhada
-          {drillDown && (
-            <span style={{ marginLeft: '10px', fontSize: '12px', fontWeight: 'normal', backgroundColor: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: '6px' }}>
-              Filtrando por: {drillDown.valor}
-            </span>
-          )}
-        </h3>
-        <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '600px' }}>
-            <thead style={{ position: 'sticky', top: 0, backgroundColor: '#F9FAFB', zIndex: 1 }}>
-              <tr style={{ textAlign: 'left', color: '#6B7280', borderBottom: '2px solid #E5E7EB' }}>
-                <th style={{ padding: '14px 16px', fontWeight: '600' }}>Nome</th>
-                <th style={{ padding: '14px 16px', fontWeight: '600' }}>CPF</th>
-                <th style={{ padding: '14px 16px', fontWeight: '600' }}>Gênero</th>
-                <th style={{ padding: '14px 16px', fontWeight: '600' }}>Cor/Raça</th>
+      <Panel
+        title="Listagem detalhada"
+        actions={drillDown ? <span className="ds-hint warning">Filtrando por: {drillDown.valor}</span> : null}
+      >
+        <TableShell className="albergue-report-table">
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>Gênero</th>
+                <th>Cor/Raça</th>
               </tr>
             </thead>
             <tbody>
@@ -575,58 +583,37 @@ const ReportsPage = () => {
                 [...filteredData]
                   .sort((a, b) => (a.nome || a.pessoa_nome || '').localeCompare(b.nome || b.pessoa_nome || ''))
                   .map((d, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                      <td style={{ padding: '14px 16px', fontWeight: '500', color: '#1F2937' }}>
-                        {(d.lgbt || d.pessoa_lgbt) && <span title="LGBT+" style={{ marginRight: '6px' }}>🏳️‍🌈</span>}
+                    <tr key={idx}>
+                      <td>
+                        {(d.lgbt || d.pessoa_lgbt) && <span title="LGBT+" className="albergue-identity-tag">LGBT+</span>}
                         {mascararNome(d.nome || d.pessoa_nome)}
                       </td>
-                      <td style={{ padding: '14px 16px', color: '#6B7280' }}>{mascararCPF(d.cpf || d.pessoa_cpf)}</td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{ 
-                          padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600',
-                          backgroundColor: '#EFF6FF',
-                          color: '#1D4ED8'
-                        }}>
+                      <td>{mascararCPF(d.cpf || d.pessoa_cpf)}</td>
+                      <td>
+                        <span className="albergue-report-badge">
                           {d.genero || d.pessoa_genero || 'Não informado'}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 16px', color: '#374151' }}>{d.cor || d.pessoa_cor || d.raca || '-'}</td>
+                      <td>{d.cor || d.pessoa_cor || d.raca || '-'}</td>
                     </tr>
                   ))
               ) : (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>
+                  <td colSpan={4} className="albergue-table-empty">
                     {loading ? 'Carregando dados...' : 'Nenhum registro encontrado.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
-      </div>
+        </TableShell>
+      </Panel>
 
-      <div style={{ textAlign: 'center', marginTop: '32px', color: '#9CA3AF', fontSize: '12px' }}>
+      <div className="albergue-report-footer">
         &copy; {new Date().getFullYear()} Sistema Albergue - Gestão Social
       </div>
-    </div>
+    </main>
   );
 };
-
-// --- COMPONENTE KPI ---
-const KpiCard = ({ title, value, sub, color, isActive }: { title: string; value: any; sub?: string; color: string; isActive?: boolean }) => (
-  <div style={{ 
-    backgroundColor: 'white', 
-    padding: '20px', 
-    borderRadius: '12px', 
-    borderLeft: `4px solid ${color}`, 
-    boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.05)',
-    transform: isActive ? 'scale(1.02)' : 'none',
-    transition: 'all 0.2s'
-  }}>
-    <div style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</div>
-    <div style={{ fontSize: '28px', fontWeight: '800', color: '#111827', margin: '6px 0' }}>{value}</div>
-    {sub && <div style={{ fontSize: '12px', color: color, fontWeight: '600' }}>{sub}</div>}
-  </div>
-);
 
 export default ReportsPage;

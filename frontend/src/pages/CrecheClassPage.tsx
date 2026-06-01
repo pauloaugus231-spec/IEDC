@@ -9,6 +9,7 @@ import {
   useCrecheTurmas,
   type CrecheTurmaDetalhe,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 const CrecheClassPage = () => {
@@ -78,13 +79,12 @@ const CrecheClassPage = () => {
   if (!id) {
     return (
       <main className="page-band creche-page">
-        <section className="creche-dashboard-head">
-          <div>
-            <p className="institutional-eyebrow">E.E.I. Casa do Pequenino</p>
-            <h1>Turmas da Escola de Educação Infantil</h1>
-            <p>Visualize cada turma, professora responsável, ocupação e acesso rápido às crianças vinculadas.</p>
-          </div>
-          <div className="creche-head-actions">
+        <PageHeader
+          eyebrow="E.E.I. Casa do Pequenino"
+          title="Turmas da Escola de Educação Infantil"
+          description="Visualize cada turma, professora responsável, ocupação e acesso rápido às crianças vinculadas."
+          actions={(
+            <>
             <Link className="creche-head-link secondary" to="/creche">
               Painel E.E.I.
             </Link>
@@ -94,8 +94,9 @@ const CrecheClassPage = () => {
             <Link className="creche-head-link" to="/creche/criancas">
               Crianças
             </Link>
-          </div>
-        </section>
+            </>
+          )}
+        />
 
         <section className="creche-turmas-grid">
           {turmas.map((turma) => {
@@ -110,9 +111,7 @@ const CrecheClassPage = () => {
                   </div>
                   <em>{turma.criancas}/{turma.capacidade}</em>
                 </div>
-                <div className="creche-turma-track" aria-hidden="true">
-                  <i style={{ width: `${Math.min(taxa, 100)}%` }} />
-                </div>
+                <progress className="creche-turma-track" value={Math.min(taxa, 100)} max={100} aria-label={`Ocupação da turma ${turma.nome}`} />
                 <div className="creche-turma-actions">
                   <Link to={`/creche/turmas/${turma.id}`}>Abrir turma</Link>
                   <Link to={`/creche/frequencia?turmaId=${turma.id}`}>Frequência</Link>
@@ -177,28 +176,12 @@ const CrecheClassPage = () => {
         </div>
       </section>
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Crianças</span>
-          <strong>{detail.indicadores.totalCriancas}</strong>
-          <small>Vinculadas à turma</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Frequência 30 dias</span>
-          <strong>{detail.indicadores.frequencia30Dias}%</strong>
-          <small>{detail.indicadores.diasRegistrados} registros</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Pendências NIS</span>
-          <strong>{detail.indicadores.semNis}</strong>
-          <small>Revisar para aferição</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Faltas</span>
-          <strong>{detail.indicadores.faltas}</strong>
-          <small>Últimos 30 dias</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Crianças" value={detail.indicadores.totalCriancas} detail="Vinculadas à turma" />
+        <MetricCard label="Frequência 30 dias" value={`${detail.indicadores.frequencia30Dias}%`} detail={`${detail.indicadores.diasRegistrados} registros`} />
+        <MetricCard label="Pendências NIS" value={detail.indicadores.semNis} detail="Revisar para aferição" tone="warning" />
+        <MetricCard label="Faltas" value={detail.indicadores.faltas} detail="Últimos 30 dias" />
+      </MetricGrid>
 
       <section className="creche-profile-grid">
         <article className="creche-panel">
@@ -268,7 +251,7 @@ const CrecheClassPage = () => {
             </div>
           </div>
 
-          <div className="report-table-wrap">
+          <div className="report-table-wrap ds-table-shell">
             <table className="report-table">
               <thead>
                 <tr>

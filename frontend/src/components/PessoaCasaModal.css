@@ -9,7 +9,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 23, 42, 0.48);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,15 +19,16 @@
 
 /* Modal Wide */
 .modal-wide {
-  background: white;
+  background: var(--iedc-surface, white);
   width: 95%;
   max-width: 1100px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border: 1px solid rgba(0, 65, 170, 0.12);
+  border-radius: var(--iedc-radius-xl, 18px);
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--iedc-shadow-md, 0 8px 14px rgba(13, 40, 76, 0.12));
   animation: slideUp 0.3s ease-out;
 }
 
@@ -73,7 +74,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+  background: linear-gradient(180deg, var(--iedc-blue-900, #073074), var(--iedc-blue-800, #0041aa));
   color: white;
   flex-wrap: wrap;
   gap: 16px;
@@ -175,7 +176,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 24px;
-  background: #F3F4F6;
+  background: var(--iedc-bg, #eef3f8);
 }
 
 /* Loading State */
@@ -224,16 +225,16 @@
 
 /* Bed Card */
 .bed-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--iedc-surface, white);
+  border-radius: var(--iedc-radius-md, 14px);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 2px solid transparent;
+  box-shadow: var(--iedc-shadow-xs, 0 1px 2px rgba(13, 40, 76, 0.06));
+  border: 1px solid var(--iedc-line, #dfe7f2);
   transition: all 0.2s ease;
 }
 
 .bed-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--iedc-shadow-sm, 0 4px 8px rgba(13, 40, 76, 0.08));
 }
 
 .bed-card.free {
@@ -260,8 +261,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #F9FAFB;
-  border-bottom: 1px solid #E5E7EB;
+  background: var(--iedc-surface-soft, #fbfdff);
+  border-bottom: 1px solid var(--iedc-line-soft, #edf2f7);
 }
 
 .bed-number {
@@ -337,7 +338,23 @@
 }
 
 .lgbt-badge {
-  font-size: 14px;
+  border-radius: 999px;
+  background: var(--iedc-green-100, #e8f7ee);
+  color: var(--iedc-green-700, #0f7a45);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 6px;
+}
+
+.lgbt-badge-small {
+  display: inline-flex;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: var(--iedc-green-100, #e8f7ee);
+  color: var(--iedc-green-700, #0f7a45);
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 6px;
 }
 
 /* Progress Bar */
@@ -357,8 +374,10 @@
 }
 
 .progress-fill {
+  width: var(--bed-progress-width, 0%);
   height: 100%;
   border-radius: 4px;
+  background: var(--bed-progress-color, #10b981);
   transition: width 0.3s ease;
 }
 
@@ -387,14 +406,15 @@
   padding: 10px;
   border: none;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 12px;
+  font-weight: 900;
   cursor: pointer;
   transition: all 0.2s;
   background: #F3F4F6;
 }
 
 .action-btn:hover {
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 .action-btn.extend:hover {

@@ -15,12 +15,14 @@ import { RmaService } from './rma.service';
 import { UploadRmaDto } from './dto/upload-rma.dto';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
+import { assertXlsxUpload, FILE_LIMITS } from '../../common/upload/file-validation';
+import { ResultadoConferencia } from './interfaces/rma.interface';
 
 @Controller('rma')
 @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
 export class RmaController {
   // Armazenamento temporário dos resultados (em produção, usar Redis ou banco)
-  private resultadosCache = new Map<string, any>();
+  private resultadosCache = new Map<string, ResultadoConferencia>();
 
   constructor(private readonly rmaService: RmaService) {}
 
@@ -28,28 +30,12 @@ export class RmaController {
    * Upload do arquivo Excel e processamento da conferência
    */
   @Post('conferir')
-  @UseInterceptors(FileInterceptor('arquivo'))
+  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: FILE_LIMITS.rmaPlanilha } }))
   async conferirRMA(
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadDto: UploadRmaDto,
   ) {
-    if (!file) {
-      throw new BadRequestException('Arquivo não enviado');
-    }
-
-    // Validar tipo de arquivo
-    const allowedMimeTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ];
-    
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException('Formato de arquivo inválido. Envie um arquivo .xlsx');
-    }
-
-    // Validar tamanho (máx 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new BadRequestException('Arquivo muito grande. Tamanho máximo: 5MB');
-    }
+    assertXlsxUpload(file);
 
     try {
       // 1. Ler arquivo Excel
@@ -72,9 +58,9 @@ export class RmaController {
         message: 'Conferência realizada com sucesso',
         resultado,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao processar conferência RMA:', error);
-      throw new BadRequestException(error.message || 'Erro ao processar conferência');
+      throw new BadRequestException(error instanceof Error ? error.message : 'Erro ao processar conferência');
     }
   }
 
@@ -122,7 +108,7 @@ export class RmaController {
       res.setHeader('Content-Length', buffer.length);
 
       res.send(buffer);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao exportar relatório:', error);
       throw new BadRequestException('Erro ao exportar relatório');
     }

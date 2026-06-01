@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
   OnModuleInit,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -18,6 +19,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AuditoriaService } from '../modules/auditoria/auditoria.service';
 
 const scrypt = promisify(scryptCallback);
 
@@ -44,6 +46,11 @@ export interface ManagedUser {
   updatedBy: string | null;
   criadoEm: Date;
   atualizadoEm: Date;
+}
+
+interface AuthClientContext {
+  ip?: string | null;
+  userAgent?: string | null;
 }
 
 type RoleProfile = Pick<Usuario, 'roleLabel' | 'service' | 'serviceLabel' | 'homePath'>;
@@ -136,6 +143,8 @@ export class AuthService implements OnModuleInit {
     @InjectRepository(Usuario)
     private readonly usuariosRepository: Repository<Usuario>,
     private readonly jwtService: JwtService,
+    @Optional()
+    private readonly auditoriaService?: AuditoriaService,
   ) {}
 
   async onModuleInit() {
@@ -151,13 +160,23 @@ export class AuthService implements OnModuleInit {
     return usuarios.map((usuario) => this.toAuthUser(usuario));
   }
 
-  async login(profileId: string, password: string) {
+  async login(profileId: string, password: string, clientContext?: AuthClientContext) {
     const login = this.normalizeLogin(profileId);
     const usuario = await this.usuariosRepository.findOne({
       where: { login, ativo: true },
     });
 
     if (!usuario || !(await this.verifyPassword(password, usuario.passwordHash))) {
+      await this.registrarAuditoria({
+        acao: 'auth.login.failed',
+        entidade: 'auth',
+        usuarioLogin: login,
+        ip: clientContext?.ip,
+        userAgent: clientContext?.userAgent,
+        status: 'falha',
+        httpStatus: 401,
+        metadata: { login },
+      });
       throw new UnauthorizedException('Perfil ou senha inválido.');
     }
 
@@ -170,6 +189,17 @@ export class AuthService implements OnModuleInit {
       login: user.login,
       role: user.role,
       service: user.service,
+    });
+
+    await this.registrarAuditoria({
+      acao: 'auth.login.success',
+      entidade: 'auth',
+      entidadeId: usuario.id,
+      actor: user,
+      ip: clientContext?.ip,
+      userAgent: clientContext?.userAgent,
+      status: 'sucesso',
+      httpStatus: 201,
     });
 
     return { accessToken, user };
@@ -212,7 +242,16 @@ export class AuthService implements OnModuleInit {
       updatedBy: actorLogin,
     });
 
-    return this.toManagedUser(await this.usuariosRepository.save(usuario));
+    const saved = await this.usuariosRepository.save(usuario);
+    await this.registrarAuditoria({
+      acao: 'auth.user.created',
+      entidade: 'usuarios',
+      entidadeId: saved.id,
+      actor,
+      metadata: { login: saved.login, role: saved.role, service: saved.service },
+    });
+
+    return this.toManagedUser(saved);
   }
 
   async updateUser(id: string, dto: UpdateUserDto, actor?: AuthUser): Promise<ManagedUser> {
@@ -242,7 +281,16 @@ export class AuthService implements OnModuleInit {
 
     usuario.updatedBy = actor?.login ?? usuario.updatedBy;
 
-    return this.toManagedUser(await this.usuariosRepository.save(usuario));
+    const saved = await this.usuariosRepository.save(usuario);
+    await this.registrarAuditoria({
+      acao: 'auth.user.updated',
+      entidade: 'usuarios',
+      entidadeId: saved.id,
+      actor,
+      metadata: { login: saved.login, role: saved.role, ativo: saved.ativo },
+    });
+
+    return this.toManagedUser(saved);
   }
 
   async resetPassword(id: string, dto: ResetPasswordDto, actor?: AuthUser): Promise<ManagedUser> {
@@ -254,7 +302,16 @@ export class AuthService implements OnModuleInit {
     usuario.passwordUpdatedAt = new Date();
     usuario.updatedBy = actor?.login ?? usuario.updatedBy;
 
-    return this.toManagedUser(await this.usuariosRepository.save(usuario));
+    const saved = await this.usuariosRepository.save(usuario);
+    await this.registrarAuditoria({
+      acao: 'auth.user.password_reset',
+      entidade: 'usuarios',
+      entidadeId: saved.id,
+      actor,
+      metadata: { login: saved.login },
+    });
+
+    return this.toManagedUser(saved);
   }
 
   async changeOwnPassword(userId: string, dto: ChangePasswordDto): Promise<AuthUser> {
@@ -273,7 +330,17 @@ export class AuthService implements OnModuleInit {
     usuario.passwordUpdatedAt = new Date();
     usuario.updatedBy = usuario.login;
 
-    return this.toAuthUser(await this.usuariosRepository.save(usuario));
+    const saved = await this.usuariosRepository.save(usuario);
+    const user = this.toAuthUser(saved);
+    await this.registrarAuditoria({
+      acao: 'auth.me.password_changed',
+      entidade: 'usuarios',
+      entidadeId: saved.id,
+      actor: user,
+      metadata: { login: saved.login },
+    });
+
+    return user;
   }
 
   async findAuthUserById(id: string): Promise<AuthUser | null> {
@@ -390,6 +457,14 @@ export class AuthService implements OnModuleInit {
     }
 
     return timingSafeEqual(derivedKey, storedKey);
+  }
+
+  private async registrarAuditoria(input: Parameters<AuditoriaService['registrar']>[0]) {
+    if (!this.auditoriaService) {
+      return;
+    }
+
+    await this.auditoriaService.registrar(input);
   }
 
   private toAuthUser(usuario: Usuario): AuthUser {

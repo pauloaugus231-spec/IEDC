@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import {
   BarElement,
   CategoryScale,
@@ -12,6 +12,7 @@ import {
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import { apiFetch, useOcupacaoHistorico, useOcupacaoTotal } from '../api';
+import { PageHeader } from '../components/DesignSystem';
 import PessoaCasaModal from '../components/PessoaCasaModal';
 import PresenceFloater from '../components/PresenceFloater';
 import { clearTriagemCensoStorage, getTriagemCensoStorageState } from '../utils';
@@ -280,58 +281,53 @@ const DashboardPage = () => {
   );
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F3F4F6', minHeight: '100vh', fontFamily: 'Inter, sans-serif', paddingBottom: '100px' }}>
-      
-      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#111827', margin: 0 }}>Painel de Controle</h1>
-            <p style={{ color: '#6B7280', fontSize: '14px', margin: 0 }}>Resumo operacional do dia</p>
-        </div>
-        <div style={{ fontSize: '12px', backgroundColor: '#DBEAFE', color: '#1E40AF', padding: '6px 12px', borderRadius: '20px', fontWeight: '600' }}>
+    <main className="page-band albergue-dashboard-page">
+      <PageHeader
+        eyebrow="Albergue Noturno"
+        title="Painel de controle"
+        description="Resumo operacional do plantão, ocupação por casa, presença e saídas previstas."
+        actions={(
+          <div className="ds-context-badge">
             {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </div>
-      </header>
+          </div>
+        )}
+      />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '24px' }}>
+      <div className="albergue-operational-grid">
         
         {/* COLUNA ESQUERDA: STATUS DAS CASAS (Melhoria 1) */}
-        <div style={{ gridColumn: 'span 12' }} className="col-left">
-             <div className="room-status-grid">
+        <div className="albergue-dashboard-column albergue-dashboard-column-main">
+             <div className="albergue-room-grid">
                 {loading && <div>Carregando...</div>}
                 {!loading && ocupacao && Object.entries(ocupacao.casas).map(([key, data]) => {
                     const livres = data.total - data.ocupadas;
                     const style = getStatusColor(livres);
                     const config = casaConfig[key] || { label: key };
+                    const roomCardStyle = {
+                      '--room-bg': style.bg,
+                      '--room-border': style.border,
+                      '--room-tone': style.text,
+                      '--room-progress': `${(data.ocupadas / data.total) * 100}%`,
+                    } as CSSProperties;
 
                     return (
                     <div
                         key={key}
                         onClick={() => handleCasaClick(key)}
-                        style={{
-                            backgroundColor: style.bg,
-                            border: `1px solid ${style.border}`,
-                            borderRadius: '16px',
-                            padding: '20px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}
+                        className="albergue-room-card"
+                        style={roomCardStyle}
                     >
                         {/* Barra de progresso visual no fundo */}
-                        <div style={{ 
-                            position: 'absolute', bottom: 0, left: 0, height: '4px', backgroundColor: style.text, 
-                            width: `${(data.ocupadas / data.total) * 100}%`, opacity: 0.3 
-                        }} />
+                        <div className="albergue-room-progress" />
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div className="albergue-room-content">
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1F2937' }}>{config.label}</h3>
-                                <span style={{ fontSize: '12px', color: '#6B7280' }}>Capacidade: {data.total}</span>
+                                <h3>{config.label}</h3>
+                                <span>Capacidade: {data.total}</span>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontSize: '24px', fontWeight: '800', color: style.text }}>{livres}</span>
-                                <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: style.text, opacity: 0.8 }}>Livres</div>
+                            <div className="albergue-room-counter">
+                                <strong>{livres}</strong>
+                                <span>Livres</span>
                             </div>
                         </div>
                     </div>
@@ -340,20 +336,20 @@ const DashboardPage = () => {
              </div>
              
              {/* Histórico de Ocupação - Funcional com dados reais */}
-             <div style={{ marginTop: '24px', backgroundColor: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'flex-start', marginBottom: '14px' }}>
+             <div className="albergue-chart-panel">
+                <div className="albergue-chart-head">
                     <div>
-                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#374151', margin: 0 }}>Histórico de Ocupação (7 Dias)</h3>
-                        <p style={{ color: '#6B7280', fontSize: '12px', fontWeight: 600, margin: '4px 0 0' }}>
+                        <h3>Histórico de ocupação</h3>
+                        <p>
                             Ocupadas, capacidade máxima e novos ingressos por plantão.
                         </p>
                     </div>
-                    <div style={{ color: '#1E40AF', backgroundColor: '#DBEAFE', borderRadius: '999px', fontSize: '11px', fontWeight: 800, padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                    <div className="albergue-chart-period">
                         7 dias
                     </div>
                 </div>
 
-                <div style={{ position: 'relative', height: '218px' }}>
+                <div className="albergue-chart-canvas">
                     {historyData.length > 0 ? (
                       <Chart<'bar' | 'line', number[], string>
                         key={historicoChartKey}
@@ -362,23 +358,23 @@ const DashboardPage = () => {
                         options={historicoChartOptions}
                       />
                     ) : (
-                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontWeight: 700 }}>
+                      <div className="albergue-empty-state">
                         {historicoLoading ? 'Carregando histórico...' : 'Sem histórico disponível'}
                       </div>
                     )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '14px', marginTop: '14px', fontSize: '11px', color: '#6B7280', fontWeight: 700 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <i style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#2563EB', display: 'inline-block' }} />
+                <div className="albergue-chart-legend">
+                    <span>
+                        <i className="legend-dot occupancy" />
                         Ocupação
                     </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <i style={{ width: '18px', borderTop: '2px dashed #172033', display: 'inline-block' }} />
+                    <span>
+                        <i className="legend-line capacity" />
                         Capacidade {totalVagas}
                     </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <i style={{ width: '18px', borderTop: '3px solid #0F9D58', display: 'inline-block' }} />
+                    <span>
+                        <i className="legend-line entries" />
                         Novos ingressos
                     </span>
                 </div>
@@ -386,83 +382,64 @@ const DashboardPage = () => {
         </div>
 
         {/* COLUNA DIREITA: TIMELINE E PREVISÃO (Melhoria 2) */}
-        <div style={{ gridColumn: 'span 12' }} className="col-right">
+        <div className="albergue-dashboard-column albergue-dashboard-column-side">
             
             {/* Widget de Ocupação Total */}
-            <div style={{ backgroundColor: '#1F2937', borderRadius: '16px', padding: '24px', color: 'white', textAlign: 'center', marginBottom: '24px' }}>
-                <div style={{ fontSize: '14px', opacity: 0.8, marginBottom: '8px' }}>Ocupação Total</div>
-                <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto 16px' }}>
-                    <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+            <div className="albergue-occupancy-card">
+                <div className="albergue-widget-label">Ocupação total</div>
+                <div className="albergue-occupancy-ring">
+                    <svg width="120" height="120" className="albergue-ring-svg">
                         <circle cx="60" cy="60" r="50" fill="none" stroke="#374151" strokeWidth="10" />
                         <circle
                             cx="60" cy="60" r="50" fill="none" stroke="#3B82F6" strokeWidth="10"
                             strokeDasharray={2 * Math.PI * 50}
                             strokeDashoffset={2 * Math.PI * 50 * (1 - ocupacaoPercent / 100)}
                             strokeLinecap="round"
-                            style={{ transition: 'stroke-dashoffset 1s ease-out' }}
+                            className="albergue-ring-progress"
                         />
                     </svg>
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '24px', fontWeight: 'bold' }}>
+                    <div className="albergue-ring-value">
                         {ocupacaoPercent}%
                     </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <div className="albergue-occupancy-stats">
                     <div>
-                        <div style={{ opacity: 0.6 }}>Total</div>
-                        <div style={{ fontWeight: 'bold' }}>{totalVagas}</div>
+                        <span>Total</span>
+                        <strong>{totalVagas}</strong>
                     </div>
                     <div>
-                         <div style={{ opacity: 0.6 }}>Livres</div>
-                         <div style={{ fontWeight: 'bold', color: '#34D399' }}>{totalVagas - totalOcupadas}</div>
+                         <span>Livres</span>
+                         <strong className="success">{totalVagas - totalOcupadas}</strong>
                     </div>
                 </div>
             </div>
 
             {/* Widget de Saídas Previstas - Destacado */}
-            <div style={{ 
-                background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', 
-                borderRadius: '20px', 
-                padding: '32px', 
-                border: '2px solid #FCA5A5',
-                boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.1), 0 2px 4px -1px rgba(220, 38, 38, 0.06)'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="albergue-exit-card">
+                <div className="albergue-exit-content">
                     {/* Título */}
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="albergue-exit-copy">
                         <div>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#991B1B', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                            <div className="albergue-widget-label danger">
                                 Saídas Previstas
                             </div>
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#7F1D1D', lineHeight: '1.2' }}>
+                            <div className="albergue-exit-title">
                                 Saem amanhã de manhã
                             </div>
-                            <div style={{ fontSize: '13px', color: '#991B1B', marginTop: '4px' }}>
+                            <div className="albergue-exit-subtitle">
                                 Checkout à meia-noite
                             </div>
                         </div>
                     </div>
                     
                     {/* Número Grande */}
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ 
-                            fontSize: '64px', 
-                            fontWeight: '800', 
-                            color: '#DC2626', 
-                            lineHeight: '1',
-                            textShadow: '2px 2px 4px rgba(220, 38, 38, 0.2)'
-                        }}>
+                    <div className="albergue-exit-number">
+                        <strong>
                             {checkoutsHoje}
-                        </div>
-                        <div style={{ 
-                            fontSize: '13px', 
-                            fontWeight: '600', 
-                            color: '#991B1B', 
-                            marginTop: '8px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                        }}>
+                        </strong>
+                        <span>
                             {checkoutsHoje === 0 ? 'Nenhuma saída' : checkoutsHoje === 1 ? 'Hóspede' : 'Hóspedes'}
-                        </div>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -483,26 +460,7 @@ const DashboardPage = () => {
         totalCount={totalAtivosPresenca}
       />
       
-      {/* Estilos responsivos inline para grid */}
-      <style>{`
-        .room-status-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-        }
-
-        @media (min-width: 1024px) {
-            .col-left { grid-column: span 8 !important; }
-            .col-right { grid-column: span 4 !important; }
-        }
-
-        @media (max-width: 640px) {
-            .room-status-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-      `}</style>
-    </div>
+    </main>
   );
 };
 

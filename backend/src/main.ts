@@ -3,12 +3,25 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/observability/global-exception.filter';
+import { requestIdMiddleware } from './common/observability/request-id.middleware';
+import { createStructuredLogger } from './common/observability/structured-logger';
 import { resolveCorsOrigin } from './config/cors-origin';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const logger = createStructuredLogger();
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger });
   const isProduction = process.env.NODE_ENV === 'production';
+
+  app.use(requestIdMiddleware);
+
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'same-site' },
+    }),
+  );
 
   // Configuração para aumentar limites de payload para uploads.
   app.useBodyParser('json', { limit: '10mb' });
@@ -23,11 +36,12 @@ async function bootstrap() {
   // Validation pipe global.
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Remove campos não definidos no DTO
-      transform: true, // Transforma payloads em instâncias de DTO
+      whitelist: true,
+      transform: true,
       forbidNonWhitelisted: isProduction,
     }),
   );
+  app.useGlobalFilters(new GlobalExceptionFilter(logger));
 
   // API prefix.
   app.setGlobalPrefix('api');
@@ -53,10 +67,17 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
 
-  console.log(`Backend rodando em: http://localhost:${port}`);
-  console.log(`Healthcheck em: http://localhost:${port}/api/health`);
+  logger.log(
+    {
+      event: 'app.started',
+      port,
+      healthcheck: `/api/health`,
+      swagger: shouldExposeSwagger ? `/api/docs` : null,
+    },
+    'Bootstrap',
+  );
   if (shouldExposeSwagger) {
-    console.log(`Documentação em: http://localhost:${port}/api/docs`);
+    logger.log({ event: 'swagger.enabled', path: `/api/docs` }, 'Bootstrap');
   }
 }
 bootstrap();

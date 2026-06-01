@@ -2,6 +2,14 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common
 import { CrecheService } from './creche.service';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
+import {
+  AtualizarCriancaTurmaDto,
+  AtualizarTurmaProfessoraDto,
+  CriarAcompanhamentoDto,
+  CriarCriancaDto,
+  ProfessoraDto,
+  SalvarFrequenciaTurmaDto,
+} from './dto/creche-operacao.dto';
 
 @Controller('creche')
 @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_CRECHE, UsuarioRole.EDUCADOR_CRECHE)
@@ -33,7 +41,7 @@ export class CrecheController {
   }
 
   @Patch('turmas/:id/professora')
-  updateTurmaProfessora(@Param('id') id: string, @Body() body: any) {
+  updateTurmaProfessora(@Param('id') id: string, @Body() body: AtualizarTurmaProfessoraDto) {
     return this.crecheService.updateTurmaProfessora(id, body);
   }
 
@@ -43,12 +51,12 @@ export class CrecheController {
   }
 
   @Post('professoras')
-  createProfessora(@Body() body: any) {
+  createProfessora(@Body() body: ProfessoraDto) {
     return this.crecheService.createProfessora(body);
   }
 
   @Patch('professoras/:id')
-  updateProfessora(@Param('id') id: string, @Body() body: any) {
+  updateProfessora(@Param('id') id: string, @Body() body: ProfessoraDto) {
     return this.crecheService.updateProfessora(id, body);
   }
 
@@ -62,7 +70,7 @@ export class CrecheController {
   }
 
   @Post('criancas')
-  createCrianca(@Body() body: any) {
+  createCrianca(@Body() body: CriarCriancaDto) {
     return this.crecheService.createCrianca(body);
   }
 
@@ -72,12 +80,12 @@ export class CrecheController {
   }
 
   @Patch('criancas/:codigo/turma')
-  updateCriancaTurma(@Param('codigo') codigo: string, @Body() body: any) {
+  updateCriancaTurma(@Param('codigo') codigo: string, @Body() body: AtualizarCriancaTurmaDto) {
     return this.crecheService.updateCriancaTurma(codigo, body);
   }
 
   @Post('criancas/:codigo/acompanhamentos')
-  createAcompanhamento(@Param('codigo') codigo: string, @Body() body: any) {
+  createAcompanhamento(@Param('codigo') codigo: string, @Body() body: CriarAcompanhamentoDto) {
     return this.crecheService.createAcompanhamento(codigo, body);
   }
 
@@ -87,7 +95,7 @@ export class CrecheController {
   }
 
   @Post('frequencias')
-  saveFrequenciaTurma(@Body() body: any) {
+  saveFrequenciaTurma(@Body() body: SalvarFrequenciaTurmaDto) {
     return this.crecheService.saveFrequenciaTurma(body);
   }
 }

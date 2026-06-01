@@ -3,6 +3,7 @@ import { SolicitacoesService } from './solicitacoes.service';
 import { Solicitacao } from '../../entities/solicitacao.entity';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
+import { SolicitacaoDto, UpdateSolicitacaoDto } from './dto/solicitacao.dto';
 
 @Controller('pedidos')
 @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
@@ -20,12 +21,12 @@ export class SolicitacoesController {
   }
 
   @Post()
-  async create(@Body() solicitacaoData: Partial<Solicitacao>): Promise<Solicitacao> {
+  async create(@Body() solicitacaoData: SolicitacaoDto): Promise<Solicitacao> {
     return this.solicitacoesService.create(solicitacaoData);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() solicitacaoData: Partial<Solicitacao>): Promise<Solicitacao | null> {
+  async update(@Param('id') id: string, @Body() solicitacaoData: UpdateSolicitacaoDto): Promise<Solicitacao | null> {
     return this.solicitacoesService.update(id, solicitacaoData);
   }
 

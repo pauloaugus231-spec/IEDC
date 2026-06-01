@@ -8,8 +8,10 @@ import {
   type ManagedUser,
   type ManagedUserRole,
 } from '../api';
+import { MetricCard, MetricGrid, ModalFrame, PageHeader, Panel, TableShell } from '../components/DesignSystem';
 import { useAuth } from '../context/AuthContext';
 import '../styles/institutional.css';
+import '../styles/design-system.css';
 
 const roleOptions: Array<{ value: ManagedUserRole; label: string; detail: string }> = [
   { value: 'gestora', label: 'Gestão', detail: 'Acesso institucional amplo' },
@@ -177,59 +179,34 @@ const SupportUsersPage = () => {
   const isEditingSelf = Boolean(editing && currentUser?.uuid === editing.id);
 
   return (
-    <main className="page-band support-page">
-      <section className="creche-dashboard-head">
-        <div>
-          <p className="institutional-eyebrow">Suporte institucional</p>
-          <h1>Usuários, perfis e senhas</h1>
-          <p>
-            Crie acessos, ajuste papéis e force troca de senha sem expor credenciais. Perfil bem definido é governança,
-            não burocracia.
-          </p>
-        </div>
-        <div className="creche-head-actions">
-          <button className="creche-head-link" onClick={openNew} type="button">
+    <main className="page-band support-page ds-admin-surface">
+      <PageHeader
+        eyebrow="Suporte institucional"
+        title="Usuários, perfis e senhas"
+        description="Crie acessos, ajuste papéis e force troca de senha sem expor credenciais. Perfil bem definido é governança institucional."
+        actions={(
+          <button className="creche-head-link ds-button" onClick={openNew} type="button">
             Novo usuário
           </button>
-        </div>
-      </section>
+        )}
+      />
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Usuários</span>
-          <strong>{metrics.total}</strong>
-          <small>Perfis cadastrados no sistema</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Ativos</span>
-          <strong>{metrics.active}</strong>
-          <small>Acessos liberados</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Troca pendente</span>
-          <strong>{metrics.pendingPassword}</strong>
-          <small>Senhas temporárias em aberto</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Inativos</span>
-          <strong>{metrics.inactive}</strong>
-          <small>Acessos preservados para auditoria</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Usuários" value={metrics.total} detail="Perfis cadastrados no sistema" />
+        <MetricCard label="Ativos" value={metrics.active} detail="Acessos liberados" />
+        <MetricCard label="Troca pendente" value={metrics.pendingPassword} detail="Senhas temporárias em aberto" tone="warning" />
+        <MetricCard label="Inativos" value={metrics.inactive} detail="Acessos preservados para auditoria" />
+      </MetricGrid>
 
       {error ? <p className="institutional-note danger">{error}</p> : null}
       {notice ? <p className="institutional-note success">{notice}</p> : null}
 
-      <section className="support-grid">
-        <article className="support-panel">
-          <div className="creche-panel-head">
-            <div>
-              <h2 className="section-title">{editing ? 'Editar usuário' : 'Criar usuário'}</h2>
-              <span>{editing ? 'Login preservado; papel e status podem mudar.' : 'A senha nasce temporária.'}</span>
-            </div>
-          </div>
-
-          <form className="support-form" onSubmit={handleSubmit}>
+      <section className="support-grid ds-admin-grid">
+        <Panel
+          title={editing ? 'Editar usuário' : 'Criar usuário'}
+          subtitle={editing ? 'Login preservado; papel e status podem mudar.' : 'A senha nasce temporária.'}
+        >
+          <form className="support-form ds-form" onSubmit={handleSubmit}>
             <label>
               Login
               <input
@@ -302,22 +279,19 @@ const SupportUsersPage = () => {
               <p className="support-hint">A própria conta não pode ser desativada durante a sessão.</p>
             ) : null}
 
-            <button className="institutional-button" disabled={saving} type="submit">
+            <button className="institutional-button ds-button" disabled={saving} type="submit">
               {saving ? 'Salvando...' : editing ? 'Salvar alterações' : 'Criar usuário'}
             </button>
           </form>
-        </article>
+        </Panel>
 
-        <article className="support-panel wide">
-          <div className="creche-panel-head">
-            <div>
-              <h2 className="section-title">Acessos cadastrados</h2>
-              <span>Controle operacional de perfis, senha temporária e último login.</span>
-            </div>
-          </div>
-
-          <div className="report-table-wrap">
-            <table className="report-table support-table">
+        <Panel
+          className="wide"
+          title="Acessos cadastrados"
+          subtitle="Controle operacional de perfis, senha temporária e último login."
+        >
+          <TableShell>
+            <table className="report-table support-table ds-table">
               <thead>
                 <tr>
                   <th>Usuário</th>
@@ -351,12 +325,12 @@ const SupportUsersPage = () => {
                       </span>
                     </td>
                     <td>
-                      <div className="support-actions">
-                        <button className="table-action" onClick={() => openEdit(user)} type="button">
+                      <div className="support-actions ds-action-row">
+                        <button className="table-action ds-row-action" onClick={() => openEdit(user)} type="button">
                           Editar
                         </button>
                         <button
-                          className="table-action secondary"
+                          className="table-action secondary ds-row-action"
                           onClick={() => {
                             setResetUser(user);
                             setResetPassword('');
@@ -373,22 +347,30 @@ const SupportUsersPage = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableShell>
 
           {loading ? <p className="institutional-note">Carregando usuários...</p> : null}
           {!loading && users.length === 0 ? <p className="institutional-note">Nenhum usuário cadastrado.</p> : null}
-        </article>
+        </Panel>
       </section>
 
       {resetUser ? (
-        <div className="support-modal-backdrop" role="presentation">
-          <form className="support-modal" onSubmit={handleResetPassword}>
-            <div className="creche-panel-head">
-              <div>
-                <h2 className="section-title">Redefinir senha</h2>
-                <span>{resetUser.displayName} receberá uma senha temporária.</span>
-              </div>
-            </div>
+        <div className="support-modal-backdrop ds-modal-backdrop" role="presentation">
+          <form onSubmit={handleResetPassword}>
+            <ModalFrame
+              title="Redefinir senha"
+              subtitle={`${resetUser.displayName} receberá uma senha temporária.`}
+              footer={(
+                <>
+                  <button className="creche-head-link secondary ds-button" onClick={() => setResetUser(null)} type="button">
+                    Cancelar
+                  </button>
+                  <button className="creche-head-link ds-button" disabled={resetSaving} type="submit">
+                    {resetSaving ? 'Redefinindo...' : 'Confirmar'}
+                  </button>
+                </>
+              )}
+            >
             <label>
               Nova senha temporária
               <input
@@ -400,14 +382,7 @@ const SupportUsersPage = () => {
                 value={resetPassword}
               />
             </label>
-            <div className="support-modal-actions">
-              <button className="creche-head-link secondary" onClick={() => setResetUser(null)} type="button">
-                Cancelar
-              </button>
-              <button className="creche-head-link" disabled={resetSaving} type="submit">
-                {resetSaving ? 'Redefinindo...' : 'Confirmar'}
-              </button>
-            </div>
+            </ModalFrame>
           </form>
         </div>
       ) : null}

@@ -2,6 +2,36 @@
 
 Data: 2026-05-28
 
+## Atualizacao 2026-05-30
+
+A sprint de higiene e seguranca V1 removeu o principal bloqueador tecnico desta auditoria:
+
+- backend migrado para Nest 11;
+- `npm audit --omit=dev --audit-level=high` retornou 0 vulnerabilidades;
+- `helmet` e `@nestjs/throttler` foram ativados;
+- auditoria institucional foi criada para mutacoes da API;
+- DTOs foram adicionados em fluxos sensiveis;
+- uploads de foto e RMA passaram por endurecimento;
+- artefatos historicos da raiz foram arquivados em `docs/archive/2026-05-v1-hygiene/`.
+
+Os bloqueadores restantes passam a ser operacionais: restauracao em ambiente de servidor, definicao de tags estaveis e rotina final de release.
+
+## Atualizacao 2026-05-30 - Governanca e deploy
+
+- bundle frontend passou a usar carregamento sob demanda por pagina;
+- suporte ganhou tela de consulta da auditoria institucional;
+- auditoria passou a aceitar filtros por entidade, usuario, status e acao;
+- QA por perfil virou suite versionada com `npm run qa:profiles`;
+- servidor ganhou atualizador controlado por repositorio com backup, lock e healthcheck.
+
+## Atualizacao 2026-06-01 - Release oficial IEDC
+
+- tag tecnica definida como `v1.0.0-iedc`;
+- titulo humano da release definido como `v1.0.0 iedc`;
+- primeiro boot em banco novo permanece restrito ao usuario `suporte`;
+- `.env` real permanece fora do repositorio e deve ser criado no servidor a partir de `.env.docker.example`;
+- `APP_VERSION` do exemplo de ambiente foi alinhado para `v1.0.0-iedc`.
+
 ## Status atual
 
 O sistema ja possui schema inicial oficial via migration e o Docker roda com `DB_SYNCHRONIZE=false` por padrao. A base esta adequada para uma primeira versao oficial local controlada, desde que as variaveis de ambiente e rotina de backup sejam configuradas no servidor.
@@ -10,31 +40,19 @@ O sistema ja possui schema inicial oficial via migration e o Docker roda com `DB
 
 ### Backend
 
-Resultado de `npm audit --omit=dev`:
+Resultado atual de `npm audit --omit=dev --audit-level=high` apos a sprint de 2026-05-30:
 
 - High: 0
 - Critical: 0
-- Moderate: 9
+- Moderate: 0
 
-As vulnerabilidades altas de producao foram removidas com:
+As vulnerabilidades altas e moderadas de producao foram removidas com:
 
 - remocao da dependencia direta de `multer`;
 - overrides seguros para `multer`, `lodash`, `qs`, `uuid` e `js-yaml`;
 - atualizacao direta de `uuid`.
-
-As 9 moderadas restantes ficam presas ao ecossistema Nest 10:
-
-- `@nestjs/core`
-- `@nestjs/common`
-- `@nestjs/platform-express`
-- `@nestjs/platform-socket.io`
-- `@nestjs/websockets`
-- `@nestjs/swagger`
-- `@nestjs/typeorm`
-- `@nestjs/cache-manager`
-- `file-type` transitivo
-
-Correcao limpa: migrar de Nest 10 para Nest 11 em uma fase planejada, com teste de regressao de API, WebSocket, uploads e autenticação.
+- migracao do backend para Nest 11;
+- endurecimento dos uploads de foto e RMA.
 
 ### Frontend
 
@@ -83,7 +101,7 @@ O Vite foi atualizado para remover vulnerabilidades do dev server.
 - Dashboard E.E.I.: OK
 - Dashboard impacto social: OK
 - Dashboard lojas: OK
-- QA por perfil: 11 perfis aprovados em API e navegador
+- QA por perfil: 204 checks em 11 perfis
 - Rotas de manutencao: 404 por padrao
 - Controller diagnostico removido: 404
 - Loja acessa a propria loja: 200
@@ -91,8 +109,6 @@ O Vite foi atualizado para remover vulnerabilidades do dev server.
 
 ## Bloqueadores antes do deploy final
 
-1. Migrar backend para Nest 11 para zerar as moderadas restantes.
-2. Transformar o QA por perfil executado via script local em suite versionada de regressao.
-3. Definir `.env` oficial do servidor com senhas fortes e guardar copia segura fora do repositorio.
-4. Repetir restauracao de backup no servidor institucional ou ambiente controlado equivalente.
-5. Otimizar bundle frontend com code splitting depois da primeira versao oficial estabilizada.
+1. Definir `.env` oficial do servidor com senhas fortes e guardar copia segura fora do repositorio.
+2. Repetir restauracao de backup no servidor institucional ou ambiente controlado equivalente.
+3. Executar QA funcional em navegador por perfil no ambiente do servidor ou homologacao equivalente.

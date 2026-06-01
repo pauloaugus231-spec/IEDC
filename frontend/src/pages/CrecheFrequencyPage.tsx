@@ -6,9 +6,18 @@ import {
   useCrecheTurmas,
   type CrecheFrequenciaTurma,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 const today = new Date().toISOString().slice(0, 10);
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function showOperationalReceipt(message: string, type: 'success' | 'info' = 'success') {
+  window.showToast?.(message, type);
+}
 
 const CrecheFrequencyPage = () => {
   const [searchParams] = useSearchParams();
@@ -93,8 +102,9 @@ const CrecheFrequencyPage = () => {
       });
       setFrequencia(saved);
       setSavedMessage('Frequência salva para a turma.');
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível salvar a frequência.');
+      showOperationalReceipt('Frequência salva para a turma.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível salvar a frequência.'));
     } finally {
       setSaving(false);
     }
@@ -102,47 +112,28 @@ const CrecheFrequencyPage = () => {
 
   return (
     <main className="page-band creche-page">
-      <section className="creche-dashboard-head">
-        <div>
-          <p className="institutional-eyebrow">E.E.I. Casa do Pequenino</p>
-          <h1>Frequência por turma</h1>
-          <p>
-            Registro diário simples para alimentar o painel da E.E.I., sinais de evasão
-            e relatórios mensais.
-          </p>
-        </div>
-        <div className="creche-head-actions">
+      <PageHeader
+        eyebrow="E.E.I. Casa do Pequenino"
+        title="Frequência por turma"
+        description="Registro diário simples para alimentar o painel da E.E.I., sinais de evasão e relatórios mensais."
+        actions={(
+          <>
           <Link className="creche-head-link secondary" to="/creche">
             Painel da E.E.I.
           </Link>
           <button className="creche-head-link" disabled={saving || !frequencia} onClick={save} type="button">
             {saving ? 'Salvando...' : 'Salvar frequência'}
           </button>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Crianças na turma</span>
-          <strong>{resumo.total}</strong>
-          <small>{frequencia?.turma.nome || 'Selecione uma turma'}</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Presentes</span>
-          <strong>{resumo.presentes}</strong>
-          <small>{resumo.percentual}% de presença</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Faltas</span>
-          <strong>{resumo.faltas}</strong>
-          <small>Geram alerta de acompanhamento</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Data</span>
-          <strong>{data.slice(8, 10)}/{data.slice(5, 7)}</strong>
-          <small>Registro operacional</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Crianças na turma" value={resumo.total} detail={frequencia?.turma.nome || 'Selecione uma turma'} />
+        <MetricCard label="Presentes" value={resumo.presentes} detail={`${resumo.percentual}% de presença`} tone="success" />
+        <MetricCard label="Faltas" value={resumo.faltas} detail="Geram alerta de acompanhamento" tone="warning" />
+        <MetricCard label="Data" value={`${data.slice(8, 10)}/${data.slice(5, 7)}`} detail="Registro operacional" />
+      </MetricGrid>
 
       <section className="creche-panel creche-frequency-panel">
         <div className="creche-list-toolbar">

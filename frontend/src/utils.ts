@@ -1,5 +1,10 @@
 // src/utils.ts
-export const getNomePrincipal = (pessoa: any) => {
+export interface PessoaNomePrincipal {
+  nome?: string | null;
+  nome_social?: string | null;
+}
+
+export const getNomePrincipal = (pessoa?: PessoaNomePrincipal | null) => {
   if (!pessoa) return 'Pessoa não encontrada';
   return pessoa.nome_social || pessoa.nome || 'Nome não disponível';
 };

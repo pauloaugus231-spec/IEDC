@@ -31,6 +31,49 @@ type SeedResposta = {
   perfilPreenchedor: string;
 };
 
+interface RespostaAlbergueInput {
+  dataReferencia?: string;
+  data_referencia?: string;
+  situacaoTerritorial?: string;
+  tempoSemMoradia?: string;
+  fatoresSemMoradia?: string[] | string;
+  fatoresSemMoradiaOutro?: string;
+  ajudaPrincipal?: string[] | string;
+  ajudaPrincipalOutro?: string;
+  respeitoUsuarios?: string;
+  comunicacaoEquipe?: string;
+  proximoPassoAjuda?: string;
+  proximosPassos?: string[] | string;
+  proximoPassoOutro?: string;
+  participouOficina?: string;
+  relatoRepresenta?: string;
+  melhoriaSugerida?: string;
+  demandasEquipe?: string[] | string;
+  demandaOutro?: string;
+  acaoEquipe?: string[] | string;
+  preenchidoPor?: string;
+  perfilPreenchedor?: string;
+}
+
+interface RespostaAlbergueRow {
+  id: string;
+  data_referencia: string;
+  situacao_territorial: string;
+  tempo_sem_moradia: string;
+  fatores_sem_moradia: string[] | null;
+  ajuda_principal: string[] | null;
+  respeito_usuarios: string;
+  comunicacao_equipe: string;
+  proximo_passo_ajuda: string;
+  proximos_passos: string[] | null;
+  participou_oficina: string;
+  relato_representa: string | null;
+  melhoria_sugerida: string | null;
+  demandas_equipe: string[] | null;
+  acao_equipe: string[] | null;
+  created_at: Date | string;
+}
+
 const SEED_RESPOSTAS_PLANILHA: SeedResposta[] = [
   {
     sourceKey: 'planilha-impacto-2026-05-18-01',
@@ -364,11 +407,11 @@ export class ImpactoSocialService {
     };
   }
 
-  async createRespostaAlbergue(body: any) {
+  async createRespostaAlbergue(body: RespostaAlbergueInput) {
     await this.ensureEstrutura();
 
     const dataReferencia = normalizeText(body.dataReferencia || body.data_referencia || formatDate(new Date()));
-    const situacaoTerritorial = normalizeText(body.situacaoTerritorial, 'Ñ informado');
+    const situacaoTerritorial = normalizeText(body.situacaoTerritorial, 'Não informado');
     const tempoSemMoradia = normalizeText(body.tempoSemMoradia, 'Prefiro não responder');
     const respeitoUsuarios = normalizeText(body.respeitoUsuarios, 'Prefiro não responder');
     const comunicacaoEquipe = normalizeText(body.comunicacaoEquipe, 'Não se aplica');
@@ -745,7 +788,7 @@ export class ImpactoSocialService {
       .slice(0, 18);
   }
 
-  private mapResposta(row: any) {
+  private mapResposta(row: RespostaAlbergueRow) {
     return {
       id: row.id,
       dataReferencia: row.data_referencia,

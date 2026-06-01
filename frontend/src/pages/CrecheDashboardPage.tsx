@@ -14,6 +14,7 @@ import {
   type CrechePeriodoDashboard,
   type CrecheSinalEvasao,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
@@ -174,16 +175,12 @@ const CrecheDashboardPage = () => {
 
   return (
     <main className="page-band creche-page">
-      <section className="creche-dashboard-head">
-        <div>
-          <p className="institutional-eyebrow">E.E.I. Casa do Pequenino</p>
-          <h1>Painel da Escola de Educação Infantil</h1>
-          <p>
-            Acompanhe crianças, responsáveis, turmas, frequência, pendências e sinais de evasão
-            sem misturar a rotina da E.E.I. com a operação do albergue.
-          </p>
-        </div>
-        <div className="creche-head-actions">
+      <PageHeader
+        eyebrow="E.E.I. Casa do Pequenino"
+        title="Painel da Escola de Educação Infantil"
+        description="Acompanhe crianças, responsáveis, turmas, frequência, pendências e sinais de evasão sem misturar a rotina da E.E.I. com a operação do albergue."
+        actions={(
+          <>
           <Link className="creche-head-link secondary" to="/creche/criancas">
             Crianças
           </Link>
@@ -196,31 +193,16 @@ const CrecheDashboardPage = () => {
           <Link className="creche-head-link" to="/creche/relatorios">
             Relatórios da E.E.I.
           </Link>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Crianças ativas</span>
-          <strong>{totalCriancas}</strong>
-          <small>Distribuídas em {turmas.length || 8} turmas</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Pendências NIS</span>
-          <strong>{semNis}</strong>
-          <small>Base cadastral para aferição</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Ingressos no período</span>
-          <strong>{ingressosPeriodo}</strong>
-          <small>Entram na conferência mensal</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Sinais de evasão</span>
-          <strong>{riscoEvasao}</strong>
-          <small>Crianças com faltas para acompanhar</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Crianças ativas" value={totalCriancas} detail={`Distribuídas em ${turmas.length || 8} turmas`} />
+        <MetricCard label="Pendências NIS" value={semNis} detail="Base cadastral para aferição" />
+        <MetricCard label="Ingressos no período" value={ingressosPeriodo} detail="Entram na conferência mensal" />
+        <MetricCard label="Sinais de evasão" value={riscoEvasao} detail="Crianças com faltas para acompanhar" tone="warning" />
+      </MetricGrid>
 
       <section className="creche-insight-grid">
         <article className="creche-panel">
@@ -278,9 +260,7 @@ const CrecheDashboardPage = () => {
                     {sinal.faltas} faltas no período. Última presença: {formatData(sinal.ultimaPresenca)}.
                   </p>
                   <small>{sinal.responsavel || 'Responsável não informado'} · {sinal.telefone || 'sem telefone'}</small>
-                  <div className="creche-risk-track" aria-hidden="true">
-                    <i className={riskClass} style={{ width: `${Math.min(sinal.risco, 100)}%` }} />
-                  </div>
+                  <progress className={`creche-risk-track ${riskClass}`} value={Math.min(sinal.risco, 100)} max={100} aria-label={`Risco de evasão de ${sinal.nome}`} />
                 </article>
               );
             })}
@@ -316,9 +296,7 @@ const CrecheDashboardPage = () => {
                 </div>
               </div>
 
-              <div className="creche-turma-track" aria-hidden="true">
-                <i style={{ width: `${Math.min(Math.max(turma.frequencia, 0), 100)}%` }} />
-              </div>
+              <progress className="creche-turma-track" value={Math.min(Math.max(turma.frequencia, 0), 100)} max={100} aria-label={`Frequência da turma ${turma.nome}`} />
 
               <div className="creche-turma-actions">
                 <Link to={`/creche/frequencia?turmaId=${turma.id}`}>Registrar</Link>

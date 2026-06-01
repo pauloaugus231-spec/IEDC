@@ -49,9 +49,23 @@ services:
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-false}
       DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-true}
       DB_LOGGING: ${DB_LOGGING:-false}
+      APP_VERSION: ${APP_VERSION:-v1-local}
+      LOG_LEVEL: ${LOG_LEVEL:-log}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      LOG_INCLUDE_STACK: ${LOG_INCLUDE_STACK:-false}
+      SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-500}
+      VERY_SLOW_REQUEST_MS: ${VERY_SLOW_REQUEST_MS:-1000}
+      BACKUP_ROOT: ${BACKUP_ROOT:-/var/backups/iedc}
+      BACKUP_STATUS_PATH: ${BACKUP_STATUS_PATH:-/var/backups/iedc/backup-status.json}
+      RESTORE_STATUS_PATH: ${RESTORE_STATUS_PATH:-/var/backups/iedc/restore-status.json}
+      BACKUP_STALE_AFTER_HOURS: ${BACKUP_STALE_AFTER_HOURS:-30}
       JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
       IEDC_DEFAULT_PASSWORD: ${IEDC_DEFAULT_PASSWORD:?Defina IEDC_DEFAULT_PASSWORD no .env}
+      THROTTLE_DEFAULT_TTL_MS: ${THROTTLE_DEFAULT_TTL_MS:-60000}
+      THROTTLE_DEFAULT_LIMIT: ${THROTTLE_DEFAULT_LIMIT:-120}
+      THROTTLE_AUTH_TTL_MS: ${THROTTLE_AUTH_TTL_MS:-60000}
+      THROTTLE_AUTH_LIMIT: ${THROTTLE_AUTH_LIMIT:-5}
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
       ENABLE_DEMO_SEED: ${ENABLE_DEMO_SEED:-false}
@@ -68,8 +82,9 @@ services:
       TRIAGEM_NOTIFICATION_INCLUDE_PII: ${TRIAGEM_NOTIFICATION_INCLUDE_PII:-false}
     volumes:
       - iedc_uploads:/app/uploads
+      - ${BACKUP_ROOT:-./.runtime/backups}:${BACKUP_ROOT:-/var/backups/iedc}:ro
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health/ready').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 12

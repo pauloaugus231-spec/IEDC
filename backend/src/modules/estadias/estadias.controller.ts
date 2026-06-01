@@ -4,6 +4,8 @@ import { CheckoutAutomaticoService } from './checkout-automatico.service';
 import { CreateCheckinDto } from './dto/create-checkin.dto';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { CreateProrrogacaoDto } from './dto/create-prorrogacao.dto';
+import { CreateAbandonoDto } from './dto/create-abandono.dto';
+import { TrocarCamaDto } from './dto/trocar-cama.dto';
 import { MotivoSaida } from '../../entities/estadia.entity';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
@@ -30,7 +32,7 @@ export class EstadiasController {
   }
 
   @Post('abandono')
-  async registrarAbandono(@Body() body: { pessoa_id: string; funcionario?: string; observacoes?: string }) {
+  async registrarAbandono(@Body() body: CreateAbandonoDto) {
     return this.estadiasService.registrarAbandono(body.pessoa_id, body.funcionario, body.observacoes);
   }
 
@@ -85,7 +87,7 @@ export class EstadiasController {
   }
 
   @Post('trocar-cama')
-  async trocarCama(@Body() { estadia_origem_id, cama_destino_id }: { estadia_origem_id: string, cama_destino_id: string }) {
+  async trocarCama(@Body() { estadia_origem_id, cama_destino_id }: TrocarCamaDto) {
     return this.estadiasService.trocarCama(estadia_origem_id, cama_destino_id);
   }
 

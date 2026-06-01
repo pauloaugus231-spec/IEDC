@@ -1,0 +1,58 @@
+.foto-preview-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.foto-preview-thumb.small {
+  width: 50px;
+  height: 50px;
+}
+
+.foto-preview-thumb.medium {
+  width: 58px;
+  height: 58px;
+}
+
+.foto-preview-thumb.large {
+  width: 104px;
+  height: 104px;
+}
+
+.foto-preview-thumb.interactive {
+  cursor: pointer;
+}
+
+.foto-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.foto-preview-placeholder {
+  width: 60%;
+  height: 60%;
+  color: #9ca3af;
+}
+
+.foto-preview-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.foto-preview-zoom-image {
+  width: 180px;
+  height: 180px;
+  border: 3px solid #ffffff;
+  border-radius: 12px;
+  box-shadow: var(--iedc-shadow-md, 0 8px 14px rgba(13, 40, 76, 0.12));
+  object-fit: cover;
+}

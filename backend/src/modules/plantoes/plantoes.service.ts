@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Plantao } from '../../entities/plantao.entity';
 import { RegraEscala } from '../../entities/regra-escala.entity';
 import { Colaborador } from '../../entities/colaborador.entity';

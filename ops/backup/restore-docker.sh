@@ -13,7 +13,42 @@ fi
 
 POSTGRES_DB="${POSTGRES_DB:-iedc}"
 POSTGRES_USER="${POSTGRES_USER:-iedc_app}"
+BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/iedc}"
+RESTORE_STATUS_PATH="${RESTORE_STATUS_PATH:-$BACKUP_ROOT/restore-status.json}"
 BACKUP_DIR="${1:-}"
+started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g'
+}
+
+write_restore_status() {
+  local status="$1"
+  local message="$2"
+  local finished_at duration tmp
+  finished_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  duration=$(( $(date -u +%s) - $(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$started_at" +%s 2>/dev/null || date -d "$started_at" +%s) ))
+  tmp="$RESTORE_STATUS_PATH.tmp"
+
+  mkdir -p "$(dirname "$RESTORE_STATUS_PATH")"
+  cat > "$tmp" <<JSON
+{
+  "status": "$(json_escape "$status")",
+  "message": "$(json_escape "$message")",
+  "startedAt": "$(json_escape "$started_at")",
+  "finishedAt": "$(json_escape "$finished_at")",
+  "durationSeconds": $duration,
+  "backupPath": "$(json_escape "$BACKUP_DIR")"
+}
+JSON
+  mv "$tmp" "$RESTORE_STATUS_PATH"
+}
+
+on_error() {
+  local exit_code=$?
+  write_restore_status "failed" "Restauracao falhou na linha $1."
+  exit "$exit_code"
+}
 
 if [ -z "$BACKUP_DIR" ] || [ "${2:-}" != "--yes" ]; then
   echo "Uso: PROJECT_DIR=/opt/iedc $0 /var/backups/iedc/diario/AAAA-MM-DD_HH-MM-SS --yes" >&2
@@ -27,6 +62,8 @@ if [ ! -d "$BACKUP_DIR" ]; then
 fi
 
 BACKUP_DIR="$(cd "$BACKUP_DIR" && pwd -P)"
+trap 'on_error $LINENO' ERR
+write_restore_status "running" "Restauracao iniciada."
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker nao encontrado." >&2
@@ -74,4 +111,5 @@ docker run --rm -i \
 echo "Subindo servicos..."
 docker compose up -d backend frontend
 
+write_restore_status "success" "Restauracao concluida e servicos reiniciados."
 echo "Restauracao concluida a partir de: $BACKUP_DIR"

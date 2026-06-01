@@ -8,6 +8,17 @@ import { Cama, StatusCama } from '../../entities/cama.entity';
 import { Bloqueio, TipoBloqueio } from '../../entities/bloqueio.entity';
 import { Resend } from 'resend';
 
+export interface NovoCadastroTriagem {
+  nome: string;
+  dataNascimento: string;
+  idade: number;
+  cpf: string | null;
+  raca: string | null;
+  genero: string;
+  lgbt: boolean;
+  nome_social: string | null;
+}
+
 @Injectable()
 export class TriagemService {
   private readonly DIAS_BLOQUEIO_ABANDONO = 15;
@@ -204,8 +215,8 @@ export class TriagemService {
           resultadoNotifs.telegramError = error;
           console.error(`❌ Erro Telegram:`, error);
         }
-      } catch (error: any) {
-        resultadoNotifs.telegramError = error.message;
+      } catch (error) {
+        resultadoNotifs.telegramError = this.errorMessage(error);
         console.error(`❌ Erro Telegram:`, error);
       }
     }
@@ -228,7 +239,7 @@ export class TriagemService {
           novosCadastrosHtml = `
             <div style="margin-top: 30px; padding: 20px; background-color: #F0FDF4; border-radius: 8px; border-left: 4px solid #10B981;">
               <h2 style="color: #059669; margin-top: 0;">✨ ${novosCadastros.length} Novo(s) Cadastro(s) Hoje</h2>
-              ${novosCadastros.map((cadastro: any) => `
+              ${novosCadastros.map((cadastro) => `
                 <div style="background-color: white; padding: 15px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #D1FAE5;">
                   <h3 style="margin-top: 0; color: #1F2937;">${cadastro.nome}</h3>
                   <table style="width: 100%; font-size: 14px;">
@@ -312,8 +323,8 @@ export class TriagemService {
         
         resultadoNotifs.email = true;
         console.log(`✅ Email enviado para ${emailConfig.nome}`);
-      } catch (error: any) {
-        resultadoNotifs.emailError = error.message;
+      } catch (error) {
+        resultadoNotifs.emailError = this.errorMessage(error);
         console.error(`❌ Erro Email:`, error);
       }
     }
@@ -331,7 +342,7 @@ export class TriagemService {
    * Busca pessoas cadastradas hoje
    * Retorna dados formatados para o relatório de triagem
    */
-  async getNovosCadastrosHoje() {
+  async getNovosCadastrosHoje(): Promise<NovoCadastroTriagem[]> {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
@@ -387,12 +398,16 @@ export class TriagemService {
         nome: pessoa.nome,
         dataNascimento,
         idade,
-        cpf: pessoa.cpf,
+        cpf: pessoa.cpf ?? null,
         raca: pessoa.raca ? racaMap[pessoa.raca] : null,
         genero: pessoa.genero ? (generoMap[pessoa.genero] || pessoa.genero) : 'Não informado',
         lgbt: pessoa.lgbt,
-        nome_social: pessoa.nome_social
+        nome_social: pessoa.nome_social ?? null
       };
     });
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Erro desconhecido';
   }
 }

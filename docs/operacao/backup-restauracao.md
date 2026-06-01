@@ -19,11 +19,16 @@ POSTGRES_DB=iedc
 POSTGRES_USER=iedc_app
 POSTGRES_PASSWORD=senha_forte
 BACKUP_ROOT=/var/backups/iedc
+BACKUP_STATUS_PATH=/var/backups/iedc/backup-status.json
+RESTORE_STATUS_PATH=/var/backups/iedc/restore-status.json
 BACKUP_RETENTION_DAYS=30
 RCLONE_DESTINATION=
 ```
 
 `RCLONE_DESTINATION` e opcional. Se estiver vazio, o backup fica apenas local.
+`BACKUP_STATUS_PATH` e `RESTORE_STATUS_PATH` alimentam a pagina `Suporte > Saude do sistema`.
+Em desenvolvimento local, quando `BACKUP_ROOT` nao estiver definido no `.env`, o `docker-compose.yml`
+monta `./.runtime/backups` dentro do backend em `/var/backups/iedc`.
 
 ## Gerar backup
 
@@ -43,6 +48,7 @@ Arquivos esperados:
 - `iedc-db-AAAA-MM-DD_HH-MM-SS.dump`
 - `iedc-uploads-AAAA-MM-DD_HH-MM-SS.tar.gz`
 - `manifest.sha256`
+- `/var/backups/iedc/backup-status.json`, com status, duracao, tamanho e envio remoto.
 
 ## Restaurar backup
 
@@ -60,6 +66,7 @@ O script:
 - restaura o PostgreSQL;
 - limpa e restaura uploads;
 - sobe backend e frontend novamente.
+- grava `/var/backups/iedc/restore-status.json` com o resultado da restauracao.
 
 Depois da restauracao:
 

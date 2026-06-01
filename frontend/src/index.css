@@ -36,6 +36,55 @@ body {
   overflow-x: hidden;
 }
 
+.root-error-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(180deg, #f7faff 0%, #eef3f8 100%);
+}
+
+.root-error-shell section {
+  max-width: 640px;
+  border: 1px solid #dfe7f2;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 14px rgba(13, 40, 76, 0.12);
+  padding: 28px;
+}
+
+.root-error-shell p {
+  margin: 0 0 8px;
+  color: #0041aa;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.root-error-shell h1 {
+  margin: 0 0 10px;
+  color: #172033;
+  font-size: 28px;
+  letter-spacing: 0;
+}
+
+.root-error-shell span {
+  color: #68778e;
+  font-weight: 700;
+}
+
+.root-error-shell pre {
+  max-height: 340px;
+  margin-top: 18px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #fff4df;
+  color: #8f5b10;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;

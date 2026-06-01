@@ -9,6 +9,12 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Throttle } from '@nestjs/throttler';
+
+function parsePositiveIntegerEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? Math.trunc(value) : fallback;
+}
 
 @Controller('auth')
 export class AuthController {
@@ -22,8 +28,17 @@ export class AuthController {
 
   @Public()
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.login, dto.password);
+  @Throttle({
+    default: {
+      limit: parsePositiveIntegerEnv('THROTTLE_AUTH_LIMIT', 5),
+      ttl: parsePositiveIntegerEnv('THROTTLE_AUTH_TTL_MS', 60_000),
+    },
+  })
+  login(@Body() dto: LoginDto, @Req() request: AuthRequest) {
+    return this.authService.login(dto.login, dto.password, {
+      ip: request.ip,
+      userAgent: request.get('user-agent'),
+    });
   }
 
   @Get('me')

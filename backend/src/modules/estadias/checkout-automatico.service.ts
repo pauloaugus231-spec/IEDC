@@ -5,6 +5,24 @@ import { Repository } from 'typeorm';
 import { Estadia, MotivoSaida } from '../../entities/estadia.entity';
 import { EstadiasService } from './estadias.service';
 
+interface EstadiaVencidaRow {
+  estadia_id: string;
+  pessoa_id: string;
+  status: string;
+  data_limite: string;
+  pessoa_nome: string;
+  data_hoje: string;
+  dias_vencidos: number | string;
+}
+
+export interface CheckoutAutomaticoItem {
+  id: string;
+  pessoa: string;
+  data_limite: string;
+  status: 'sucesso' | 'erro';
+  erro?: string;
+}
+
 @Injectable()
 export class CheckoutAutomaticoService {
   constructor(
@@ -36,7 +54,7 @@ export class CheckoutAutomaticoService {
       // Lógica: Se data_limite = 07/01 (hoje), significa que a última noite foi 06/01
       //         Portanto, o checkout deve acontecer à meia-noite de 07/01 (hoje)
       // Exemplo: Check-in 23/12 → 15 noites → data_limite 06/01 → checkout 07/01 00:00
-      const estadiasVencidas = await this.estadiaRepository.query(`
+      const estadiasVencidas = await this.estadiaRepository.query<EstadiaVencidaRow[]>(`
         SELECT 
           e.id as estadia_id,
           e.pessoa_id,
@@ -65,11 +83,11 @@ export class CheckoutAutomaticoService {
       }
 
       console.log('\n📝 Estadias que serão processadas:');
-      estadiasVencidas.forEach((e: any) => {
+      estadiasVencidas.forEach((e) => {
         console.log(`  • ${e.pessoa_nome} - Vencida há ${e.dias_vencidos} dia(s)`);
       });
 
-      const results: any[] = [];
+      const results: CheckoutAutomaticoItem[] = [];
       let sucessos = 0;
       let falhas = 0;
 

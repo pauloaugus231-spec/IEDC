@@ -7,6 +7,7 @@ import {
   useCrecheTurmas,
   type CreateCrecheCriancaPayload,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 const today = new Date().toISOString().slice(0, 10);
@@ -145,16 +146,12 @@ const CrecheChildrenPage = () => {
 
   return (
     <main className="page-band creche-page">
-      <section className="creche-dashboard-head">
-        <div>
-          <p className="institutional-eyebrow">E.E.I. Casa do Pequenino</p>
-          <h1>Crianças e responsáveis</h1>
-          <p>
-            Consulta operacional da E.E.I. com dados de aferição, responsáveis,
-            turma e pendências cadastrais.
-          </p>
-        </div>
-        <div className="creche-head-actions">
+      <PageHeader
+        eyebrow="E.E.I. Casa do Pequenino"
+        title="Crianças e responsáveis"
+        description="Consulta operacional da E.E.I. com dados de aferição, responsáveis, turma e pendências cadastrais."
+        actions={(
+          <>
           <Link className="creche-head-link secondary" to="/creche/turmas">
             Turmas
           </Link>
@@ -164,31 +161,16 @@ const CrecheChildrenPage = () => {
           <button className="creche-head-link" onClick={openModal} type="button">
             Nova criança
           </button>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Total filtrado</span>
-          <strong>{metrics.total}</strong>
-          <small>Crianças na lista atual</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Com responsável</span>
-          <strong>{metrics.comResponsavel}</strong>
-          <small>Base pronta para contato</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Pendências</span>
-          <strong>{metrics.pendencias}</strong>
-          <small>CPF, NIS ou responsável</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Meninas</span>
-          <strong>{metrics.meninas}</strong>
-          <small>Recorte rápido do cadastro</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Total filtrado" value={metrics.total} detail="Crianças na lista atual" />
+        <MetricCard label="Com responsável" value={metrics.comResponsavel} detail="Base pronta para contato" tone="success" />
+        <MetricCard label="Pendências" value={metrics.pendencias} detail="CPF, NIS ou responsável" tone="warning" />
+        <MetricCard label="Meninas" value={metrics.meninas} detail="Recorte rápido do cadastro" />
+      </MetricGrid>
 
       <section className="creche-panel creche-list-panel">
         <div className="creche-list-toolbar">
@@ -223,7 +205,7 @@ const CrecheChildrenPage = () => {
           </label>
         </div>
 
-        <div className="report-table-wrap">
+        <div className="report-table-wrap ds-table-shell">
           <table className="report-table">
             <thead>
               <tr>

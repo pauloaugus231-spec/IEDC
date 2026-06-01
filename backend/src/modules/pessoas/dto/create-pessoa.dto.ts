@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail, IsDateString, IsEnum, Length, IsPhoneNumber } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsEnum, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TipoVaga } from '../../../entities/pessoa.entity';
 

@@ -10,6 +10,8 @@ import { Turno } from '../entities/turno.entity';
 import { RegraEscala } from '../entities/regra-escala.entity';
 import { Plantao } from '../entities/plantao.entity';
 import { Usuario } from '../entities/usuario.entity';
+import { Auditoria } from '../entities/auditoria.entity';
+import { ObservabilityEvent } from '../entities/observability-event.entity';
 
 function resolveDatabaseEnv(name: string, fallback?: string) {
   const value = process.env[name];
@@ -28,7 +30,21 @@ export const AppDataSource = new DataSource({
   username: resolveDatabaseEnv('DB_USER', 'postgres'),
   password: resolveDatabaseEnv('DB_PASSWORD'),
   database: resolveDatabaseEnv('DB_NAME', 'albergue'),
-  entities: [Pessoa, Estadia, Bloqueio, Ocorrencia, Solicitacao, Cama, Colaborador, Turno, RegraEscala, Plantao, Usuario],
+  entities: [
+    Pessoa,
+    Estadia,
+    Bloqueio,
+    Ocorrencia,
+    Solicitacao,
+    Cama,
+    Colaborador,
+    Turno,
+    RegraEscala,
+    Plantao,
+    Usuario,
+    Auditoria,
+    ObservabilityEvent,
+  ],
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
   migrations: ['src/database/migrations/*.ts'],

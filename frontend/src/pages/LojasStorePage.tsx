@@ -18,10 +18,10 @@ import {
   type ComandaDetalhe,
   type ComandaResumo,
   type LojaSlug,
-  type LojasPeriodo,
   type ProdutoLoja,
   type RetiradaLoja,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import { useAuth } from '../context/AuthContext';
 import { useLojasRealtime, type LojasRealtimeEvent } from '../hooks/useLojasRealtime';
 import '../styles/institutional.css';
@@ -29,7 +29,7 @@ import '../styles/institutional.css';
 const lojaInfo: Record<LojaSlug, { nome: string; subtitulo: string }> = {
   bazar: {
     nome: 'Bazar',
-    subtitulo: 'Lance itens na comanda única e envie a venda prevista para a secretaria.',
+    subtitulo: 'Lance itens na comanda única e encaminhe a conferência para a secretaria.',
   },
   brecho: {
     nome: 'Brechó',
@@ -37,7 +37,7 @@ const lojaInfo: Record<LojaSlug, { nome: string; subtitulo: string }> = {
   },
   feirao: {
     nome: 'Feirão',
-    subtitulo: 'Registre os itens escolhidos e acompanhe a comanda até o pagamento.',
+    subtitulo: 'Registre os itens escolhidos e acompanhe a retirada após liberação da secretaria.',
   },
 };
 
@@ -45,13 +45,6 @@ const currency = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
 });
-
-const periodos: { label: string; value: LojasPeriodo }[] = [
-  { label: 'Dia', value: 'dia' },
-  { label: 'Semana', value: 'semana' },
-  { label: 'Mês', value: 'mes' },
-  { label: 'Ano', value: 'ano' },
-];
 
 const statusLabel: Record<string, string> = {
   aberta: 'Aberta',
@@ -128,6 +121,14 @@ function isRetiradaPayload(payload: unknown): payload is RetiradaLoja {
   return Boolean(retirada.id && retirada.comandaId && retirada.lojaSlug && retirada.codigo);
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function showOperationalReceipt(message: string, type: 'success' | 'info' = 'success') {
+  window.showToast?.(message, type);
+}
+
 type LojasStoreMode = 'operacao' | 'produtos' | 'historico';
 
 const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
@@ -151,18 +152,15 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
   const [comandaModalOpen, setComandaModalOpen] = useState(false);
   const [activeComanda, setActiveComanda] = useState<ComandaDetalhe | null>(null);
   const [itemForm, setItemForm] = useState(emptyItemForm);
-  const [historicoPeriodo, setHistoricoPeriodo] = useState<LojasPeriodo>('dia');
   const [retiradaNotifications, setRetiradaNotifications] = useState<RetiradaLoja[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isProductsPage = mode === 'produtos';
+  const isHistoryPage = mode === 'historico';
 
   const { data: produtos } = useProdutosLoja(lojaSlug, reload);
   const { data: clientes, loading: loadingClientes } = useClientesComerciais(clienteSearch, reload);
   const { data: comandasAtivas } = useComandasComerciais({ status: 'ativas', lojaSlug }, reload);
-  const { data: historicoLoja } = useComandasComerciais(
-    { status: 'recentes', lojaSlug, periodo: historicoPeriodo },
-    reload,
-  );
   const { data: retiradasPendentes } = useRetiradasLoja(
     { lojaSlug, status: 'pendentes' },
     reload,
@@ -199,14 +197,13 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
   }, [reload, activeComanda?.id, comandaModalOpen, lojaSlug]);
 
   const storeStats = useMemo(() => {
-    const previsto = comandasAtivas.reduce((sum, comanda) => sum + Number(comanda.totalLoja ?? comanda.saldo), 0);
     const itens = comandasAtivas.reduce((sum, comanda) => sum + Number(comanda.itensLoja ?? comanda.itens), 0);
     return {
       comandas: comandasAtivas.length,
-      previsto,
       itens,
+      produtos: produtos.length,
     };
-  }, [comandasAtivas]);
+  }, [comandasAtivas, produtos.length]);
 
   const openClienteModal = (cliente?: ClienteComercial) => {
     setEditingClient(cliente || null);
@@ -223,6 +220,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
 
   const handleClienteSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const isEditingClient = Boolean(editingClient);
 
     if (!clienteForm.nome.trim()) {
       setError('Nome do cliente é obrigatório.');
@@ -241,11 +239,13 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
       setReload((value) => value + 1);
       closeClienteModal();
 
-      if (!editingClient) {
+      if (isEditingClient) {
+        showOperationalReceipt('Cliente atualizado.');
+      } else {
         await openComanda(saved);
       }
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível salvar o cliente.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível salvar o cliente.'));
     } finally {
       setSaving(false);
     }
@@ -268,6 +268,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
     event.preventDefault();
 
     const preco = asNumber(produtoForm.preco);
+    const isEditingProduct = Boolean(editingProduct);
 
     if (!produtoForm.nome.trim()) {
       setError('Nome do produto é obrigatório.');
@@ -300,8 +301,9 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
 
       setReload((value) => value + 1);
       closeProdutoModal();
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível salvar o produto.');
+      showOperationalReceipt(isEditingProduct ? 'Produto atualizado no estoque.' : 'Produto cadastrado no estoque.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível salvar o produto.'));
     } finally {
       setSaving(false);
     }
@@ -320,8 +322,9 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
       setActiveComanda(comanda);
       setComandaModalOpen(true);
       setReload((value) => value + 1);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível abrir a comanda.');
+      showOperationalReceipt(`Comanda ${comanda.codigo} aberta.`);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível abrir a comanda.'));
     } finally {
       setSaving(false);
     }
@@ -343,8 +346,8 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
       setActiveClient(null);
       setActiveComanda(detail);
       setComandaModalOpen(true);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível abrir a comanda.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível abrir a comanda.'));
     } finally {
       setSaving(false);
     }
@@ -386,8 +389,9 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
       setActiveComanda(updated);
       setItemForm(emptyItemForm);
       setReload((value) => value + 1);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível lançar o item.');
+      showOperationalReceipt('Item lançado na comanda.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível lançar o item.'));
     } finally {
       setSaving(false);
     }
@@ -403,8 +407,9 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
       const updated = await removeItemComandaComercial(activeComanda.id, itemId);
       setActiveComanda(updated);
       setReload((value) => value + 1);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível remover o item.');
+      showOperationalReceipt('Item removido da comanda.', 'info');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível remover o item.'));
     } finally {
       setSaving(false);
     }
@@ -427,18 +432,15 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
         const detail = await getComandaComercial(activeComanda.id, lojaSlug);
         setActiveComanda(detail);
       }
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível confirmar a retirada.');
+      showOperationalReceipt('Retirada confirmada.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível confirmar a retirada.'));
     } finally {
       setSaving(false);
     }
   };
 
   const searchReady = clienteSearch.trim().length >= 2;
-  const historicoVendasLoja = historicoLoja.filter((comanda) => (
-    Number(comanda.totalLoja ?? comanda.total ?? 0) > 0 &&
-    (comanda.pago > 0 || ['paga', 'desistencia', 'cancelada', 'expirada'].includes(comanda.status))
-  ));
   const activeComandaOperavel = Boolean(
     activeComanda && ['aberta', 'aguardando_pagamento'].includes(activeComanda.status),
   );
@@ -448,58 +450,37 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
   const retiradaPendente = activeRetirada?.status === 'aguardando_retirada';
   const visibleRetiradaNotifications = retiradaNotifications.slice(0, 3);
   const hiddenRetiradaNotifications = Math.max(retiradaNotifications.length - visibleRetiradaNotifications.length, 0);
-  const isProductsPage = mode === 'produtos';
-  const isHistoryPage = mode === 'historico';
   const pageTitle = isProductsPage
     ? `Produtos do ${loja.nome}`
     : isHistoryPage
-      ? `Histórico do ${loja.nome}`
+      ? `${loja.nome}: área operacional`
       : loja.nome;
   const pageSubtitle = isProductsPage
     ? 'Cadastre, edite e mantenha a base de produtos usados na criação das comandas.'
     : isHistoryPage
-      ? 'Confira as vendas vinculadas à loja por período, sem misturar dados das outras lojas.'
+      ? 'Histórico financeiro fica restrito à secretaria. A loja mantém estoque, comanda e retirada.'
       : loja.subtitulo;
 
   return (
     <main className="page-band commerce-page">
-      <section className="commerce-head">
-        <div>
-          <p className="institutional-eyebrow">Lojas</p>
-          <h1>{pageTitle}</h1>
-          <p>{pageSubtitle}</p>
-        </div>
-        {canOpenSecretaria ? (
-          <div className="creche-head-actions">
+      <PageHeader
+        className="commerce-head"
+        eyebrow="Lojas"
+        title={pageTitle}
+        description={pageSubtitle}
+        actions={canOpenSecretaria ? (
             <Link className="creche-head-link secondary" to="/lojas/secretaria">
               Secretaria
             </Link>
-          </div>
         ) : null}
-      </section>
+      />
 
-      <section className="metrics-grid commerce-metrics">
-        <article className="metric-card">
-          <span>Comandas abertas</span>
-          <strong>{storeStats.comandas}</strong>
-          <small>Com itens desta loja aguardando pagamento</small>
-        </article>
-        <article className="metric-card">
-          <span>Venda prevista</span>
-          <strong>{currency.format(storeStats.previsto)}</strong>
-          <small>Valor ainda não recebido pela secretaria</small>
-        </article>
-        <article className="metric-card">
-          <span>Itens lançados</span>
-          <strong>{storeStats.itens}</strong>
-          <small>Somando comandas ativas da loja</small>
-        </article>
-        <article className="metric-card">
-          <span>Aguardando retirada</span>
-          <strong>{retiradasPendentes.length}</strong>
-          <small>Pedidos pagos liberados pela secretaria</small>
-        </article>
-      </section>
+      <MetricGrid className="commerce-metrics">
+        <MetricCard label="Comandas abertas" value={storeStats.comandas} detail="Com itens desta loja aguardando pagamento" />
+        <MetricCard label="Produtos ativos" value={storeStats.produtos} detail="Estoque precificado para lançar comanda" />
+        <MetricCard label="Itens lançados" value={storeStats.itens} detail="Somando comandas ativas da loja" />
+        <MetricCard label="Aguardando retirada" value={retiradasPendentes.length} detail="Pedidos pagos liberados pela secretaria" tone="warning" />
+      </MetricGrid>
 
       {error ? <p className="commerce-alert">{error}</p> : null}
 
@@ -535,7 +516,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
               </div>
               <div className="finance-notification-body">
                 <strong>{retirada.cliente}</strong>
-                <span>{retirada.itens} item(ns) · {currency.format(retirada.total)}</span>
+                <span>{retirada.itens} item(ns) liberado(s) pela secretaria</span>
               </div>
               <div className="finance-notification-footer">
                 <div>
@@ -561,7 +542,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
               <span>Buscar cliente</span>
               <input
                 onChange={(event) => setClienteSearch(event.target.value)}
-                placeholder="Digite ao menos 2 caracteres: nome, CPF ou telefone"
+                placeholder="Nome, CPF ou telefone"
                 value={clienteSearch}
               />
             </label>
@@ -625,7 +606,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
                     <div className="commerce-pickup-row" key={retirada.id}>
                       <button onClick={() => openExistingComanda({ id: retirada.comandaId } as ComandaResumo)} type="button">
                         <strong>{retirada.codigo} · {retirada.cliente}</strong>
-                        <span>{retirada.itens} item(ns) · {currency.format(retirada.total)}</span>
+                        <span>{retirada.itens} item(ns) liberado(s) para entrega</span>
                       </button>
                       <button onClick={() => confirmarRetirada(retirada.id)} type="button">
                         Retirado
@@ -654,7 +635,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
                     >
                       <strong>{comanda.codigo} · {comanda.cliente}</strong>
                       <span>{loja.nome}</span>
-                      <em>{currency.format(comanda.totalLoja ?? comanda.saldo)}</em>
+                      <em>{Number(comanda.itensLoja ?? comanda.itens)} item(ns)</em>
                     </button>
                   ))}
                   {!comandasAtivas.length ? (
@@ -703,44 +684,15 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
         <section className="commerce-panel commerce-dedicated-panel">
           <div className="commerce-panel-title">
             <div>
-              <h2>Histórico da loja</h2>
-              <span>Somente vendas vinculadas ao {loja.nome}.</span>
+              <h2>Histórico financeiro restrito</h2>
+              <span>A secretaria financeira acompanha período, realizado, pendências e desistências.</span>
             </div>
-            <strong>{historicoVendasLoja.length}</strong>
+            <strong>Protegido</strong>
           </div>
-
-          <div className="creche-period-tabs commerce-history-tabs">
-            {periodos.map((option) => (
-              <button
-                className={historicoPeriodo === option.value ? 'active' : ''}
-                key={option.value}
-                onClick={() => setHistoricoPeriodo(option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="commerce-command-list commerce-history-list commerce-history-list-large">
-            {historicoVendasLoja.map((comanda) => (
-              <button key={comanda.id} onClick={() => openExistingComanda(comanda)} type="button">
-                <strong>{comanda.codigo} · {comanda.cliente}</strong>
-                <span>
-                  {statusLabel[comanda.status] ?? comanda.status}
-                  {' · '}
-                  {comanda.finalizadaEm || comanda.atualizadaEm}
-                  {comanda.retiradaStatus === 'aguardando_retirada' ? ' · Aguardando retirada' : ''}
-                  {comanda.retiradaStatus === 'retirado' ? ` · Retirado${comanda.retiradaEm ? ` em ${comanda.retiradaEm}` : ''}` : ''}
-                </span>
-                <em>{currency.format(comanda.totalLoja ?? comanda.total)}</em>
-              </button>
-            ))}
-
-            {!historicoVendasLoja.length ? (
-              <p className="institutional-note">Nenhuma venda desta loja no período selecionado.</p>
-            ) : null}
-          </div>
+          <p className="institutional-note">
+            A loja não acessa relatórios nem totais de vendas. Use a operação principal para lançar itens,
+            consultar produtos e confirmar retiradas.
+          </p>
         </section>
       ) : null}
 
@@ -886,12 +838,12 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
 
             <section className="commerce-command-summary">
               <article>
-                <span>Valor da loja</span>
-                <strong>{currency.format(visibleComandaTotal)}</strong>
+                <span>Itens da loja</span>
+                <strong>{visibleComandaItems.length}</strong>
               </article>
               <article>
-                <span>Itens</span>
-                <strong>{visibleComandaItems.length}</strong>
+                <span>Subtotal operacional</span>
+                <strong>{currency.format(visibleComandaTotal)}</strong>
               </article>
               <article>
                 <span>Status</span>
@@ -1003,7 +955,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
               {!visibleComandaItems.length ? (
                 <div className="commerce-empty-state compact">
                   <strong>Nenhum item desta loja</strong>
-                  <span>A secretaria verá a venda prevista depois do primeiro item lançado aqui.</span>
+                  <span>A secretaria receberá a comanda para conferência após o primeiro lançamento.</span>
                 </div>
               ) : null}
             </div>

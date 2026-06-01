@@ -8,6 +8,63 @@ import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { DiasCruzGateway } from '../websocket/websocket.gateway';
 
+interface DuplicacaoCamaRow {
+  cama_id: string;
+  count: string;
+  estadia_ids: string;
+  datas_checkin: string;
+}
+
+interface CorrigirDuplicacoesItem {
+  pessoa?: string;
+  camaOrigem?: number;
+  casaOrigem?: Casa;
+  camaDestino?: number;
+  casaDestino?: Casa;
+  mesma_casa?: boolean;
+  erro?: string;
+  cama?: number;
+  casa?: Casa;
+  total_pessoas?: string;
+}
+
+export interface CorrigirDuplicacoesResultado {
+  corrigidas: number;
+  detalhes: CorrigirDuplicacoesItem[];
+  mensagem?: string;
+}
+
+interface DiagnosticoEstadiaCama {
+  estadia_id: string;
+  pessoa_id: string;
+  pessoa_nome?: string;
+  data_checkin: Date;
+  cama_id: string | null | undefined;
+  cama_numero: number;
+  casa: Casa;
+}
+
+interface DiagnosticoDuplicacaoCama {
+  casa: string;
+  cama_numero: number;
+  total_pessoas: number;
+  estadias: DiagnosticoEstadiaCama[];
+}
+
+interface DiagnosticoCasaResumo {
+  numero: number;
+  ocupantes: number;
+  pessoas: Array<string | undefined>;
+}
+
+export interface DiagnosticoCamasResultado {
+  total_estadias_ativas: number;
+  duplicacoes_encontradas: number;
+  duplicacoes: DiagnosticoDuplicacaoCama[];
+  camas_livres: Record<'masculina' | 'feminina' | 'idosos' | 'lgbt', number[]>;
+  resumo_ocupacao: Record<'masculina' | 'feminina' | 'idosos' | 'lgbt', DiagnosticoCasaResumo[]>;
+}
+
 @Injectable()
 export class EstadiasService {
   constructor(
@@ -254,10 +311,10 @@ export class EstadiasService {
     const estadiasVencidas = estadiasAtivas.filter(e => {
       // Converter data_limite para Date sem problema de timezone
       // data_limite é armazenado como DATE no banco (sem hora)
-      const dataLimiteValue: any = e.data_limite;
+      const dataLimiteValue: unknown = e.data_limite;
       const dataLimiteStr = typeof dataLimiteValue === 'string' 
         ? dataLimiteValue.split('T')[0]  // Pegar apenas YYYY-MM-DD
-        : dataLimiteValue.toISOString().split('T')[0];
+        : (dataLimiteValue instanceof Date ? dataLimiteValue : new Date(String(dataLimiteValue))).toISOString().split('T')[0];
       
       const dataLimite = new Date(dataLimiteStr + 'T00:00:00.000Z');
       const hojeStr = hoje.toISOString().split('T')[0];
@@ -321,11 +378,7 @@ export class EstadiasService {
       if (estadiaDestino) {
         // ===== TROCA MÚTUA: Ambas as pessoas trocam de cama =====
         
-        // Estratégia: Usar uma cama temporária fictícia para evitar violação de constraint
-        // 1. Buscar ou criar uma cama "temporária" que não existe
-        const TEMP_CAMA_ID = '00000000-0000-0000-0000-000000000000'; // UUID nulo temporário
-        
-        // 2. Mover estadia origem para cama temporária (remove da cama original)
+        // 1. Mover estadia origem para fora da cama original durante a troca.
         await transactionalEntityManager.query(
           `UPDATE estadias SET cama_id = NULL WHERE id = $1`,
           [estadiaOrigemId]
@@ -421,7 +474,7 @@ export class EstadiasService {
   }
 
   // Corrigir duplicações de cama
-  async corrigirDuplicacoes(): Promise<any> {
+  async corrigirDuplicacoes(): Promise<CorrigirDuplicacoesResultado> {
     const duplicacoes = await this.estadiaRepository
       .createQueryBuilder('estadia')
       .select('estadia.cama_id', 'cama_id')
@@ -431,13 +484,13 @@ export class EstadiasService {
       .where('estadia.status = :status', { status: StatusEstadia.ATIVA })
       .groupBy('estadia.cama_id')
       .having('COUNT(*) > 1')
-      .getRawMany();
+      .getRawMany<DuplicacaoCamaRow>();
 
     if (duplicacoes.length === 0) {
       return { corrigidas: 0, detalhes: [], mensagem: 'Nenhuma duplicação encontrada' };
     }
 
-    const resultados = [];
+    const resultados: CorrigirDuplicacoesItem[] = [];
 
     for (const dup of duplicacoes) {
       const camaAtual = await this.camaRepository.findOne({ where: { id: dup.cama_id } });
@@ -492,11 +545,6 @@ export class EstadiasService {
           camaLivre.status = StatusCama.OCUPADA;
           await this.camaRepository.save(camaLivre);
 
-          // Se agora só tem uma pessoa na cama original, não está mais ocupada/duplicada
-          const estadiasRestantes = await this.estadiaRepository.count({
-            where: { cama_id: camaAtual.id, status: StatusEstadia.ATIVA }
-          });
-
           resultados.push({
             pessoa: estadiaParaMover.pessoa.nome,
             camaOrigem: camaAtual.numero,
@@ -524,7 +572,7 @@ export class EstadiasService {
   }
 
   // Diagnosticar problemas de camas
-  async diagnosticarCamas(): Promise<any> {
+  async diagnosticarCamas(): Promise<DiagnosticoCamasResultado> {
     // Buscar todas as estadias ativas
     const estadiasAtivas = await this.estadiaRepository.find({
       where: { status: StatusEstadia.ATIVA },
@@ -533,7 +581,7 @@ export class EstadiasService {
     });
 
     // Agrupar por cama
-    const camaMap = new Map<string, any[]>();
+    const camaMap = new Map<string, DiagnosticoEstadiaCama[]>();
     
     for (const estadia of estadiasAtivas) {
       if (estadia.cama) {
@@ -557,8 +605,13 @@ export class EstadiasService {
     }
 
     // Encontrar duplicações
-    const duplicacoes = [];
-    const camasPorCasa: Record<string, any[]> = { masculina: [], feminina: [], idosos: [], lgbt: [] };
+    const duplicacoes: DiagnosticoDuplicacaoCama[] = [];
+    const camasPorCasa: Record<'masculina' | 'feminina' | 'idosos' | 'lgbt', DiagnosticoCasaResumo[]> = {
+      masculina: [],
+      feminina: [],
+      idosos: [],
+      lgbt: [],
+    };
     
     for (const [key, estadias] of camaMap.entries()) {
       const [casa, numero] = key.split('-');
@@ -573,7 +626,7 @@ export class EstadiasService {
       }
       
       // Organizar por casa
-      const casaKey = casa.toLowerCase();
+      const casaKey = casa.toLowerCase() as keyof typeof camasPorCasa;
       if (casaKey in camasPorCasa) {
         camasPorCasa[casaKey].push({
           numero: parseInt(numero),

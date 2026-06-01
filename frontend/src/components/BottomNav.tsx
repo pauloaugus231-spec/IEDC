@@ -4,12 +4,11 @@ import {
   BarChart2,
   Calendar,
   CheckCircle,
-  FileSpreadsheet,
   Home,
   Menu,
+  Pin,
   PlusCircle,
   Search,
-  Settings,
   Users,
   X,
 } from './Icons';
@@ -54,9 +53,6 @@ const BottomNav = ({ onNovoCadastro }: BottomNavProps) => {
       { to: '/albergue/buscar', label: 'Buscar', icon: Search },
       { to: '/albergue/relatorios', label: 'Relatorios', icon: BarChart2 },
       { to: '/albergue/impacto-social', label: 'Impacto', icon: BarChart2 },
-      { to: '/albergue/conferencia-rma', label: 'Afericao', icon: FileSpreadsheet },
-      { to: '/albergue/admin', label: 'Admin', icon: Settings },
-      { to: '/albergue/escala', label: 'Escala', icon: Calendar },
     );
   }
 
@@ -110,8 +106,9 @@ const BottomNav = ({ onNovoCadastro }: BottomNavProps) => {
             className={`pin-btn ${isPinned ? 'active' : ''}`} 
             onClick={togglePin}
             title={isPinned ? 'Desafixar menu' : 'Fixar menu'}
+            type="button"
           >
-            📌
+            <Pin size={14} aria-hidden="true" />
           </button>
         </div>
 

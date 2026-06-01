@@ -4,9 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import * as redisStore from 'cache-manager-redis-store';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 // Interceptors
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 
 // Módulos da aplicação
@@ -29,6 +30,10 @@ import { RmaModule } from './modules/rma/rma.module';
 import { CrecheModule } from './modules/creche/creche.module';
 import { LojasModule } from './modules/lojas/lojas.module';
 import { ImpactoSocialModule } from './modules/impacto-social/impacto-social.module';
+import { AuditoriaModule } from './modules/auditoria/auditoria.module';
+import { ObservabilityModule } from './modules/observability/observability.module';
+import { QualidadeDadosModule } from './modules/qualidade-dados/qualidade-dados.module';
+import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './auth/roles.guard';
@@ -36,6 +41,11 @@ import { HealthController } from './health.controller';
 
 // Configuração do banco
 import { databaseConfig } from './config/database.config';
+
+function parsePositiveIntegerEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? Math.trunc(value) : fallback;
+}
 
 @Module({
   imports: [
@@ -48,18 +58,25 @@ import { databaseConfig } from './config/database.config';
     // Schedule (cron jobs)
     ScheduleModule.forRoot(),
 
+    // Rate limiting institucional: proteção básica contra abuso sem atrapalhar uso local.
+    // Rotas com limite próprio, como login, sobrescrevem o default no controller.
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: parsePositiveIntegerEnv('THROTTLE_DEFAULT_TTL_MS', 60_000),
+        limit: parsePositiveIntegerEnv('THROTTLE_DEFAULT_LIMIT', 120),
+      },
+    ]),
+
     // TypeORM
     TypeOrmModule.forRootAsync({
       useFactory: () => databaseConfig,
     }),
 
-    // Cache Redis
+    // Cache de aplicação. Redis segue disponível no compose para evolução operacional futura.
     CacheModule.register({
       isGlobal: true,
-      store: redisStore as any,
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      ttl: 300, // 5 minutos padrão
+      ttl: 300_000, // 5 minutos padrão
     }),
 
     // Módulos da aplicação
@@ -83,6 +100,10 @@ import { databaseConfig } from './config/database.config';
     CrecheModule,
     LojasModule,
     ImpactoSocialModule,
+    AuditoriaModule,
+    ObservabilityModule,
+    QualidadeDadosModule,
+    NotificacoesModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -90,6 +111,14 @@ import { databaseConfig } from './config/database.config';
     {
       provide: APP_INTERCEPTOR,
       useClass: PerformanceInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     {
       provide: APP_GUARD,

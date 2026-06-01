@@ -20,6 +20,7 @@ import {
   type ComandaResumo,
   type LojasPeriodo,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import { useAuth } from '../context/AuthContext';
 import { useLojasRealtime, type LojasRealtimeEvent } from '../hooks/useLojasRealtime';
 import '../styles/institutional.css';
@@ -103,6 +104,14 @@ function getNotificationTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function showOperationalReceipt(message: string, type: 'success' | 'info' = 'success') {
+  window.showToast?.(message, type);
 }
 
 type LojasSecretariaMode = 'overview' | 'fila' | 'historico';
@@ -315,8 +324,8 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
       const detail = await getComandaComercial(comanda.id);
       setSelected(detail);
       setPayments(emptyPayments);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível abrir a comanda.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível abrir a comanda.'));
     } finally {
       setSaving(false);
     }
@@ -373,8 +382,9 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
       setSelected(updated);
       setPayments(emptyPayments);
       setReload((value) => value + 1);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível registrar o pagamento.');
+      showOperationalReceipt('Pagamento registrado na comanda.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível registrar o pagamento.'));
     } finally {
       setSaving(false);
     }
@@ -393,8 +403,9 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
       });
       setSelected(updated);
       setReload((value) => value + 1);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível marcar a desistência.');
+      showOperationalReceipt('Desistência registrada.', 'info');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível marcar a desistência.'));
     } finally {
       setSaving(false);
     }
@@ -430,13 +441,12 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
 
   return (
     <main className="page-band commerce-page">
-      <section className="commerce-head">
-        <div>
-          <p className="institutional-eyebrow">Secretaria e Financeiro</p>
-          <h1>{pageTitle}</h1>
-          <p>{pageSubtitle}</p>
-        </div>
-        {!isQueuePage ? (
+      <PageHeader
+        className="commerce-head"
+        eyebrow="Secretaria e Financeiro"
+        title={pageTitle}
+        description={pageSubtitle}
+        actions={!isQueuePage ? (
         <div className="commerce-head-controls">
           <div className="creche-period-tabs">
             {periodos.map((option) => (
@@ -460,30 +470,19 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
           </div>
         </div>
         ) : null}
-      </section>
+      />
 
-      <section className="metrics-grid commerce-metrics">
-        <article className="metric-card">
-          <span>Vendas previstas</span>
-          <strong>{currency.format(dashboard?.kpis.vendasPrevistas ?? 0)}</strong>
-          <small>{dashboard?.kpis.comandasAguardando ?? 0} comandas aguardando pagamento</small>
-        </article>
-        <article className="metric-card">
-          <span>Vendas realizadas</span>
-          <strong>{currency.format(dashboard?.kpis.vendasPagas ?? 0)}</strong>
-          <small>{dashboard?.kpis.comandasPagas ?? 0} comandas pagas no período</small>
-        </article>
-        <article className="metric-card">
-          <span>Desistências</span>
-          <strong>{dashboard?.kpis.desistencias ?? 0}</strong>
-          <small>{currency.format(dashboard?.kpis.valorDesistido ?? 0)} em venda perdida</small>
-        </article>
-        <article className="metric-card">
-          <span>Ticket médio</span>
-          <strong>{currency.format(dashboard?.kpis.ticketMedio ?? 0)}</strong>
-          <small>{dashboard?.kpis.taxaConversao ?? 0}% de conversão no período</small>
-        </article>
-      </section>
+      <MetricGrid className="commerce-metrics commerce-finance-metrics">
+        <MetricCard label="Previsto" value={currency.format(dashboard?.kpis.vendasPrevistas ?? 0)} detail="Valor ainda em aberto nas comandas" />
+        <MetricCard label="Realizado" value={currency.format(dashboard?.kpis.vendasPagas ?? 0)} detail={`${dashboard?.kpis.comandasPagas ?? 0} comandas pagas no período`} tone="success" />
+        <MetricCard label="Pendente" value={dashboard?.kpis.comandasAguardando ?? 0} detail="Comandas aguardando pagamento" tone="warning" />
+        <MetricCard label="Desistências" value={dashboard?.kpis.desistencias ?? 0} detail={`${currency.format(dashboard?.kpis.valorDesistido ?? 0)} em venda perdida`} tone="warning" />
+        <MetricCard
+          label="Retiradas"
+          value={(dashboard?.kpis.retiradasPendentes ?? 0) + (dashboard?.kpis.retiradasConcluidas ?? 0)}
+          detail={`${dashboard?.kpis.retiradasPendentes ?? 0} pendente(s), ${dashboard?.kpis.retiradasConcluidas ?? 0} concluída(s)`}
+        />
+      </MetricGrid>
 
       {error ? <p className="commerce-alert">{error}</p> : null}
 

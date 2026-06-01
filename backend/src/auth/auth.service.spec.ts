@@ -1,5 +1,7 @@
 import { AuthService } from './auth.service';
-import { UsuarioRole } from '../entities/usuario.entity';
+import { Usuario, UsuarioRole } from '../entities/usuario.entity';
+import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
 
 describe('AuthService bootstrap users', () => {
   const originalEnv = process.env;
@@ -23,7 +25,10 @@ describe('AuthService bootstrap users', () => {
       find: jest.fn().mockResolvedValue([]),
       save: jest.fn().mockImplementation(async (usuarios) => usuarios),
     };
-    const service = new AuthService(repository as any, {} as any);
+    const service = new AuthService(
+      repository as unknown as Repository<Usuario>,
+      {} as JwtService,
+    );
 
     await service.onModuleInit();
 
@@ -45,7 +50,10 @@ describe('AuthService bootstrap users', () => {
       find: jest.fn().mockResolvedValue([{ login: 'suporte' }]),
       save: jest.fn(),
     };
-    const service = new AuthService(repository as any, {} as any);
+    const service = new AuthService(
+      repository as unknown as Repository<Usuario>,
+      {} as JwtService,
+    );
 
     await service.onModuleInit();
 

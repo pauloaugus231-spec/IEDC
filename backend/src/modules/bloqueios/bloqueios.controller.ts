@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BloqueiosService } from './bloqueios.service';
-import { TipoBloqueio } from '../../entities/bloqueio.entity';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
+import { CriarBloqueioDto } from './dto/criar-bloqueio.dto';
+import { LiberarBloqueioDto } from './dto/liberar-bloqueio.dto';
+import { EncerrarBloqueioDto } from './dto/encerrar-bloqueio.dto';
 
 @ApiTags('bloqueios')
 @Controller('bloqueios')
@@ -52,14 +54,7 @@ export class BloqueiosController {
   @ApiOperation({ summary: 'Criar novo bloqueio' })
   @ApiResponse({ status: 201, description: 'Bloqueio criado com sucesso' })
   criar(
-    @Body() body: {
-      pessoa_id: string;
-      tipo: TipoBloqueio;
-      motivo: string;
-      dias_bloqueio?: number;
-      criado_por: string;
-      observacoes?: string;
-    },
+    @Body() body: CriarBloqueioDto,
   ) {
     return this.bloqueiosService.criar(body);
   }
@@ -72,7 +67,7 @@ export class BloqueiosController {
   @ApiResponse({ status: 400, description: 'Bloqueio já encerrado ou já liberado' })
   liberarAntecipadamente(
     @Param('id') id: string,
-    @Body() body: { motivo: string; liberado_por: string },
+    @Body() body: LiberarBloqueioDto,
   ) {
     return this.bloqueiosService.liberarAntecipadamente(id, body.motivo, body.liberado_por);
   }
@@ -84,7 +79,7 @@ export class BloqueiosController {
   @ApiResponse({ status: 404, description: 'Bloqueio não encontrado' })
   encerrar(
     @Param('id') id: string,
-    @Body() body: { motivo?: string },
+    @Body() body: EncerrarBloqueioDto,
   ) {
     return this.bloqueiosService.encerrar(id, body.motivo);
   }

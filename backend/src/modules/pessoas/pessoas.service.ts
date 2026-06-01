@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, ILike } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
-import { Estadia, StatusEstadia } from '../../entities/estadia.entity';
+import { StatusEstadia } from '../../entities/estadia.entity';
 import { Bloqueio } from '../../entities/bloqueio.entity';
 import { Ocorrencia, TipoOcorrencia, SeveridadeOcorrencia } from '../../entities/ocorrencia.entity';
 import { CreatePessoaDto } from './dto/create-pessoa.dto';
@@ -11,6 +11,7 @@ import { PaginatedResult, createPaginatedResult } from '../../common/dto/paginat
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { assertImageUpload, resolveImageExtension } from '../../common/upload/file-validation';
 
 @Injectable()
 export class PessoasService {
@@ -92,7 +93,12 @@ export class PessoasService {
     const pessoa = await this.findOne(id);
 
     // Remover campos que não devem ser atualizados diretamente
-    const { estadias, bloqueios, created_at, updated_at, id: _, ...dadosPermitidos } = updatePessoaDto as any;
+    const dadosPermitidos: Record<string, unknown> = { ...updatePessoaDto };
+    delete dadosPermitidos.estadias;
+    delete dadosPermitidos.bloqueios;
+    delete dadosPermitidos.created_at;
+    delete dadosPermitidos.updated_at;
+    delete dadosPermitidos.id;
 
     Object.assign(pessoa, dadosPermitidos);
 
@@ -174,15 +180,7 @@ export class PessoasService {
       throw new NotFoundException('Pessoa não encontrada');
     }
 
-    // Validar tipo de arquivo
-    if (!file.mimetype.startsWith('image/')) {
-      throw new BadRequestException('Arquivo deve ser uma imagem');
-    }
-
-    // Validar tamanho (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new BadRequestException('Imagem deve ter no máximo 5MB');
-    }
+    assertImageUpload(file);
 
     // Criar diretório se não existir
     const uploadDir = path.join(process.cwd(), 'uploads', 'fotos');
@@ -191,7 +189,7 @@ export class PessoasService {
     }
 
     // Gerar nome único para o arquivo
-    const fileExtension = path.extname(file.originalname);
+    const fileExtension = resolveImageExtension(file);
     const fileName = `${uuidv4()}${fileExtension}`;
     const filePath = path.join(uploadDir, fileName);
 

@@ -8,6 +8,7 @@ import {
   useCrecheTurmas,
   type CrecheCriancaDetalhe,
 } from '../api';
+import { MetricCard, MetricGrid } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 function formatDate(value?: string | null) {
@@ -148,28 +149,12 @@ const CrecheChildProfilePage = () => {
         </div>
       </section>
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Frequência 90 dias</span>
-          <strong>{resumoFrequencia?.percentual ?? 0}%</strong>
-          <small>{resumoFrequencia?.diasRegistrados ?? 0} dias registrados</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Faltas</span>
-          <strong>{resumoFrequencia?.faltas ?? 0}</strong>
-          <small>Ausências no período observado</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Responsáveis</span>
-          <strong>{profile.responsaveis.length}</strong>
-          <small>{primaryResponsible?.nome || 'Sem responsável principal'}</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Acompanhamentos</span>
-          <strong>{profile.acompanhamentos.length}</strong>
-          <small>Registros técnicos no cadastro</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Frequência 90 dias" value={`${resumoFrequencia?.percentual ?? 0}%`} detail={`${resumoFrequencia?.diasRegistrados ?? 0} dias registrados`} />
+        <MetricCard label="Faltas" value={resumoFrequencia?.faltas ?? 0} detail="Ausências no período observado" tone="warning" />
+        <MetricCard label="Responsáveis" value={profile.responsaveis.length} detail={primaryResponsible?.nome || 'Sem responsável principal'} />
+        <MetricCard label="Acompanhamentos" value={profile.acompanhamentos.length} detail="Registros técnicos no cadastro" />
+      </MetricGrid>
 
       <section className="creche-profile-grid">
         <article className="creche-panel">
@@ -189,7 +174,7 @@ const CrecheChildProfilePage = () => {
             <div><dt>Endereço</dt><dd>{crianca.endereco}</dd></div>
             <div><dt>Bairro</dt><dd>{crianca.bairro || '-'}</dd></div>
           </dl>
-          <div className="creche-inline-editor" style={{ marginTop: 16 }}>
+          <div className="creche-inline-editor creche-inline-editor-spaced">
             <label>
               <span>Editar turma</span>
               <select value={selectedTurmaId} onChange={(event) => setSelectedTurmaId(event.target.value)}>

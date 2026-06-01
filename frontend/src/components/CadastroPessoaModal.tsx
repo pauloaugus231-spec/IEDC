@@ -279,9 +279,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                 <span>Etapa {step} de 3</span>
                 <strong>{etapaAtual}%</strong>
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${etapaAtual}%` }} />
-              </div>
+              <progress className="progress-bar" value={etapaAtual} max={100} aria-label="Progresso do cadastro" />
             </div>
 
             <nav className="wizard-steps" aria-label="Etapas do cadastro">
@@ -454,7 +452,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                         value={form.uf}
                         onChange={handleChange}
                         maxLength={2}
-                        style={{ textTransform: 'uppercase' }}
+                        className="uppercase-input"
                       />
                     </div>
 

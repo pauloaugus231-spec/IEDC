@@ -9,6 +9,7 @@ import {
   useCrecheTurmas,
   type CrecheProfessora,
 } from '../api';
+import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import '../styles/institutional.css';
 
 const funcoesEquipe = [
@@ -135,15 +136,12 @@ const CrecheTeachersPage = () => {
 
   return (
     <main className="page-band creche-page">
-      <section className="creche-dashboard-head">
-        <div>
-          <p className="institutional-eyebrow">E.E.I. Casa do Pequenino</p>
-          <h1>Equipe da Escola de Educação Infantil</h1>
-          <p>
-            Cadastre profissionais, defina função e direcione cada turma para sua responsável sem duplicar dados.
-          </p>
-        </div>
-        <div className="creche-head-actions">
+      <PageHeader
+        eyebrow="E.E.I. Casa do Pequenino"
+        title="Equipe da Escola de Educação Infantil"
+        description="Cadastre profissionais, defina função e direcione cada turma para sua responsável sem duplicar dados."
+        actions={(
+          <>
           <Link className="creche-head-link secondary" to="/creche/turmas">
             Turmas
           </Link>
@@ -153,31 +151,16 @@ const CrecheTeachersPage = () => {
           <button className="creche-head-link" onClick={openNew} type="button">
             Nova profissional
           </button>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      <section className="metrics-grid creche-metrics-grid">
-        <article className="metric-card creche-metric-card">
-          <span>Equipe cadastrada</span>
-          <strong>{metrics.total}</strong>
-          <small>{metrics.ativas} profissionais ativas</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Regentes</span>
-          <strong>{metrics.regentes}</strong>
-          <small>Responsáveis pedagógicas por turma</small>
-        </article>
-        <article className="metric-card creche-metric-card">
-          <span>Apoio</span>
-          <strong>{metrics.apoio}</strong>
-          <small>Volantes, técnicas, estagiárias e substitutas</small>
-        </article>
-        <article className="metric-card creche-metric-card warning">
-          <span>Turmas sem vínculo</span>
-          <strong>{metrics.turmasSemResponsavel}</strong>
-          <small>Revisar antes da apresentação</small>
-        </article>
-      </section>
+      <MetricGrid>
+        <MetricCard label="Equipe cadastrada" value={metrics.total} detail={`${metrics.ativas} profissionais ativas`} />
+        <MetricCard label="Regentes" value={metrics.regentes} detail="Responsáveis pedagógicas por turma" />
+        <MetricCard label="Apoio" value={metrics.apoio} detail="Volantes, técnicas, estagiárias e substitutas" />
+        <MetricCard label="Turmas sem vínculo" value={metrics.turmasSemResponsavel} detail="Revisar antes da apresentação" tone="warning" />
+      </MetricGrid>
 
       {error && <p className="institutional-note">{error}</p>}
 
@@ -190,7 +173,7 @@ const CrecheTeachersPage = () => {
             </div>
           </div>
 
-          <div className="report-table-wrap">
+          <div className="report-table-wrap ds-table-shell">
             <table className="report-table">
               <thead>
                 <tr>

@@ -19,11 +19,11 @@ export class DiasCruzGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @WebSocketServer()
   server!: Server;
 
-  afterInit(server: Server) {
+  afterInit(_server: Server) {
     console.log('WebSocket iniciado');
   }
 
-  handleConnection(client: Socket, ...args: any[]) {
+  handleConnection(client: Socket, ..._args: unknown[]) {
     console.log(`Cliente conectado: ${client.id}`);
   }
 
@@ -43,27 +43,27 @@ export class DiasCruzGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     this.server.emit('cadastroRecusado', pessoa);
   }
 
-  emitNovaSolicitacao(solicitacao: any) {
+  emitNovaSolicitacao(solicitacao: unknown) {
     this.server.emit('novaSolicitacao', solicitacao);
   }
 
-  emitVagasAtualizadas(painel: any) {
+  emitVagasAtualizadas(painel: unknown) {
     this.server.emit('vagasAtualizadas', painel);
   }
 
-  emitLojasAtualizadas(payload: any) {
+  emitLojasAtualizadas(payload: unknown) {
     this.server.emit('lojas:atualizado', payload);
   }
 
-  emitComandaAtualizada(payload: any) {
+  emitComandaAtualizada(payload: unknown) {
     this.server.emit('lojas:comanda-atualizada', payload);
   }
 
-  emitClienteComercialAtualizado(payload: any) {
+  emitClienteComercialAtualizado(payload: unknown) {
     this.server.emit('lojas:cliente-atualizado', payload);
   }
 
-  emitRetiradaAtualizada(payload: any) {
+  emitRetiradaAtualizada(payload: unknown) {
     this.server.emit('lojas:retirada-atualizada', payload);
   }
 }
