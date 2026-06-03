@@ -2,7 +2,7 @@
 
 Data: 2026-05-30
 
-Atualizacao: 2026-06-01, a suite cobre qualidade de dados, relatorio financeiro, auditoria restrita ao suporte e politica de avisos por perfil.
+Atualizacao: 2026-06-03, a suite cobre qualidade de dados, relatorio financeiro, caixa restrito ao financeiro, auditoria restrita ao suporte e politica de avisos por perfil.
 
 ## Objetivo
 
@@ -35,13 +35,13 @@ O comando executa `ops/qa/profile-qa-matrix.mjs`, sem depender de banco, Docker 
 - auditoria fica restrita ao suporte.
 - `albergue` acessa apenas rotas do Albergue e conta propria; coordenacao acessa relatorios da area, educador nao; ambos acessam qualidade de dados do Albergue.
 - `creche` acessa apenas rotas da E.E.I. e conta propria; coordenacao acessa relatorios da E.E.I., educador nao; ambos acessam qualidade de dados da E.E.I.
-- `lojas` separa financeiro das lojas individuais; financeiro acessa relatorio financeiro e qualidade de dados comercial; lojas individuais nao acessam historico financeiro, relatorios, qualidade de dados nem totais por periodo.
+- `lojas` separa financeiro das lojas individuais; financeiro acessa caixa, relatorio financeiro e qualidade de dados comercial; lojas individuais nao acessam historico financeiro, caixa, relatorios, qualidade de dados nem totais por periodo.
 - `leitura` usa `equipe_tecnica` como perfil transversal da V1, incluindo relatorios sociais e qualidade de dados; nao acessa o relatorio financeiro.
 
 Resultado atual:
 
 ```text
-QA por perfil aprovado: 204 checks, 11 perfis.
+QA por perfil aprovado: 210 checks, 11 perfis.
 ```
 
 ## Avisos e recibos por perfil

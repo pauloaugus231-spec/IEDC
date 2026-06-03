@@ -225,3 +225,50 @@ export class ConfirmarRetiradaDto {
 
   lojaSlugPermitido?: string;
 }
+
+export class AbrirCaixaDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  saldoInicial?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  abertoPor?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  observacoes?: string;
+}
+
+export class CaixaMetodoConferenciaDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(80)
+  metodo!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valorInformado!: number;
+}
+
+export class FecharCaixaDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CaixaMetodoConferenciaDto)
+  metodos!: CaixaMetodoConferenciaDto[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  fechadoPor?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  observacoes?: string;
+}

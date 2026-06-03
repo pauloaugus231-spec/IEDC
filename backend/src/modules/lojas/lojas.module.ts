@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { WebSocketModule } from '../websocket/websocket.module';
+import { LojasCaixaService } from './lojas-caixa.service';
 import { LojasCatalogoService } from './lojas-catalogo.service';
 import { LojasClientesService } from './lojas-clientes.service';
 import { LojasComandasService } from './lojas-comandas.service';
@@ -17,6 +18,7 @@ import { LojasService } from './lojas.service';
     LojasSchemaService,
     LojasEventsService,
     LojasCatalogoService,
+    LojasCaixaService,
     LojasClientesService,
     LojasComandasService,
     LojasRetiradasService,

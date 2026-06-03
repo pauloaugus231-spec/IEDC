@@ -24,6 +24,7 @@ const CrecheTeachersPage = lazy(() => import('./pages/CrecheTeachersPage'));
 const LojasSecretariaPage = lazy(() => import('./pages/LojasSecretariaPage'));
 const LojasStorePage = lazy(() => import('./pages/LojasStorePage'));
 const FinancialReportPage = lazy(() => import('./pages/FinancialReportPage'));
+const CaixaFinanceiroPage = lazy(() => import('./pages/CaixaFinanceiroPage'));
 const SupportUsersPage = lazy(() => import('./pages/SupportUsersPage'));
 const SupportAuditPage = lazy(() => import('./pages/SupportAuditPage'));
 const SupportSystemHealthPage = lazy(() => import('./pages/SupportSystemHealthPage'));
@@ -93,6 +94,10 @@ function canAccessPath(user: DemoUser, pathname: string) {
 
   if (pathname === '/lojas/secretaria/relatorio-executivo') {
     return user.role === 'gestora' || user.role === 'financeiro';
+  }
+
+  if (pathname === '/lojas/secretaria/caixa') {
+    return user.role === 'financeiro';
   }
 
   if (user.role === 'suporte') {
@@ -218,6 +223,14 @@ function AppRoutes() {
         element={(
           <ProtectedLayout>
             <LojasSecretariaPage mode="historico" />
+          </ProtectedLayout>
+        )}
+      />
+      <Route
+        path="/lojas/secretaria/caixa"
+        element={(
+          <ProtectedLayout>
+            <CaixaFinanceiroPage />
           </ProtectedLayout>
         )}
       />

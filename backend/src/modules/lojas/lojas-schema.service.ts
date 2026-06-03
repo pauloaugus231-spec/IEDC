@@ -145,10 +145,53 @@ export class LojasSchemaService {
     `);
 
     await this.dataSource.query(`
+      CREATE TABLE IF NOT EXISTS comercio_caixas (
+        id uuid PRIMARY KEY,
+        codigo varchar(40) UNIQUE NOT NULL,
+        status varchar(40) NOT NULL DEFAULT 'aberto',
+        aberto_por varchar(160) NULL,
+        fechado_por varchar(160) NULL,
+        saldo_inicial numeric(12,2) NOT NULL DEFAULT 0,
+        total_sistema numeric(12,2) NOT NULL DEFAULT 0,
+        total_conferido numeric(12,2) NOT NULL DEFAULT 0,
+        diferenca numeric(12,2) NOT NULL DEFAULT 0,
+        comandas_pagas integer NOT NULL DEFAULT 0,
+        comandas_desistidas integer NOT NULL DEFAULT 0,
+        observacoes_abertura text NULL,
+        observacoes_fechamento text NULL,
+        aberto_em timestamp NOT NULL DEFAULT NOW(),
+        fechado_em timestamp NULL,
+        created_at timestamp NOT NULL DEFAULT NOW(),
+        updated_at timestamp NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await this.dataSource.query(`
+      CREATE TABLE IF NOT EXISTS comercio_caixa_metodos (
+        id uuid PRIMARY KEY,
+        caixa_id uuid NOT NULL REFERENCES comercio_caixas(id) ON DELETE CASCADE,
+        metodo varchar(80) NOT NULL,
+        valor_sistema numeric(12,2) NOT NULL DEFAULT 0,
+        valor_informado numeric(12,2) NOT NULL DEFAULT 0,
+        diferenca numeric(12,2) NOT NULL DEFAULT 0,
+        quantidade_pagamentos integer NOT NULL DEFAULT 0,
+        created_at timestamp NOT NULL DEFAULT NOW(),
+        UNIQUE (caixa_id, metodo)
+      )
+    `);
+
+    await this.dataSource.query(`
+      ALTER TABLE comercio_pagamentos
+      ADD COLUMN IF NOT EXISTS caixa_id uuid NULL REFERENCES comercio_caixas(id)
+    `);
+
+    await this.dataSource.query(`
       CREATE INDEX IF NOT EXISTS idx_comercio_comandas_status ON comercio_comandas(status);
       CREATE INDEX IF NOT EXISTS idx_comercio_comandas_cliente ON comercio_comandas(cliente_id);
       CREATE INDEX IF NOT EXISTS idx_comercio_itens_comanda ON comercio_comanda_itens(comanda_id);
       CREATE INDEX IF NOT EXISTS idx_comercio_pagamentos_comanda ON comercio_pagamentos(comanda_id);
+      CREATE INDEX IF NOT EXISTS idx_comercio_pagamentos_caixa ON comercio_pagamentos(caixa_id);
+      CREATE INDEX IF NOT EXISTS idx_comercio_caixas_status ON comercio_caixas(status);
       CREATE INDEX IF NOT EXISTS idx_comercio_retiradas_loja_status ON comercio_retiradas(loja_id, status);
       CREATE INDEX IF NOT EXISTS idx_comercio_retiradas_comanda ON comercio_retiradas(comanda_id);
       CREATE UNIQUE INDEX IF NOT EXISTS uidx_comercio_clientes_cpf_digits

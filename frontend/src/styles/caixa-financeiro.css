@@ -1,0 +1,383 @@
+.caixa-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--iedc-text);
+}
+
+.caixa-head,
+.caixa-panel,
+.caixa-status-card,
+.caixa-metric {
+  border: 1px solid var(--iedc-line);
+  background: var(--iedc-surface);
+  box-shadow: var(--iedc-shadow-sm);
+}
+
+.caixa-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.caixa-head h1,
+.caixa-panel h2 {
+  margin: 0;
+  color: var(--iedc-blue-900);
+  letter-spacing: 0;
+}
+
+.caixa-head h1 {
+  margin-top: 6px;
+  font-size: clamp(2rem, 4vw, 3.75rem);
+  font-weight: 950;
+  line-height: 1;
+}
+
+.caixa-head p {
+  max-width: 74ch;
+  margin: 8px 0 0;
+  color: var(--iedc-muted);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.caixa-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--iedc-blue-050);
+  color: var(--iedc-blue-800);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 5px 9px;
+}
+
+.caixa-refresh,
+.caixa-primary,
+.caixa-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid var(--iedc-line);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 9px 14px;
+}
+
+.caixa-refresh {
+  background: var(--iedc-surface);
+  color: var(--iedc-blue-800);
+}
+
+.caixa-primary {
+  border-color: var(--iedc-blue-800);
+  background: var(--iedc-blue-800);
+  color: #fff;
+}
+
+.caixa-danger {
+  width: 100%;
+  border-color: rgba(180, 35, 24, 0.18);
+  background: var(--iedc-red-100);
+  color: var(--iedc-red-700);
+}
+
+.caixa-primary:disabled,
+.caixa-danger:disabled,
+.caixa-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.caixa-alert,
+.caixa-success {
+  margin: 0;
+  border-radius: 12px;
+  font-weight: 850;
+  padding: 12px 14px;
+}
+
+.caixa-alert {
+  border: 1px solid rgba(180, 35, 24, 0.2);
+  background: var(--iedc-red-100);
+  color: var(--iedc-red-700);
+}
+
+.caixa-success {
+  border: 1px solid rgba(15, 122, 69, 0.2);
+  background: rgba(15, 122, 69, 0.08);
+  color: var(--iedc-green-700);
+}
+
+.caixa-status-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.35fr) repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.caixa-status-card,
+.caixa-metric {
+  min-width: 0;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.caixa-status-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.caixa-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--iedc-blue-050);
+  color: var(--iedc-blue-800);
+  flex: 0 0 auto;
+}
+
+.caixa-status-card.open .caixa-status-icon {
+  background: rgba(15, 122, 69, 0.1);
+  color: var(--iedc-green-700);
+}
+
+.caixa-status-card span,
+.caixa-status-card small,
+.caixa-metric span,
+.caixa-metric small,
+.caixa-method-table small,
+.caixa-list-table small,
+.caixa-history-list small {
+  color: var(--iedc-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.caixa-status-card strong,
+.caixa-metric strong {
+  display: block;
+  margin: 5px 0;
+  color: var(--iedc-blue-900);
+  font-size: 24px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.caixa-metric.ok strong {
+  color: var(--iedc-green-700);
+}
+
+.caixa-metric.warning strong {
+  color: var(--iedc-amber-700);
+}
+
+.caixa-panel {
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.caixa-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.caixa-panel-head h2 {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.caixa-form-grid {
+  display: grid;
+  grid-template-columns: 180px minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.caixa-form-grid label,
+.caixa-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.caixa-form-grid label span,
+.caixa-notes span {
+  color: var(--iedc-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.caixa-form-grid input,
+.caixa-method-table input,
+.caixa-notes textarea {
+  width: 100%;
+  border: 1px solid var(--iedc-line);
+  border-radius: 10px;
+  background: var(--iedc-surface);
+  color: var(--iedc-text);
+  font: inherit;
+  font-weight: 800;
+  padding: 10px 11px;
+}
+
+.caixa-notes textarea {
+  min-height: 118px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.caixa-work-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  gap: 16px;
+}
+
+.caixa-work-grid.bottom {
+  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+}
+
+.caixa-method-table,
+.caixa-list-table {
+  overflow-x: auto;
+}
+
+.caixa-method-table table,
+.caixa-list-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.caixa-method-table th,
+.caixa-list-table th {
+  border-bottom: 1px solid var(--iedc-line);
+  color: var(--iedc-muted);
+  font-size: 12px;
+  font-weight: 950;
+  padding: 10px 8px;
+  text-align: left;
+}
+
+.caixa-method-table td,
+.caixa-list-table td {
+  border-bottom: 1px solid var(--iedc-line-soft);
+  color: var(--iedc-text);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.caixa-method-table td:nth-child(2),
+.caixa-method-table td:nth-child(4),
+.caixa-list-table td:nth-child(3) {
+  text-align: right;
+}
+
+.caixa-method-table td.ok {
+  color: var(--iedc-green-700);
+}
+
+.caixa-method-table td.warning {
+  color: var(--iedc-amber-700);
+}
+
+.caixa-method-table td strong,
+.caixa-list-table td strong,
+.caixa-list-table td small {
+  display: block;
+}
+
+.caixa-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 14px 0;
+  border: 1px solid rgba(180, 35, 24, 0.16);
+  border-radius: 12px;
+  background: rgba(180, 35, 24, 0.05);
+  color: var(--iedc-text);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.45;
+  padding: 12px;
+}
+
+.caixa-confirm input {
+  margin-top: 2px;
+}
+
+.caixa-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.caixa-history-list > div {
+  border: 1px solid var(--iedc-line);
+  border-radius: 12px;
+  background: var(--iedc-surface-soft);
+  padding: 12px;
+}
+
+.caixa-history-list span,
+.caixa-history-list strong {
+  display: block;
+}
+
+.caixa-history-list span {
+  color: var(--iedc-blue-900);
+  font-weight: 950;
+}
+
+.caixa-history-list strong {
+  margin: 5px 0;
+  color: var(--iedc-green-700);
+  font-size: 20px;
+}
+
+.caixa-empty {
+  border: 1px dashed var(--iedc-line);
+  border-radius: 12px;
+  color: var(--iedc-muted);
+  font-size: 13px;
+  font-weight: 850;
+  padding: 14px;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .caixa-status-grid,
+  .caixa-work-grid,
+  .caixa-work-grid.bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .caixa-head {
+    flex-direction: column;
+  }
+
+  .caixa-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

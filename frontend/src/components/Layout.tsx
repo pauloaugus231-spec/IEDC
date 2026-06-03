@@ -183,6 +183,11 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             roles: ['equipe_tecnica', 'financeiro'],
           },
           {
+            label: 'Caixa',
+            to: '/lojas/secretaria/caixa',
+            roles: ['financeiro'],
+          },
+          {
             label: 'Relatório financeiro',
             to: '/lojas/secretaria/relatorio-executivo',
             roles: ['gestora', 'financeiro'],

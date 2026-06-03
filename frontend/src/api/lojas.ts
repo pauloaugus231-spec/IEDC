@@ -197,6 +197,50 @@ export interface RelatorioFinanceiroDrilldown {
   valores: RelatorioFinanceiroValor[];
 }
 
+export interface CaixaFinanceiro {
+  id: string;
+  codigo: string;
+  status: 'aberto' | 'fechado';
+  abertoPor: string | null;
+  fechadoPor: string | null;
+  saldoInicial: number;
+  totalSistema: number;
+  totalConferido: number;
+  diferenca: number;
+  comandasPagas: number;
+  comandasDesistidas: number;
+  observacoesAbertura: string | null;
+  observacoesFechamento: string | null;
+  abertoEm: string;
+  fechadoEm: string | null;
+}
+
+export interface CaixaMetodoResumo {
+  metodo: string;
+  valorSistema: number;
+  valorInformado: number;
+  diferenca: number;
+  quantidadePagamentos: number;
+}
+
+export interface CaixaPendenteResumo {
+  id: string;
+  codigo: string;
+  cliente: string;
+  status: ComandaStatus;
+  total: number;
+  pago: number;
+  saldo: number;
+  criadaEm: string;
+}
+
+export interface CaixaFinanceiroData {
+  caixa: CaixaFinanceiro | null;
+  metodos: CaixaMetodoResumo[];
+  pendencias: CaixaPendenteResumo[];
+  historico: CaixaFinanceiro[];
+}
+
 export function useLojas(periodoReload = 0) {
   const [data, setData] = useState<LojaComercial[]>([]);
   const [loading, setLoading] = useState(false);
@@ -423,6 +467,63 @@ export function useRelatorioFinanceiro(periodo: LojasPeriodo = 'dia', reload = 0
   }, [periodo, reload, refreshMs]);
 
   return { data, loading, error };
+}
+
+export function useCaixaFinanceiro(reload = 0, refreshMs = 0) {
+  const [data, setData] = useState<CaixaFinanceiroData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = (showLoading = false) => {
+      if (showLoading) setLoading(true);
+      setError(null);
+      apiFetch<CaixaFinanceiroData>('/api/lojas/caixa')
+        .then((response) => {
+          if (mounted) setData(response);
+        })
+        .catch(e => {
+          if (mounted) setError(e.message);
+        })
+        .finally(() => {
+          if (mounted && showLoading) setLoading(false);
+        });
+    };
+
+    load(true);
+    const interval = refreshMs > 0 ? window.setInterval(() => load(false), refreshMs) : undefined;
+
+    return () => {
+      mounted = false;
+      if (interval) window.clearInterval(interval);
+    };
+  }, [reload, refreshMs]);
+
+  return { data, loading, error };
+}
+
+export function abrirCaixaFinanceiro(payload: {
+  saldoInicial?: number;
+  abertoPor?: string;
+  observacoes?: string;
+}) {
+  return apiFetch<CaixaFinanceiroData>('/api/lojas/caixa/abrir', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function fecharCaixaFinanceiro(payload: {
+  fechadoPor?: string;
+  observacoes?: string;
+  metodos: { metodo: string; valorInformado: number }[];
+}) {
+  return apiFetch<CaixaFinanceiroData>('/api/lojas/caixa/fechar', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getRelatorioFinanceiroDrilldown(

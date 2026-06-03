@@ -9,6 +9,7 @@ import {
   RegistrarPagamentoDto,
 } from './dto/lojas-operacao.dto';
 import { LojasCatalogoService } from './lojas-catalogo.service';
+import { LojasCaixaService } from './lojas-caixa.service';
 import { LojasClientesService } from './lojas-clientes.service';
 import { LojasEventsService } from './lojas-events.service';
 import { LojasRetiradasService } from './lojas-retiradas.service';
@@ -33,6 +34,7 @@ export class LojasComandasService {
     private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly catalogo: LojasCatalogoService,
+    private readonly caixa: LojasCaixaService,
     private readonly clientes: LojasClientesService,
     private readonly retiradas: LojasRetiradasService,
     private readonly events: LojasEventsService,
@@ -490,6 +492,12 @@ export class LojasComandasService {
       throw new BadRequestException('Informe ao menos um pagamento com valor.');
     }
 
+    const caixaId = await this.caixa.getCaixaAbertoId();
+
+    if (!caixaId) {
+      throw new BadRequestException('Abra o caixa antes de registrar pagamentos.');
+    }
+
     const totalNovosPagamentos = pagamentos.reduce((sum, pagamento) => sum + pagamento.valor, 0);
 
     if (totalNovosPagamentos > detalhe.saldo + 0.01) {
@@ -510,14 +518,15 @@ export class LojasComandasService {
         await manager.query(
           `
             INSERT INTO comercio_pagamentos (
-              id, comanda_id, metodo, valor, recebido_por, observacoes, created_at
+              id, comanda_id, caixa_id, metodo, valor, recebido_por, observacoes, created_at
             )
-            VALUES ($1, $2::uuid, $3, $4, $5, $6, NOW())
+            VALUES ($1, $2::uuid, $3::uuid, $4, $5, $6, $7, NOW())
           `,
           [
             randomUUID(),
             comandaId,
-            pagamento.metodo,
+            caixaId,
+            this.normalizeMetodoPagamento(pagamento.metodo),
             pagamento.valor,
             body.recebidoPor || body.usuario || 'Secretaria',
             body.observacoes || null,
@@ -622,5 +631,14 @@ export class LojasComandasService {
     if (['paga', 'desistencia', 'cancelada', 'expirada'].includes(comanda.status)) {
       throw new BadRequestException('Esta comanda já foi finalizada.');
     }
+  }
+
+  private normalizeMetodoPagamento(value: string) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'pix') return 'Pix';
+    if (raw.includes('débito') || raw.includes('debito')) return 'Cartão débito';
+    if (raw.includes('crédito') || raw.includes('credito')) return 'Cartão crédito';
+    if (raw === 'dinheiro') return 'Dinheiro';
+    return String(value || '').trim();
   }
 }

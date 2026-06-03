@@ -39,6 +39,10 @@ function canAccessPath(role, pathname) {
     return role === roles.gestora || role === roles.financeiro;
   }
 
+  if (pathname === '/lojas/secretaria/caixa') {
+    return role === roles.financeiro;
+  }
+
   if (role === roles.suporte) {
     return false;
   }
@@ -97,7 +101,7 @@ const suites = [
     group: 'gestao',
     role: roles.gestora,
     allow: ['/gestao', '/gestao/qualidade-dados', '/albergue', '/albergue/relatorios', '/albergue/qualidade-dados', '/creche', '/creche/relatorios', '/creche/qualidade-dados', '/lojas/secretaria', '/lojas/secretaria/relatorio-executivo', '/minha-conta'],
-    deny: ['/gestao/auditoria', '/albergue/auditoria', '/creche/auditoria', '/suporte/usuarios', '/suporte/auditoria', '/lojas/bazar', '/lojas/brecho', '/lojas/feirao'],
+    deny: ['/gestao/auditoria', '/albergue/auditoria', '/creche/auditoria', '/suporte/usuarios', '/suporte/auditoria', '/lojas/secretaria/caixa', '/lojas/bazar', '/lojas/brecho', '/lojas/feirao'],
   },
   {
     group: 'albergue',
@@ -126,32 +130,32 @@ const suites = [
   {
     group: 'lojas',
     role: roles.financeiro,
-    allow: ['/lojas/secretaria', '/lojas/secretaria/fila', '/lojas/secretaria/historico', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/minha-conta'],
+    allow: ['/lojas/secretaria', '/lojas/secretaria/fila', '/lojas/secretaria/historico', '/lojas/secretaria/caixa', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/minha-conta'],
     deny: ['/gestao', '/gestao/qualidade-dados', '/albergue', '/creche', '/suporte/usuarios', '/lojas/secretaria/auditoria', '/lojas/bazar'],
   },
   {
     group: 'lojas',
     role: roles.lojaBazar,
     allow: ['/lojas/bazar', '/lojas/bazar/produtos', '/minha-conta'],
-    deny: ['/lojas/bazar/historico', '/lojas/brecho', '/lojas/feirao', '/lojas/secretaria', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/gestao', '/suporte/auditoria'],
+    deny: ['/lojas/bazar/historico', '/lojas/brecho', '/lojas/feirao', '/lojas/secretaria', '/lojas/secretaria/caixa', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/gestao', '/suporte/auditoria'],
   },
   {
     group: 'lojas',
     role: roles.lojaBrecho,
     allow: ['/lojas/brecho', '/lojas/brecho/produtos', '/minha-conta'],
-    deny: ['/lojas/brecho/historico', '/lojas/bazar', '/lojas/feirao', '/lojas/secretaria', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/gestao', '/suporte/usuarios'],
+    deny: ['/lojas/brecho/historico', '/lojas/bazar', '/lojas/feirao', '/lojas/secretaria', '/lojas/secretaria/caixa', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/gestao', '/suporte/usuarios'],
   },
   {
     group: 'lojas',
     role: roles.lojaFeirao,
     allow: ['/lojas/feirao', '/lojas/feirao/produtos', '/minha-conta'],
-    deny: ['/lojas/feirao/historico', '/lojas/bazar', '/lojas/brecho', '/lojas/secretaria', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/gestao', '/suporte/auditoria'],
+    deny: ['/lojas/feirao/historico', '/lojas/bazar', '/lojas/brecho', '/lojas/secretaria', '/lojas/secretaria/caixa', '/lojas/secretaria/relatorio-executivo', '/lojas/secretaria/qualidade-dados', '/gestao', '/suporte/auditoria'],
   },
   {
     group: 'leitura',
     role: roles.equipeTecnica,
     allow: ['/gestao', '/gestao/qualidade-dados', '/albergue', '/albergue/relatorios', '/albergue/qualidade-dados', '/creche', '/creche/relatorios', '/creche/qualidade-dados', '/lojas/secretaria', '/lojas/secretaria/qualidade-dados', '/minha-conta'],
-    deny: ['/suporte/usuarios', '/suporte/auditoria', '/lojas/secretaria/relatorio-executivo', '/lojas/bazar', '/lojas/brecho', '/lojas/feirao'],
+    deny: ['/suporte/usuarios', '/suporte/auditoria', '/lojas/secretaria/caixa', '/lojas/secretaria/relatorio-executivo', '/lojas/bazar', '/lojas/brecho', '/lojas/feirao'],
   },
 ];
 

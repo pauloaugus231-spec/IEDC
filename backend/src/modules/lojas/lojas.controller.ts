@@ -1,15 +1,18 @@
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { LojasCaixaService } from './lojas-caixa.service';
 import { LojasService } from './lojas.service';
 import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { AuthRequest, AuthUser } from '../../auth/auth.types';
 import {
   AdicionarItemDto,
+  AbrirCaixaDto,
   AtualizarStatusComandaDto,
   ClienteDto,
   ConfirmarRetiradaDto,
   CriarComandaDto,
+  FecharCaixaDto,
   ProdutoDto,
   RegistrarPagamentoDto,
 } from './dto/lojas-operacao.dto';
@@ -17,7 +20,10 @@ import {
 @Controller('lojas')
 @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO, UsuarioRole.LOJA_BAZAR, UsuarioRole.LOJA_BRECHO, UsuarioRole.LOJA_FEIRAO)
 export class LojasController {
-  constructor(private readonly lojasService: LojasService) {}
+  constructor(
+    private readonly lojasService: LojasService,
+    private readonly caixaService: LojasCaixaService,
+  ) {}
 
   @Get('dashboard')
   @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
@@ -39,6 +45,24 @@ export class LojasController {
     @Query('key') key?: string,
   ) {
     return this.lojasService.getRelatorioFinanceiroDrilldown(periodo, dimension, key);
+  }
+
+  @Get('caixa')
+  @Roles(UsuarioRole.FINANCEIRO)
+  getCaixaAtual() {
+    return this.caixaService.getCaixaAtual();
+  }
+
+  @Post('caixa/abrir')
+  @Roles(UsuarioRole.FINANCEIRO)
+  abrirCaixa(@Body() body: AbrirCaixaDto) {
+    return this.caixaService.abrirCaixa(body);
+  }
+
+  @Post('caixa/fechar')
+  @Roles(UsuarioRole.FINANCEIRO)
+  fecharCaixa(@Body() body: FecharCaixaDto) {
+    return this.caixaService.fecharCaixa(body);
   }
 
   @Get('lojas')
