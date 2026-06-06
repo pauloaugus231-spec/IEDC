@@ -23,6 +23,10 @@ Base operacional de captacao:
 - `docs/qa/V1_PROFILE_QA_2026-05-28.md`: evidencia de QA por perfil.
 - `docs/qa/V1_PROFILE_QA_SUITE_2026-05-30.md`: suite versionada de regressao por perfil.
 - `docs/manuais/V1_MANUAL_CURTO_POR_PERFIL.md`: manual curto por perfil.
+- `docs/manuais/MANUAL_ALBERGUE_OPERACIONAL.md`: manual operacional completo do modulo Albergue.
+- `docs/manuais/albergue-profissional/MANUAL_ALBERGUE_PROFISSIONAL.html`: manual visual profissional do Albergue com capturas reais do sistema.
+- `docs/manuais/albergue-profissional/MANUAL_ALBERGUE_PROFISSIONAL.pdf`: versao PDF do manual visual profissional do Albergue.
+- `docs/manuais/albergue-profissional/manual-visual-albergue-treinamento.pptx`: deck de treinamento visual do modulo Albergue.
 - `docs/operacao/backup-restauracao.md`: rotina de backup e restauracao.
 - `docs/release/V1_BASELINE_2026-05-28.md`: checklist do baseline Git.
 - `docs/release/V1_HIGIENE_SEGURANCA_2026-05-30.md`: sprint de higiene de producao e seguranca V1.

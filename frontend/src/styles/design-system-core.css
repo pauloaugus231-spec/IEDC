@@ -434,7 +434,7 @@
     linear-gradient(180deg, rgba(251, 253, 255, 0.96) 0%, rgba(238, 243, 248, 0.98) 100%);
 }
 
-.ds-page-head.creche-dashboard-head {
+.ds-page-head {
   align-items: center;
   gap: 22px;
   margin-bottom: 20px;
@@ -448,13 +448,13 @@
   letter-spacing: 0.12em;
 }
 
-.ds-page-head.creche-dashboard-head h1 {
+.ds-page-head h1 {
   color: var(--iedc-text);
   font-size: clamp(28px, 2.8vw, 38px);
   line-height: 1.04;
 }
 
-.ds-page-head.creche-dashboard-head p {
+.ds-page-head p {
   max-width: 780px;
   color: var(--iedc-muted);
   font-size: 15px;
@@ -580,16 +580,14 @@
   box-shadow: var(--iedc-focus);
 }
 
-.ds-metric-grid.metrics-grid,
-.ds-metric-grid.creche-metrics-grid {
+.ds-metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin: 20px 0;
 }
 
-.ds-metric-card.metric-card,
-.ds-metric-card.creche-metric-card {
+.ds-metric-card {
   min-height: 126px;
   border: 1px solid rgba(0, 65, 170, 0.1);
   border-radius: var(--iedc-radius-lg);
@@ -633,7 +631,7 @@
   margin-top: 20px;
 }
 
-.ds-panel.support-panel {
+.ds-panel {
   position: relative;
   min-width: 0;
   border: 1px solid rgba(0, 65, 170, 0.1);
@@ -643,7 +641,7 @@
   padding: clamp(18px, 1.7vw, 24px);
 }
 
-.ds-panel .creche-panel-head {
+.ds-panel .ds-panel-head {
   margin-bottom: 18px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--iedc-line-soft);
@@ -653,7 +651,7 @@
   color: var(--iedc-text);
 }
 
-.ds-panel .creche-panel-head span {
+.ds-panel .ds-panel-head span {
   color: var(--iedc-muted);
 }
 
@@ -662,7 +660,7 @@
 }
 
 .ds-form.support-form label,
-.ds-modal.support-modal label,
+.ds-modal label,
 .ds-toolbar.audit-toolbar label {
   color: #29354a;
   font-size: 12px;
@@ -672,7 +670,7 @@
 
 .ds-form.support-form input,
 .ds-form.support-form select,
-.ds-modal.support-modal input,
+.ds-modal input,
 .ds-toolbar.audit-toolbar input,
 .ds-toolbar.audit-toolbar select {
   border: 1px solid var(--iedc-line);
@@ -687,7 +685,7 @@
 
 .ds-form.support-form input:focus,
 .ds-form.support-form select:focus,
-.ds-modal.support-modal input:focus,
+.ds-modal input:focus,
 .ds-toolbar.audit-toolbar input:focus,
 .ds-toolbar.audit-toolbar select:focus {
   border-color: var(--iedc-blue-600);
@@ -700,7 +698,7 @@
   background: #f3f6fb;
 }
 
-.ds-table-shell.report-table-wrap,
+.ds-table-shell,
 .ds-table-shell.table-scroll {
   border: 1px solid var(--iedc-line);
   border-radius: var(--iedc-radius-md);
@@ -773,20 +771,20 @@
   background: var(--iedc-red-100);
 }
 
-.ds-modal-backdrop.support-modal-backdrop {
+.ds-modal-backdrop {
   z-index: 110;
   background: rgba(15, 23, 42, 0.48);
   backdrop-filter: blur(10px);
 }
 
-.ds-modal.support-modal {
+.ds-modal {
   border: 1px solid rgba(0, 65, 170, 0.12);
   border-radius: var(--iedc-radius-xl);
   background: var(--iedc-surface);
   box-shadow: 0 14px 14px rgba(13, 40, 76, 0.16);
 }
 
-.ds-modal-actions.support-modal-actions {
+.ds-modal-actions {
   align-items: center;
 }
 

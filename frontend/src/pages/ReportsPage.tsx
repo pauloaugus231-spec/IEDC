@@ -1,15 +1,11 @@
-import { useState, useMemo, useEffect, useRef, type CSSProperties, type MouseEvent } from 'react';
+import { useState, useMemo, useEffect, useCallback, type CSSProperties } from 'react';
 import { apiFetch } from '../api';
-import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
-import type { ActiveElement, Chart, ChartEvent } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader, Panel, TableShell } from '../components/DesignSystem';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, CHART_COLORS_GENERO, CHART_COLORS_RACA } from '../styles/echarts-theme-iedc';
 import { downloadExcelCompatibleTable } from '../utils/spreadsheet';
-
-// Registrar componentes do Chart.js
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface ReportRow {
   nome?: string | null;
@@ -60,12 +56,6 @@ function normalizeReportRows(response: CustomReportResponse): ReportRow[] {
   return Array.isArray(response.data) ? response.data : [];
 }
 
-function updateCanvasCursor(event: ChartEvent, chartElement: ActiveElement[]) {
-  const target = event.native?.target;
-  if (target instanceof HTMLElement) {
-    target.style.cursor = chartElement.length ? 'pointer' : 'default';
-  }
-}
 
 const ReportsPage = () => {
   // Dados Brutos
@@ -87,10 +77,6 @@ const ReportsPage = () => {
   });
   const [showFiltrosAvancados, setShowFiltrosAvancados] = useState(false);
   
-  // Referências para os gráficos
-  const pieChartRef = useRef<Chart<'pie'> | null>(null);
-  const barChartRef = useRef<Chart<'bar'> | null>(null);
-
   // --- 1. CARGA DE DADOS DA API ---
   const carregarResumoOperacional = async () => {
     let url = '/api/relatorios/operacional-resumo';
@@ -229,24 +215,42 @@ const ReportsPage = () => {
       .filter(([_, qtd]) => qtd > 0); // Remover zeros
   }, [contagemCor]);
 
-  const chartCorData = {
-    labels: coresOrdenadas.map(([cor]) => cor),
-    datasets: [{
-      data: coresOrdenadas.map(([_, qtd]) => qtd),
-      backgroundColor: coresOrdenadas.map(([cor]) => {
-        const cores: Record<string, string> = {
-          'Parda': '#F59E0B',
-          'Preta': '#1F2937',
-          'Branca': '#E5E7EB',
-          'Amarela': '#FCD34D',
-          'Indígena': '#10B981',
-          'Não informado': '#9CA3AF',
-        };
-        return cores[cor] || '#6366F1';
-      }),
-      borderWidth: 0,
-    }]
-  };
+  const pieChartOption = useMemo<IEDCChartOption>(
+    () => ({
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'vertical' as const,
+        right: 0,
+        top: 'center',
+        icon: 'circle',
+        itemWidth: 8,
+        itemHeight: 8,
+        textStyle: { fontSize: 12, fontWeight: 700, color: '#29354a' },
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: '80%',
+          center: ['40%', '50%'],
+          data: coresOrdenadas.map(([cor, qtd]) => ({
+            name: cor,
+            value: qtd,
+            itemStyle: { color: CHART_COLORS_RACA[cor] || '#6366F1' },
+          })),
+          label: { show: false },
+          itemStyle: { borderWidth: 0 },
+          emphasis: { scaleSize: 6 },
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
+        },
+      ],
+    }),
+    [coresOrdenadas],
+  );
 
   // Contagem por Gênero
   const contagemGenero = useMemo(() => {
@@ -259,15 +263,45 @@ const ReportsPage = () => {
     return generos;
   }, [filteredData]);
 
-  const chartGeneroData = {
-    labels: Object.keys(contagemGenero),
-    datasets: [{
-      label: 'Quantidade',
-      data: Object.values(contagemGenero),
-      backgroundColor: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444'],
-      borderRadius: 6,
-    }]
-  };
+  const generoLabels = Object.keys(contagemGenero);
+  const generoValues = Object.values(contagemGenero);
+
+  const barChartOption = useMemo<IEDCChartOption>(
+    () => ({
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+      },
+      grid: { left: 42, right: 16, top: 12, bottom: 28, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: generoLabels,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      yAxis: {
+        type: 'value',
+        minInterval: 1,
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      series: [
+        {
+          type: 'bar',
+          data: generoValues.map((val, i) => ({
+            value: val,
+            itemStyle: { color: CHART_COLORS_GENERO[i % CHART_COLORS_GENERO.length] },
+          })),
+          itemStyle: { borderRadius: [6, 6, 0, 0] },
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
+        },
+      ],
+    }),
+    [generoLabels, generoValues],
+  );
 
   // KPIs
   const kpis = useMemo(() => {
@@ -292,34 +326,6 @@ const ReportsPage = () => {
 
   // --- 4. HANDLERS DE CLIQUE (DRILL-DOWN) ---
 
-  const handlePieClick = (event: MouseEvent<HTMLCanvasElement>) => {
-    if (!pieChartRef.current) return;
-    const element = pieChartRef.current.getElementsAtEventForMode(
-      event.nativeEvent,
-      'nearest',
-      { intersect: true },
-      false,
-    );
-    if (!element.length) return;
-
-    const corClicada = coresOrdenadas[element[0].index]?.[0];
-    if (corClicada) applyFilter('cor', corClicada);
-  };
-
-  const handleBarClick = (event: MouseEvent<HTMLCanvasElement>) => {
-    if (!barChartRef.current) return;
-    const element = barChartRef.current.getElementsAtEventForMode(
-      event.nativeEvent,
-      'nearest',
-      { intersect: true },
-      false,
-    );
-    if (!element.length) return;
-
-    const generoClicado = chartGeneroData.labels[element[0].index];
-    applyFilter('genero', generoClicado);
-  };
-
   const applyFilter = (tipo: DrillDown['tipo'], valor: string) => {
     if (drillDown?.tipo === tipo && drillDown?.valor === valor) {
       setDrillDown(null);
@@ -327,6 +333,22 @@ const ReportsPage = () => {
       setDrillDown({ tipo, valor });
     }
   };
+
+  const handlePieClick = useCallback(
+    (params: { dataIndex: number; name: string }) => {
+      const corClicada = coresOrdenadas[params.dataIndex]?.[0];
+      if (corClicada) applyFilter('cor', corClicada);
+    },
+    [coresOrdenadas, drillDown],
+  );
+
+  const handleBarClick = useCallback(
+    (params: { dataIndex: number; name: string }) => {
+      const generoClicado = generoLabels[params.dataIndex];
+      if (generoClicado) applyFilter('genero', generoClicado);
+    },
+    [generoLabels, drillDown],
+  );
 
   // --- 5. EXPORTAÇÃO ---
   const downloadPDF = () => {
@@ -513,20 +535,10 @@ const ReportsPage = () => {
         >
           <div className="albergue-report-chart-box">
             {Object.keys(contagemGenero).length > 0 ? (
-              <Bar 
-                ref={barChartRef}
-                data={chartGeneroData}
-                onClick={handleBarClick}
-                options={{ 
-                  responsive: true, 
-                  maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: { 
-                    y: { beginAtZero: true, grid: { color: '#F3F4F6' } },
-                    x: { grid: { display: false } }
-                  },
-                  onHover: updateCanvasCursor
-                }} 
+              <EChartCanvas
+                ariaLabel="Gráfico por gênero"
+                option={barChartOption}
+                onDataClick={handleBarClick}
               />
             ) : (
               <div className="albergue-empty-state">
@@ -543,16 +555,10 @@ const ReportsPage = () => {
         >
           <div className="albergue-report-chart-box centered">
             {coresOrdenadas.length > 0 ? (
-              <Pie 
-                ref={pieChartRef}
-                data={chartCorData} 
-                onClick={handlePieClick}
-                options={{ 
-                  responsive: true, 
-                  maintainAspectRatio: false,
-                  plugins: { legend: { position: 'right' } },
-                  onHover: updateCanvasCursor
-                }} 
+              <EChartCanvas
+                ariaLabel="Gráfico por cor/raça"
+                option={pieChartOption}
+                onDataClick={handlePieClick}
               />
             ) : (
               <div className="albergue-empty-state">

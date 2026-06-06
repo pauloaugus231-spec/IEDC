@@ -7,6 +7,7 @@ import {
 } from '../api';
 import { CheckCircle, Clock, RefreshCw, StopCircle } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
+import LojasSecretariaPage from './LojasSecretariaPage';
 import '../styles/caixa-financeiro.css';
 
 const currency = new Intl.NumberFormat('pt-BR', {
@@ -231,7 +232,7 @@ const CaixaFinanceiroPage = () => {
                       <tr key={row.metodo}>
                         <td>
                           <strong>{row.metodo}</strong>
-                          <small>{row.quantidadePagamentos} pagamento(s)</small>
+                          <small className="caixa-method-count">{row.quantidadePagamentos} pagamento(s)</small>
                         </td>
                         <td>{currency.format(row.valorSistema)}</td>
                         <td>
@@ -290,6 +291,12 @@ const CaixaFinanceiroPage = () => {
           </aside>
         </section>
       )}
+
+      {data?.caixa ? (
+        <section className="caixa-queue-module">
+          <LojasSecretariaPage embedded mode="fila" />
+        </section>
+      ) : null}
 
       <section className="caixa-work-grid bottom">
         <article className="caixa-panel">

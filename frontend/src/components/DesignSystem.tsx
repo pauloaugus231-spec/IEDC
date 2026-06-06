@@ -15,14 +15,14 @@ type PageHeaderProps = HTMLAttributes<HTMLElement> & {
 
 export function PageHeader({ eyebrow, title, description, actions, className, children, ...props }: PageHeaderProps) {
   return (
-    <section className={cx('creche-dashboard-head ds-page-head', className)} {...props}>
+    <section className={cx('ds-page-head', className)} {...props}>
       <div>
         {eyebrow ? <p className="institutional-eyebrow">{eyebrow}</p> : null}
         <h1>{title}</h1>
         {description ? <p>{description}</p> : null}
         {children}
       </div>
-      {actions ? <div className="creche-head-actions ds-page-actions">{actions}</div> : null}
+      {actions ? <div className="ds-page-actions">{actions}</div> : null}
     </section>
   );
 }
@@ -33,7 +33,7 @@ type MetricGridProps = HTMLAttributes<HTMLElement> & {
 
 export function MetricGrid({ children, className, ...props }: MetricGridProps) {
   return (
-    <section className={cx('metrics-grid creche-metrics-grid ds-metric-grid', className)} {...props}>
+    <section className={cx('ds-metric-grid', className)} {...props}>
       {children}
     </section>
   );
@@ -48,7 +48,7 @@ type MetricCardProps = HTMLAttributes<HTMLElement> & {
 
 export function MetricCard({ label, value, detail, tone = 'default', className, ...props }: MetricCardProps) {
   return (
-    <article className={cx('metric-card creche-metric-card ds-metric-card', tone !== 'default' && tone, className)} {...props}>
+    <article className={cx('ds-metric-card', tone !== 'default' && tone, className)} {...props}>
       <span>{label}</span>
       <strong>{value}</strong>
       {detail ? <small>{detail}</small> : null}
@@ -65,9 +65,9 @@ type PanelProps = HTMLAttributes<HTMLElement> & {
 
 export function Panel({ title, subtitle, actions, children, className, ...props }: PanelProps) {
   return (
-    <article className={cx('support-panel ds-panel', className)} {...props}>
+    <article className={cx('ds-panel', className)} {...props}>
       {title || subtitle || actions ? (
-        <div className="creche-panel-head ds-panel-head">
+        <div className="ds-panel-head">
           <div>
             {title ? <h2 className="section-title">{title}</h2> : null}
             {subtitle ? <span>{subtitle}</span> : null}
@@ -86,7 +86,7 @@ type TableShellProps = HTMLAttributes<HTMLDivElement> & {
 
 export function TableShell({ children, className, ...props }: TableShellProps) {
   return (
-    <div className={cx('report-table-wrap ds-table-shell', className)} {...props}>
+    <div className={cx('ds-table-shell', className)} {...props}>
       {children}
     </div>
   );
@@ -101,15 +101,15 @@ type ModalFrameProps = HTMLAttributes<HTMLDivElement> & {
 
 export function ModalFrame({ title, subtitle, children, footer, className, ...props }: ModalFrameProps) {
   return (
-    <div className={cx('support-modal ds-modal', className)} role="dialog" aria-modal="true" {...props}>
-      <div className="creche-panel-head ds-panel-head">
+    <div className={cx('ds-modal', className)} role="dialog" aria-modal="true" {...props}>
+      <div className="ds-panel-head">
         <div>
           <h2 className="section-title">{title}</h2>
           {subtitle ? <span>{subtitle}</span> : null}
         </div>
       </div>
       {children}
-      {footer ? <div className="support-modal-actions ds-modal-actions">{footer}</div> : null}
+      {footer ? <div className="ds-modal-actions">{footer}</div> : null}
     </div>
   );
 }

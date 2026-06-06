@@ -9,8 +9,7 @@
 }
 
 @media (max-width: 1040px) {
-  .ds-metric-grid.metrics-grid,
-  .ds-metric-grid.creche-metrics-grid {
+  .ds-metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -49,19 +48,18 @@
     padding: 18px;
   }
 
-  .ds-page-head.creche-dashboard-head {
+  .ds-page-head {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .ds-page-head .creche-head-actions,
+  .ds-page-head .ds-page-actions,
   .ds-button.creche-head-link,
   .ds-button.institutional-button {
     width: 100%;
   }
 
-  .ds-metric-grid.metrics-grid,
-  .ds-metric-grid.creche-metrics-grid {
+  .ds-metric-grid {
     grid-template-columns: 1fr;
   }
 

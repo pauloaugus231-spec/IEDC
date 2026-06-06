@@ -1,15 +1,13 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArcElement, BarElement, CategoryScale, Chart as ChartJS, Legend, LinearScale, Tooltip } from 'chart.js';
-import { Bar, Pie, getElementAtEvent } from 'react-chartjs-2';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useCrecheAfericao } from '../api';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, AXIS_LABEL_DARK, GRID_LINE_STYLE, CHART_COLORS_CRECHE_RACA } from '../styles/echarts-theme-iedc';
 import { downloadExcelCompatibleTable } from '../utils/spreadsheet';
 import '../styles/institutional.css';
-
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const camposAfericao = [
   'Nome',
@@ -89,8 +87,6 @@ function normalizarRacaCor(value?: string | null) {
 const CrecheReportsPage = () => {
   const [lgpdMode, setLgpdMode] = useState(false);
   const [drillDown, setDrillDown] = useState<{ tipo: 'genero' | 'racaCor'; valor: string } | null>(null);
-  const sexoChartRef = useRef<any>(null);
-  const racaChartRef = useRef<any>(null);
   const { data: afericao, loading, error } = useCrecheAfericao();
 
   const filteredAfericao = useMemo(() => {
@@ -132,130 +128,82 @@ const CrecheReportsPage = () => {
     return Object.entries(contagem).sort((a, b) => b[1] - a[1]);
   }, [filteredAfericao]);
 
-  const sexoChartData = useMemo(
+  const sexoChartOption = useMemo<IEDCChartOption>(
     () => ({
-      labels: contagemSexo.map(([label]) => label),
-      datasets: [
+      tooltip: { ...TOOLTIP_STYLE, trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: 42, right: 16, top: 12, bottom: 28, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: contagemSexo.map(([label]) => label),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_DARK,
+      },
+      yAxis: {
+        type: 'value',
+        minInterval: 1,
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      series: [
         {
-          label: 'Crianças',
-          data: contagemSexo.map(([, quantidade]) => quantidade),
-          backgroundColor: contagemSexo.map(([label]) => {
-            if (label === 'Menina') return '#e85d8f';
-            if (label === 'Menino') return '#2563eb';
-            return '#9ca3af';
-          }),
-          hoverBackgroundColor: contagemSexo.map(([label]) => {
-            if (label === 'Menina') return '#db3f79';
-            if (label === 'Menino') return '#1d4ed8';
-            return '#7a8492';
-          }),
-          borderRadius: 8,
-          maxBarThickness: 58,
+          type: 'bar',
+          data: contagemSexo.map(([label, quantidade]) => ({
+            value: quantidade,
+            itemStyle: {
+              color: label === 'Menina' ? '#e85d8f' : label === 'Menino' ? '#2563eb' : '#9ca3af',
+            },
+          })),
+          emphasis: {
+            itemStyle: {
+              color: undefined, // echarts will darken automatically
+            },
+          },
+          itemStyle: { borderRadius: [8, 8, 0, 0] },
+          barMaxWidth: 58,
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
         },
       ],
     }),
     [contagemSexo],
   );
 
-  const racaChartData = useMemo(
+  const racaChartOption = useMemo<IEDCChartOption>(
     () => ({
-      labels: contagemRacaCor.map(([label]) => label),
-      datasets: [
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)',
+      },
+      legend: {
+        orient: 'vertical' as const,
+        right: 0,
+        top: 'center',
+        icon: 'circle',
+        itemWidth: 12,
+        itemHeight: 12,
+        textStyle: { color: '#29354a', fontSize: 12, fontWeight: 700 },
+      },
+      series: [
         {
-          data: contagemRacaCor.map(([, quantidade]) => quantidade),
-          backgroundColor: contagemRacaCor.map(([label]) => {
-            const colors: Record<string, string> = {
-              Branca: '#d7dee8',
-              Parda: '#c68145',
-              Preta: '#1f2937',
-              Negra: '#1f2937',
-              Indígena: '#0f9d58',
-              Amarela: '#f4c542',
-              'Não informado': '#9ca3af',
-            };
-            return colors[label] || '#4077cf';
-          }),
-          borderWidth: 0,
+          type: 'pie',
+          radius: '80%',
+          center: ['40%', '50%'],
+          data: contagemRacaCor.map(([label, quantidade]) => ({
+            name: label,
+            value: quantidade,
+            itemStyle: { color: CHART_COLORS_CRECHE_RACA[label] || '#4077cf' },
+          })),
+          label: { show: false },
+          itemStyle: { borderWidth: 0 },
+          emphasis: { scaleSize: 6 },
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
         },
       ],
     }),
     [contagemRacaCor],
-  );
-
-  const chartOptions = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart' as const,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0,
-            color: '#7a879a',
-            font: { size: 11, weight: 700 as const },
-          },
-          grid: { color: 'rgba(104, 119, 142, 0.12)' },
-          border: { display: false },
-        },
-        x: {
-          grid: { display: false },
-          ticks: {
-            color: '#172033',
-            font: { size: 12, weight: 800 as const },
-          },
-        },
-      },
-      onHover: (event: any, chartElement: any) => {
-        if (event.native?.target) {
-          (event.native.target as HTMLElement).style.cursor = chartElement.length ? 'pointer' : 'default';
-        }
-      },
-    }),
-    [],
-  );
-
-  const pieOptions = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart' as const,
-      },
-      plugins: {
-        legend: {
-          position: 'right' as const,
-          labels: {
-            color: '#29354a',
-            boxWidth: 12,
-            font: { size: 12, weight: 700 as const },
-          },
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-        },
-      },
-      onHover: (event: any, chartElement: any) => {
-        if (event.native?.target) {
-          (event.native.target as HTMLElement).style.cursor = chartElement.length ? 'pointer' : 'default';
-        }
-      },
-    }),
-    [],
   );
 
   const exportRows = useMemo(
@@ -281,21 +229,21 @@ const CrecheReportsPage = () => {
     ));
   };
 
-  const handleSexoClick = (event: any) => {
-    if (!sexoChartRef.current) return;
-    const element = getElementAtEvent(sexoChartRef.current, event);
-    if (!element.length) return;
-    const label = sexoChartData.labels[element[0].index];
-    if (label) applyFilter('genero', label);
-  };
+  const handleSexoClick = useCallback(
+    (params: { dataIndex: number; name: string }) => {
+      const label = contagemSexo[params.dataIndex]?.[0];
+      if (label) applyFilter('genero', label);
+    },
+    [contagemSexo, drillDown],
+  );
 
-  const handleRacaClick = (event: any) => {
-    if (!racaChartRef.current) return;
-    const element = getElementAtEvent(racaChartRef.current, event);
-    if (!element.length) return;
-    const label = racaChartData.labels[element[0].index];
-    if (label) applyFilter('racaCor', label);
-  };
+  const handleRacaClick = useCallback(
+    (params: { dataIndex: number; name: string }) => {
+      const label = contagemRacaCor[params.dataIndex]?.[0];
+      if (label) applyFilter('racaCor', label);
+    },
+    [contagemRacaCor, drillDown],
+  );
 
   const downloadPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -386,11 +334,10 @@ const CrecheReportsPage = () => {
           </div>
           <div className="report-chart-box">
             {contagemSexo.length > 0 ? (
-              <Bar
-                data={sexoChartData}
-                onClick={handleSexoClick}
-                options={chartOptions}
-                ref={sexoChartRef}
+              <EChartCanvas
+                ariaLabel="Gráfico por gênero da E.E.I."
+                option={sexoChartOption}
+                onDataClick={handleSexoClick}
               />
             ) : (
               <div className="executive-empty-chart executive-empty-chart-compact">
@@ -407,11 +354,10 @@ const CrecheReportsPage = () => {
           </div>
           <div className="report-chart-box">
             {contagemRacaCor.length > 0 ? (
-              <Pie
-                data={racaChartData}
-                onClick={handleRacaClick}
-                options={pieOptions}
-                ref={racaChartRef}
+              <EChartCanvas
+                ariaLabel="Gráfico por raça/cor da E.E.I."
+                option={racaChartOption}
+                onDataClick={handleRacaClick}
               />
             ) : (
               <div className="executive-empty-chart executive-empty-chart-compact">

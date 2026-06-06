@@ -306,6 +306,27 @@
   display: block;
 }
 
+.caixa-method-count {
+  margin-top: 4px;
+  line-height: 1.25;
+}
+
+.caixa-queue-module {
+  min-width: 0;
+}
+
+.commerce-embedded-queue {
+  display: block;
+}
+
+.commerce-embedded-queue .commerce-dedicated-panel {
+  margin: 0;
+}
+
+.commerce-embedded-queue .commerce-panel-title h2 {
+  font-size: 22px;
+}
+
 .caixa-confirm {
   display: flex;
   align-items: flex-start;

@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual profissional do Albergue | Sistema Dias da Cruz</title>
+  <style>
+    :root {
+      --ink: #152033;
+      --muted: #637089;
+      --blue: #0047b6;
+      --blue-2: #1e63d6;
+      --green: #0f8f4f;
+      --red: #bf2525;
+      --amber: #e29a14;
+      --paper: #f4f7fb;
+      --line: #dce5f2;
+      --soft-blue: #eaf2ff;
+      --soft-green: #e9f8ef;
+      --soft-red: #fff1f1;
+      --white: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 48px 28px 72px;
+    }
+
+    .cover {
+      min-height: 86vh;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 44px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 44px;
+    }
+
+    .eyebrow {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 58px;
+      line-height: 1.02;
+      margin: 14px 0 20px;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: 34px;
+      line-height: 1.12;
+      margin: 0 0 10px;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      font-size: 22px;
+      margin: 28px 0 10px;
+    }
+
+    p { margin: 0 0 14px; }
+
+    .lead {
+      color: var(--muted);
+      font-size: 21px;
+      max-width: 620px;
+    }
+
+    .cover-panel {
+      background: linear-gradient(145deg, #0f1d36, #0b4db2);
+      color: white;
+      padding: 36px;
+      border-radius: 22px;
+      min-height: 430px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 28px 70px rgba(10, 36, 86, 0.22);
+    }
+
+    .cover-panel strong {
+      display: block;
+      font-size: 34px;
+      line-height: 1.12;
+      max-width: 440px;
+    }
+
+    .meta-grid,
+    .principles,
+    .quick-flow,
+    .raci-grid,
+    .check-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meta-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 34px;
+    }
+
+    .meta {
+      border: 1px solid var(--line);
+      background: var(--white);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .meta span,
+    .callout-list span,
+    .function-list span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .meta strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+    }
+
+    .toc {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 30px;
+      margin: 36px 0;
+    }
+
+    .toc ol {
+      columns: 2;
+      margin: 18px 0 0;
+      padding-left: 22px;
+    }
+
+    .toc li { margin: 0 0 8px; }
+
+    .section {
+      break-inside: avoid;
+      margin: 52px 0 66px;
+    }
+
+    .section-head {
+      border-top: 4px solid var(--blue);
+      padding-top: 18px;
+      margin-bottom: 20px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      font-size: 18px;
+      max-width: 800px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .note {
+      border-left: 5px solid var(--blue);
+      background: var(--soft-blue);
+      padding: 16px 18px;
+      border-radius: 10px;
+      color: #24405f;
+      font-weight: 650;
+      margin: 18px 0;
+    }
+
+    .warning {
+      border-left-color: var(--red);
+      background: var(--soft-red);
+      color: #6d1e1e;
+    }
+
+    .success {
+      border-left-color: var(--green);
+      background: var(--soft-green);
+      color: #1f5f3c;
+    }
+
+    .figure {
+      margin: 24px 0;
+      break-inside: avoid;
+    }
+
+    .figure-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 10px;
+    }
+
+    .figure-title strong {
+      font-size: 18px;
+    }
+
+    .figure-title span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .screenshot {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #d9e4f2;
+      box-shadow: 0 18px 42px rgba(19, 39, 71, 0.13);
+    }
+
+    .screenshot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .mark {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: white;
+      border: 3px solid white;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(0, 45, 130, 0.34);
+    }
+
+    .mark.green { background: var(--green); }
+    .mark.red { background: var(--red); }
+    .mark.amber { background: var(--amber); }
+
+    .callout-list,
+    .function-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .callout,
+    .function-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 15px;
+    }
+
+    .callout b {
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: white;
+      font-size: 12px;
+    }
+
+    .callout p,
+    .function-card p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .steps {
+      counter-reset: step;
+      display: grid;
+      gap: 10px;
+      margin: 16px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      counter-increment: step;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 13px 15px 13px 50px;
+      position: relative;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 15px;
+      top: 13px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--blue);
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef4ff;
+      color: #24405f;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .check-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 16px;
+    }
+
+    .check-item {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .check-item::before {
+      content: "□";
+      color: var(--blue);
+      font-weight: 900;
+      margin-right: 8px;
+    }
+
+    .footer-note {
+      margin-top: 56px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media print {
+      body { background: white; }
+      .page { max-width: none; padding: 22mm 14mm; }
+      .cover { min-height: auto; page-break-after: always; }
+      .section { page-break-inside: avoid; margin: 28px 0 36px; }
+      .figure { page-break-inside: avoid; }
+      .screenshot { box-shadow: none; }
+      h1 { font-size: 44px; }
+      h2 { font-size: 27px; }
+      .toc { page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="cover">
+      <div>
+        <div class="eyebrow">Sistema Dias da Cruz | Albergue Noturno</div>
+        <h1>Manual operacional profissional do Albergue</h1>
+        <p class="lead">Guia visual para operar o plantão, registrar estadias, controlar presença, acompanhar qualidade de dados e gerar evidências institucionais com segurança.</p>
+
+        <div class="meta-grid">
+          <div class="meta"><span>Versão</span><strong>2026-06-06</strong></div>
+          <div class="meta"><span>Público</span><strong>Coordenação, educadores e equipe técnica</strong></div>
+          <div class="meta"><span>Base visual</span><strong>Screenshots reais em ambiente local</strong></div>
+          <div class="meta"><span>Privacidade</span><strong>Dados fictícios de treinamento</strong></div>
+        </div>
+      </div>
+
+      <aside class="cover-panel">
+        <strong>O manual não ensina apenas onde clicar. Ele padroniza a rotina que sustenta decisão, censo, RMA e prestação de contas.</strong>
+        <p>Disciplina operacional é tecnologia social aplicada. O resto é botão bonito procurando uma desculpa para existir.</p>
+      </aside>
+    </section>
+
+    <section class="toc">
+      <div class="eyebrow">Mapa de leitura</div>
+      <h2>Use por fluxo, não por curiosidade</h2>
+      <ol>
+        <li>Fluxo do plantão</li>
+        <li>Login e perfil ativo</li>
+        <li>Painel de controle</li>
+        <li>Casas, camas e lista</li>
+        <li>Buscar pessoas e novo cadastro</li>
+        <li>Perfil, ocorrências e histórico</li>
+        <li>Presença e censo</li>
+        <li>Relatórios, LGPD e exportações</li>
+        <li>Qualidade de dados</li>
+        <li>Impacto social</li>
+        <li>Conferência de RMA</li>
+        <li>Checklist e responsabilidades</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Rotina</div>
+        <h2>O plantão deve seguir uma sequência simples</h2>
+        <p>O sistema é mais forte quando a equipe registra a realidade na ordem correta: ocupação, cadastro, estadia, presença, qualidade e evidência.</p>
+      </div>
+      <ol class="steps">
+        <li>Entrar com o perfil correto do Albergue.</li>
+        <li>Abrir o painel e conferir ocupação, vagas livres, saídas previstas e pendências.</li>
+        <li>Buscar a pessoa antes de cadastrar.</li>
+        <li>Registrar entrada somente com cama real disponível.</li>
+        <li>Registrar ocorrências relevantes no perfil da pessoa.</li>
+        <li>Conferir presença por quarto e encerrar triagem apenas após revisão.</li>
+        <li>Abrir qualidade de dados antes de exportar relatórios.</li>
+        <li>Usar relatórios, impacto social e RMA para fechamento e decisão.</li>
+      </ol>
+      <div class="note warning">Atalho errado vira retrabalho. Cadastro duplicado, presença pendente e cama fictícia aparecem depois como relatório fraco.</div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Acesso</div>
+        <h2>Login define o que cada pessoa pode enxergar</h2>
+        <p>O menu muda conforme o perfil. Antes de concluir que uma tela “sumiu”, confira a conta ativa e o papel institucional.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 1. Tela de login</strong><span>Arquivo: 01-login.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/01-login.png" alt="Tela de login do Sistema Dias da Cruz">
+          <i class="mark" style="left:69%;top:55%">1</i>
+          <i class="mark green" style="left:68%;top:68%">2</i>
+          <i class="mark amber" style="left:29%;top:21%">3</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Usuário</strong><p>Identifica o perfil institucional que será carregado.</p></div>
+          <div class="callout"><b>2</b><strong>Senha</strong><p>Garante acesso individual. Senha temporária deve ser trocada.</p></div>
+          <div class="callout"><b>3</b><strong>Identidade institucional</strong><p>A tela reforça que o sistema integra Albergue, E.E.I., lojas e gestão.</p></div>
+          <div class="callout"><b>4</b><strong>Resultado esperado</strong><p>Após login, a pessoa deve cair na área compatível com seu perfil.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Painel</div>
+        <h2>O painel mostra a verdade inicial do plantão</h2>
+        <p>Antes de qualquer entrada ou saída, a equipe deve ler ocupação por casa, total de vagas, histórico e pendências de presença.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 2. Painel de controle</strong><span>Arquivo: 02-painel-albergue.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/02-painel-albergue.png" alt="Painel de controle do Albergue">
+          <i class="mark" style="left:40%;top:33%">1</i>
+          <i class="mark green" style="left:84%;top:40%">2</i>
+          <i class="mark amber" style="left:54%;top:67%">3</i>
+          <i class="mark red" style="left:94%;top:86%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Casas e vagas</strong><p>Clicar em uma casa abre camas ocupadas e livres.</p></div>
+          <div class="callout"><b>2</b><strong>Ocupação total</strong><p>Resume uso da capacidade instalada no plantão.</p></div>
+          <div class="callout"><b>3</b><strong>Histórico</strong><p>Mostra ocupação recente, capacidade e novos ingressos.</p></div>
+          <div class="callout"><b>4</b><strong>Pendências</strong><p>Atalho operacional para presença ainda não conferida.</p></div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li>Abra o painel no início do plantão.</li>
+        <li>Confira se há vaga livre na casa correta.</li>
+        <li>Abra a casa antes de registrar uma nova estadia.</li>
+        <li>Verifique pendências antes do fechamento.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Camas</div>
+        <h2>Casa e cama são o núcleo da ocupação real</h2>
+        <p>A estadia só é válida se corresponder a uma cama concreta. O modal permite controlar permanência, troca e saída.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 3. Casa Masculina em cards</strong><span>Arquivo: 03-casa-camas-modal.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/03-casa-camas-modal.png" alt="Modal de camas da casa masculina">
+          <i class="mark" style="left:18%;top:13%">1</i>
+          <i class="mark green" style="left:50%;top:50%">2</i>
+          <i class="mark amber" style="left:82%;top:50%">3</i>
+          <i class="mark red" style="left:73%;top:56%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Resumo da casa</strong><p>Mostra ocupadas, livres e percentual da casa selecionada.</p></div>
+          <div class="callout"><b>2</b><strong>Card da cama</strong><p>Exibe pessoa, prazo restante e ações da estadia.</p></div>
+          <div class="callout"><b>3</b><strong>Estadia vencida</strong><p>Sinaliza necessidade de decisão: prorrogar, trocar ou sair.</p></div>
+          <div class="callout"><b>4</b><strong>Ações</strong><p>Prorrogar, trocar cama ou fazer checkout alteram ocupação e histórico.</p></div>
+        </div>
+      </div>
+
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 4. Casa Masculina em lista</strong><span>Arquivo: 04-casa-lista-exportacao.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/04-casa-lista-exportacao.png" alt="Lista de pessoas hospedadas por cama">
+          <i class="mark" style="left:18%;top:29%">1</i>
+          <i class="mark green" style="left:78%;top:30%">2</i>
+          <i class="mark amber" style="left:57%;top:56%">3</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Quantidade hospedada</strong><p>Confere rapidamente quem está na casa.</p></div>
+          <div class="callout"><b>2</b><strong>Copiar tudo</strong><p>Apoia conferência interna sem digitação manual.</p></div>
+          <div class="callout"><b>3</b><strong>CPF individual</strong><p>Pode ser copiado quando houver finalidade administrativa.</p></div>
+          <div class="callout"><b>4</b><strong>LGPD</strong><p>Evite colar dados pessoais em canais sem controle.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Cadastro</div>
+        <h2>Buscar antes de cadastrar evita duplicidade</h2>
+        <p>A busca mostra status da pessoa e oferece as ações corretas: abrir perfil, iniciar entrada ou registrar saída.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 5. Buscar pessoas</strong><span>Arquivo: 05-buscar-pessoas.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/05-buscar-pessoas.png" alt="Tela Buscar pessoas">
+          <i class="mark" style="left:85%;top:19%">1</i>
+          <i class="mark green" style="left:47%;top:58%">2</i>
+          <i class="mark amber" style="left:38%;top:38%">3</i>
+          <i class="mark red" style="left:92%;top:88%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Novo cadastro</strong><p>Use apenas depois de buscar e confirmar que a pessoa não existe.</p></div>
+          <div class="callout"><b>2</b><strong>Campo de busca</strong><p>Aceita nome, nome social, CPF ou NIS.</p></div>
+          <div class="callout"><b>3</b><strong>Filtros</strong><p>Organizam hospedados, aprovados, liberados e inativos.</p></div>
+          <div class="callout"><b>4</b><strong>Ações do card</strong><p>`Abrir`, `Entrada` e `Saída` aparecem conforme a situação.</p></div>
+        </div>
+      </div>
+
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 6. Novo cadastro</strong><span>Arquivo: 06-novo-cadastro-modal.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/06-novo-cadastro-modal.png" alt="Modal de novo cadastro">
+          <i class="mark" style="left:34%;top:24%">1</i>
+          <i class="mark green" style="left:52%;top:25%">2</i>
+          <i class="mark amber" style="left:72%;top:25%">3</i>
+          <i class="mark red" style="left:81%;top:90%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Identificação</strong><p>Nome, nome social, documento e dados de nascimento.</p></div>
+          <div class="callout"><b>2</b><strong>Contato</strong><p>Endereço, telefone e referência familiar quando houver.</p></div>
+          <div class="callout"><b>3</b><strong>Cuidados</strong><p>Saúde, alergias, medicações e observações relevantes.</p></div>
+          <div class="callout"><b>4</b><strong>Salvar</strong><p>Finaliza o cadastro e torna o registro pesquisável.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Perfil</div>
+        <h2>O perfil é a memória institucional do atendimento</h2>
+        <p>O perfil reúne identidade, estadia atual, histórico, ocorrências e pendências. É a tela que deve orientar decisões sensíveis.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 7. Perfil da pessoa</strong><span>Arquivo: 07-perfil-pessoa-geral.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/07-perfil-pessoa-geral.png" alt="Perfil da pessoa atendida">
+          <i class="mark" style="left:45%;top:21%">1</i>
+          <i class="mark green" style="left:57%;top:53%">2</i>
+          <i class="mark amber" style="left:89%;top:64%">3</i>
+          <i class="mark red" style="left:88%;top:24%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Identificação</strong><p>Nome, documentos e dados básicos da pessoa.</p></div>
+          <div class="callout"><b>2</b><strong>Situação da estadia</strong><p>Cama, entrada, dias de estadia e saída prevista.</p></div>
+          <div class="callout"><b>3</b><strong>Registrar saída</strong><p>Encerra estadia e libera a cama.</p></div>
+          <div class="callout"><b>4</b><strong>Editar cadastro</strong><p>Atualiza dados quando houver informação confiável.</p></div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="figure">
+            <div class="figure-title"><strong>Figura 8. Ocorrências</strong><span>Arquivo: 08-perfil-ocorrencias.png</span></div>
+            <div class="screenshot"><img src="assets/screenshots/08-perfil-ocorrencias.png" alt="Aba de ocorrências do perfil"></div>
+          </div>
+        </div>
+        <div>
+          <h3>Como registrar uma ocorrência útil</h3>
+          <ol class="steps">
+            <li>Registre fato, contexto e encaminhamento.</li>
+            <li>Escolha tipo e severidade compatíveis.</li>
+            <li>Evite opinião pessoal ou linguagem acusatória.</li>
+            <li>Use o histórico antes de decidir prorrogação, saída ou bloqueio.</li>
+          </ol>
+          <div class="note">Ocorrência não é desabafo. É registro institucional para continuidade do cuidado.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Presença</div>
+        <h2>Presença e censo fecham a realidade do plantão</h2>
+        <p>A presença transforma ocupação em confirmação do pernoite. Pendência precisa ser resolvida antes de encerrar triagem.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 9. Presença e censo</strong><span>Arquivo: 10-presencas-censo.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/10-presencas-censo.png" alt="Tela de presença do Albergue">
+          <i class="mark" style="left:42%;top:36%">1</i>
+          <i class="mark red" style="left:64%;top:36%">2</i>
+          <i class="mark green" style="left:52%;top:56%">3</i>
+          <i class="mark amber" style="left:91%;top:55%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Presentes</strong><p>Quantidade já confirmada no plantão.</p></div>
+          <div class="callout"><b>2</b><strong>Pendentes</strong><p>Pessoas ativas sem presença marcada.</p></div>
+          <div class="callout"><b>3</b><strong>Filtro e busca</strong><p>Permite revisar por quarto, nome ou cama.</p></div>
+          <div class="callout"><b>4</b><strong>Encerrar triagem</strong><p>Use somente depois da conferência.</p></div>
+        </div>
+      </div>
+      <div class="note warning">Nunca trate `Encerrar triagem` como botão administrativo qualquer. Ele consolida informação de censo.</div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Relatórios</div>
+        <h2>Relatório bom começa com base limpa</h2>
+        <p>Os relatórios tornam visíveis perfil, movimentação e recortes. Para apresentação, use LGPD e revise qualidade de dados antes.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 10. Dashboard analítico</strong><span>Arquivo: 11-relatorios-albergue.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/11-relatorios-albergue.png" alt="Dashboard analítico do Albergue">
+          <i class="mark" style="left:78%;top:17%">1</i>
+          <i class="mark green" style="left:86%;top:17%">2</i>
+          <i class="mark amber" style="left:93%;top:17%">3</i>
+          <i class="mark red" style="left:63%;top:67%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Anonimizar LGPD</strong><p>Oculta dados sensíveis quando o relatório circular fora da operação.</p></div>
+          <div class="callout"><b>2</b><strong>Filtrar dados</strong><p>Recorta período e características para responder uma pergunta específica.</p></div>
+          <div class="callout"><b>3</b><strong>PDF/Excel</strong><p>PDF para leitura; Excel para análise e conferência.</p></div>
+          <div class="callout"><b>4</b><strong>Resumo operacional</strong><p>Traduz registros em movimento, pernoites e faixa etária.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Governança</div>
+        <h2>Qualidade de dados é a antessala da decisão</h2>
+        <p>A tela mostra pendências que fragilizam relatórios, censo, RMA e leitura de gestão.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 11. Qualidade de dados do Albergue</strong><span>Arquivo: 13-qualidade-dados.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/13-qualidade-dados.png" alt="Tela de qualidade de dados do Albergue">
+          <i class="mark red" style="left:28%;top:36%">1</i>
+          <i class="mark amber" style="left:70%;top:36%">2</i>
+          <i class="mark green" style="left:49%;top:62%">3</i>
+          <i class="mark" style="left:86%;top:74%">4</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Cadastros incompletos</strong><p>Afetam identificação, relatório e continuidade do atendimento.</p></div>
+          <div class="callout"><b>2</b><strong>Presenças pendentes</strong><p>Devem ser resolvidas antes do fechamento.</p></div>
+          <div class="callout"><b>3</b><strong>Estadias vencidas</strong><p>Quando em ordem, indica que não há prazo ultrapassado.</p></div>
+          <div class="callout"><b>4</b><strong>Amostras</strong><p>Apontam exatamente onde corrigir.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Impacto</div>
+        <h2>Impacto social registra escuta anônima, não prontuário paralelo</h2>
+        <p>O módulo apoia leitura qualitativa do serviço: proteção, descanso, orientação, próximos passos e demandas identificadas.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 12. Painel de impacto social</strong><span>Arquivo: 14-impacto-social.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/14-impacto-social.png" alt="Painel de impacto social do Albergue">
+          <i class="mark" style="left:86%;top:24%">1</i>
+          <i class="mark green" style="left:41%;top:53%">2</i>
+          <i class="mark amber" style="left:84%;top:88%">3</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Formulário de impacto</strong><p>Abre registro anônimo da experiência de acolhimento.</p></div>
+          <div class="callout"><b>2</b><strong>Evolução das escutas</strong><p>Mostra volume de respostas por período.</p></div>
+          <div class="callout"><b>3</b><strong>Dimensões</strong><p>Resume proteção, comunicação, descanso, oficinas e próximos passos.</p></div>
+          <div class="callout"><b>4</b><strong>Uso adequado</strong><p>Serve para gestão do serviço, não para exposição individual.</p></div>
+        </div>
+      </div>
+
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 13. Formulário de impacto</strong><span>Arquivo: 15-impacto-formulario.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/15-impacto-formulario.png" alt="Formulário de impacto social">
+          <i class="mark" style="left:33%;top:34%">1</i>
+          <i class="mark green" style="left:35%;top:58%">2</i>
+          <i class="mark amber" style="left:64%;top:58%">3</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Contexto do acesso</strong><p>Situação territorial e tempo sem moradia estável.</p></div>
+          <div class="callout"><b>2</b><strong>Experiência</strong><p>Respeito, comunicação, proteção e orientação.</p></div>
+          <div class="callout"><b>3</b><strong>Leitura da equipe</strong><p>Demanda identificada e ação realizada.</p></div>
+          <div class="callout"><b>4</b><strong>Privacidade</strong><p>O formulário deve permanecer anônimo.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">RMA</div>
+        <h2>Conferência de RMA transforma divergência em ação administrativa</h2>
+        <p>A ferramenta compara a planilha Gesuas com o sistema e mostra diferenças antes do fechamento.</p>
+      </div>
+      <div class="figure">
+        <div class="figure-title"><strong>Figura 14. Conferência de RMA</strong><span>Arquivo: 16-conferencia-rma.png</span></div>
+        <div class="screenshot">
+          <img src="assets/screenshots/16-conferencia-rma.png" alt="Tela de conferência de RMA">
+          <i class="mark" style="left:60%;top:56%">1</i>
+          <i class="mark green" style="left:45%;top:93%">2</i>
+          <i class="mark amber" style="left:90%;top:19%">3</i>
+        </div>
+        <div class="callout-list">
+          <div class="callout"><b>1</b><strong>Upload Gesuas</strong><p>Recebe planilha `.xlsx` usada como referência.</p></div>
+          <div class="callout"><b>2</b><strong>Período</strong><p>Define intervalo comparado com a base interna.</p></div>
+          <div class="callout"><b>3</b><strong>Voltar aos relatórios</strong><p>Retorna à leitura gerencial do Albergue.</p></div>
+          <div class="callout"><b>4</b><strong>Finalidade</strong><p>Corrigir divergências antes de fechar o mês.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Responsabilidade</div>
+        <h2>Quem registra, quem valida e quem decide</h2>
+        <p>O sistema reduz retrabalho quando a responsabilidade de cada etapa é explícita.</p>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Atividade</th><th>Responsável</th><th>Aprovador</th><th>Uso do sistema</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Entrada e checkout</td><td>Educador ou plantão</td><td>Coordenação</td><td>Busca, perfil, cama e estadia.</td></tr>
+          <tr><td>Prorrogação</td><td>Coordenação</td><td>Coordenação</td><td>Modal da casa ou perfil, com motivo.</td></tr>
+          <tr><td>Troca de cama</td><td>Educador/coordenação</td><td>Coordenação</td><td>Modal da casa, revisando origem e destino.</td></tr>
+          <tr><td>Presença e censo</td><td>Plantão</td><td>Coordenação</td><td>Tela de presença e encerramento da triagem.</td></tr>
+          <tr><td>Qualidade de dados</td><td>Coordenação</td><td>Coordenação</td><td>Correção de cadastros, presenças e estadias.</td></tr>
+          <tr><td>RMA</td><td>Coordenação</td><td>Gestão/equipe técnica</td><td>Upload Gesuas e análise de divergências.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="eyebrow">Checklist</div>
+        <h2>Checklist de plantão e fechamento</h2>
+        <p>Use como roteiro de treinamento ou conferência rápida.</p>
+      </div>
+      <div class="check-grid">
+        <div class="check-item">Perfil correto ativo.</div>
+        <div class="check-item">Painel de ocupação conferido.</div>
+        <div class="check-item">Casa e cama abertas antes da entrada.</div>
+        <div class="check-item">Pessoa buscada antes de cadastrar.</div>
+        <div class="check-item">Cadastro atualizado quando possível.</div>
+        <div class="check-item">Estadia vinculada a cama real.</div>
+        <div class="check-item">Ocorrências relevantes registradas.</div>
+        <div class="check-item">Presenças pendentes revisadas.</div>
+        <div class="check-item">Triagem encerrada com conferência.</div>
+        <div class="check-item">Qualidade de dados revisada antes do relatório.</div>
+        <div class="check-item">LGPD ativada quando o relatório circular.</div>
+        <div class="check-item">RMA conferido no fechamento mensal.</div>
+      </div>
+    </section>
+
+    <p class="footer-note">Manual gerado a partir de screenshots reais do ambiente local em 06/06/2026. Os nomes exibidos nas capturas são fictícios e foram usados apenas para documentação. Não reproduzir dados reais de pessoas atendidas sem finalidade institucional e autorização adequada.</p>
+  </main>
+</body>
+</html>

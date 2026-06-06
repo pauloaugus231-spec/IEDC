@@ -40,7 +40,7 @@ const Toast = ({ message, type = 'success', show, onClose, duration = 3500 }: To
 
   return (
     <div
-      className={`toast glass-card${show ? ' show' : ''} ${type}`}
+      className={`toast${show ? ' show' : ''} ${type}`}
       role="alert"
       aria-live="assertive"
     >

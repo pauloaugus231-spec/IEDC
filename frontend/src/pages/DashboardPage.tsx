@@ -1,23 +1,11 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react';
-import {
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  LineElement,
-  LinearScale,
-  PointElement,
-  Tooltip,
-  type ChartData,
-  type ChartOptions,
-} from 'chart.js';
-import { Chart } from 'react-chartjs-2';
 import { apiFetch, useOcupacaoHistorico, useOcupacaoTotal } from '../api';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { PageHeader } from '../components/DesignSystem';
 import PessoaCasaModal from '../components/PessoaCasaModal';
 import PresenceFloater from '../components/PresenceFloater';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, IEDC_TEXT } from '../styles/echarts-theme-iedc';
 import { clearTriagemCensoStorage, getTriagemCensoStorageState } from '../utils';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip);
 
 // --- INTERFACES ---
 interface OcupacaoData {
@@ -125,159 +113,97 @@ const DashboardPage = () => {
 
   const maiorCapacidadeHistorica = Math.max(totalVagas, ...historyData.map((item) => item.total), 1);
   const maiorIngressoHistorico = Math.max(...historyData.map((item) => item.ingressos), 0);
-  const historicoChartKey = historyData
-    .map((item) => `${item.data}-${item.ocupadas}-${item.ingressos}`)
-    .join('|');
 
-  const historicoChartData = useMemo<ChartData<'bar' | 'line', number[], string>>(
+  const labels = useMemo(
+    () => historyData.map((item) => {
+      const date = new Date(`${item.data}T12:00:00`);
+      return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
+    }),
+    [historyData],
+  );
+
+  const historicoChartOption = useMemo<IEDCChartOption>(
     () => ({
-      labels: historyData.map((item) => {
-        const date = new Date(`${item.data}T12:00:00`);
-        return date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
-      }),
-      datasets: [
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const items = Array.isArray(params) ? params : [params];
+          const idx = items[0]?.dataIndex ?? 0;
+          const point = historyData[idx];
+          let html = `<strong>${items[0]?.name ?? ''}</strong>`;
+          for (const item of items) {
+            const name = item.seriesName ?? '';
+            if (name === 'Ocupação') html += `<br/>Ocupação: ${item.value} ocupadas`;
+            else if (name === 'Capacidade máxima') html += `<br/>Capacidade máxima: ${item.value} camas`;
+            else if (name === 'Novos ingressos') html += `<br/>Novos ingressos: ${item.value}`;
+          }
+          if (point) html += `<br/>${point.percentual}% de ocupação no dia`;
+          return html;
+        },
+      },
+      legend: { show: false },
+      grid: { left: 46, right: 52, top: 12, bottom: 28, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: labels,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      yAxis: [
+        {
+          type: 'value',
+          min: 0,
+          max: Math.ceil(maiorCapacidadeHistorica * 1.08),
+          splitLine: { lineStyle: GRID_LINE_STYLE },
+          axisLabel: AXIS_LABEL_STYLE,
+        },
+        {
+          type: 'value',
+          min: 0,
+          max: Math.max(5, maiorIngressoHistorico + 2),
+          splitLine: { show: false },
+          axisLabel: { ...AXIS_LABEL_STYLE, color: '#0f9d58' },
+        },
+      ],
+      series: [
         {
           type: 'bar',
-          label: 'Ocupação',
+          name: 'Ocupação',
           data: historyData.map((item) => item.ocupadas),
-          yAxisID: 'y',
-          backgroundColor: 'rgba(37, 99, 235, 0.86)',
-          borderColor: '#2563eb',
-          borderRadius: 10,
-          borderSkipped: false,
-          borderWidth: 1,
-          hoverBackgroundColor: '#1d4ed8',
-          maxBarThickness: 42,
+          yAxisIndex: 0,
+          itemStyle: { color: 'rgba(37, 99, 235, 0.86)', borderRadius: [10, 10, 0, 0] },
+          emphasis: { itemStyle: { color: '#1d4ed8' } },
+          barMaxWidth: 42,
+          animationDuration: 1000,
+          animationEasing: 'quarticOut',
         },
         {
           type: 'line',
-          label: 'Capacidade máxima',
+          name: 'Capacidade máxima',
           data: historyData.map((item) => item.total || totalVagas),
-          yAxisID: 'y',
-          borderColor: '#172033',
-          borderDash: [7, 6],
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          tension: 0,
+          yAxisIndex: 0,
+          lineStyle: { color: IEDC_TEXT, width: 2, type: [7, 6] },
+          symbol: 'none',
+          smooth: false,
+          animationDuration: 1000,
         },
         {
           type: 'line',
-          label: 'Novos ingressos',
+          name: 'Novos ingressos',
           data: historyData.map((item) => item.ingressos),
-          yAxisID: 'yIngressos',
-          borderColor: '#0f9d58',
-          backgroundColor: '#0f9d58',
-          borderWidth: 3,
-          pointBackgroundColor: '#ffffff',
-          pointBorderColor: '#0f9d58',
-          pointBorderWidth: 2,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          tension: 0.35,
+          yAxisIndex: 1,
+          lineStyle: { color: '#0f9d58', width: 3 },
+          itemStyle: { color: '#0f9d58', borderColor: '#ffffff', borderWidth: 2 },
+          symbolSize: 6,
+          smooth: true,
+          animationDuration: 1000,
         },
       ],
     }),
-    [historyData, totalVagas],
-  );
-
-  const historicoChartOptions = useMemo<ChartOptions<'bar' | 'line'>>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 1000,
-        easing: 'easeOutQuart',
-        delay: (context) => {
-          if (context.type !== 'data') return 0;
-          return context.dataIndex * 90 + context.datasetIndex * 140;
-        },
-      },
-      animations: {
-        y: {
-          from: 0,
-          duration: 950,
-          easing: 'easeOutQuart',
-        },
-      },
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => {
-              const label = context.dataset.label ?? '';
-              if (label === 'Novos ingressos') return `${label}: ${context.parsed.y}`;
-              if (label === 'Capacidade máxima') return `${label}: ${context.parsed.y} camas`;
-              return `${label}: ${context.parsed.y} ocupadas`;
-            },
-            afterBody: (items) => {
-              const point = historyData[items[0]?.dataIndex ?? -1];
-              return point ? [`${point.percentual}% de ocupação no dia`] : [];
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: '#7a879a',
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-        y: {
-          min: 0,
-          suggestedMax: Math.ceil(maiorCapacidadeHistorica * 1.08),
-          border: {
-            display: false,
-          },
-          grid: {
-            color: 'rgba(104, 119, 142, 0.12)',
-          },
-          ticks: {
-            color: '#7a879a',
-            precision: 0,
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-        yIngressos: {
-          position: 'right',
-          min: 0,
-          suggestedMax: Math.max(5, maiorIngressoHistorico + 2),
-          border: {
-            display: false,
-          },
-          grid: {
-            drawOnChartArea: false,
-          },
-          ticks: {
-            color: '#0f9d58',
-            precision: 0,
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-      },
-    }),
-    [historyData, maiorCapacidadeHistorica, maiorIngressoHistorico],
+    [historyData, totalVagas, labels, maiorCapacidadeHistorica, maiorIngressoHistorico],
   );
 
   return (
@@ -351,12 +277,7 @@ const DashboardPage = () => {
 
                 <div className="albergue-chart-canvas">
                     {historyData.length > 0 ? (
-                      <Chart<'bar' | 'line', number[], string>
-                        key={historicoChartKey}
-                        type="bar"
-                        data={historicoChartData}
-                        options={historicoChartOptions}
-                      />
+                      <EChartCanvas ariaLabel="Histórico de ocupação do albergue" option={historicoChartOption} />
                     ) : (
                       <div className="albergue-empty-state">
                         {historicoLoading ? 'Carregando histórico...' : 'Sem histórico disponível'}

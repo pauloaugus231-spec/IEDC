@@ -1,17 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Legend,
-  LinearScale,
-  Tooltip,
-  type ChartOptions,
-} from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
-import {
   getComandaComercial,
   registrarPagamentoComanda,
   updateStatusComandaComercial,
@@ -20,12 +9,12 @@ import {
   type ComandaResumo,
   type LojasPeriodo,
 } from '../api';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import { useAuth } from '../context/AuthContext';
 import { useLojasRealtime, type LojasRealtimeEvent } from '../hooks/useLojasRealtime';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, LEGEND_STYLE, IEDC_BLUE_800 } from '../styles/echarts-theme-iedc';
 import '../styles/institutional.css';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
 const currency = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -116,7 +105,13 @@ function showOperationalReceipt(message: string, type: 'success' | 'info' = 'suc
 
 type LojasSecretariaMode = 'overview' | 'fila' | 'historico';
 
-const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode }) => {
+const LojasSecretariaPage = ({
+  embedded = false,
+  mode = 'overview',
+}: {
+  embedded?: boolean;
+  mode?: LojasSecretariaMode;
+}) => {
   const { currentUser } = useAuth();
   const isGestoraView = currentUser?.role === 'gestora';
   const isQueuePage = mode === 'fila';
@@ -179,141 +174,99 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
 
   useLojasRealtime(refreshRealtime);
 
-  const chartData = useMemo(
-    () => ({
-      labels: (dashboard?.serie ?? []).map((point) => {
-        const data = new Date(`${point.data}T12:00:00`);
-        return data.toLocaleDateString('pt-BR', {
-          day: periodo === 'ano' ? undefined : '2-digit',
-          month: 'short',
-        });
-      }),
-      datasets: [
-        {
-          label: 'Previsto',
-          data: (dashboard?.serie ?? []).map((point) => point.previsto),
-          backgroundColor: 'rgba(64, 119, 207, 0.32)',
-          borderRadius: 9,
-          borderSkipped: false,
-          maxBarThickness: 28,
-        },
-        {
-          label: 'Realizado',
-          data: (dashboard?.serie ?? []).map((point) => point.realizado),
-          backgroundColor: '#0041aa',
-          borderRadius: 9,
-          borderSkipped: false,
-          maxBarThickness: 28,
-        },
-      ],
+  const serieLabels = useMemo(
+    () => (dashboard?.serie ?? []).map((point) => {
+      const data = new Date(`${point.data}T12:00:00`);
+      return data.toLocaleDateString('pt-BR', {
+        day: periodo === 'ano' ? undefined : '2-digit',
+        month: 'short',
+      });
     }),
     [dashboard?.serie, periodo],
   );
 
-  const chartOptions = useMemo<ChartOptions<'bar'>>(
+  const barChartOption = useMemo<IEDCChartOption>(
     () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart',
-      },
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            boxWidth: 8,
-            color: '#526174',
-            font: {
-              size: 12,
-              weight: 800,
-            },
-          },
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => `${context.dataset.label}: ${currency.format(Number(context.parsed.y || 0))}`,
-          },
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const items = Array.isArray(params) ? params : [params];
+          let html = `<strong>${items[0]?.name ?? ''}</strong>`;
+          for (const item of items) {
+            html += `<br/>${item.seriesName}: ${currency.format(Number(item.value || 0))}`;
+          }
+          return html;
         },
       },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            color: '#7a879a',
-            maxTicksLimit: periodo === 'ano' ? 12 : 10,
-            font: { size: 11, weight: 800 },
-          },
-        },
-        y: {
-          border: { display: false },
-          grid: { color: 'rgba(104, 119, 142, 0.12)' },
-          ticks: {
-            color: '#7a879a',
-            callback: (value) => currency.format(Number(value)),
-            font: { size: 11, weight: 800 },
-          },
-        },
+      legend: { bottom: 0, ...LEGEND_STYLE },
+      grid: { left: 64, right: 16, top: 12, bottom: 42, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: serieLabels,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { ...AXIS_LABEL_STYLE, fontWeight: 800 },
       },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: (value: number) => currency.format(value) },
+      },
+      series: [
+        {
+          type: 'bar',
+          name: 'Previsto',
+          data: (dashboard?.serie ?? []).map((point) => point.previsto),
+          itemStyle: { color: 'rgba(64, 119, 207, 0.32)', borderRadius: [9, 9, 0, 0] },
+          barMaxWidth: 28,
+        },
+        {
+          type: 'bar',
+          name: 'Realizado',
+          data: (dashboard?.serie ?? []).map((point) => point.realizado),
+          itemStyle: { color: IEDC_BLUE_800, borderRadius: [9, 9, 0, 0] },
+          barMaxWidth: 28,
+        },
+      ],
+      animationDuration: 850,
+      animationEasing: 'quarticOut',
     }),
-    [periodo],
+    [dashboard?.serie, serieLabels, periodo],
   );
 
-  const lojasPieData = useMemo(
+  const doughnutChartOption = useMemo<IEDCChartOption>(
     () => ({
-      labels: lojas.map((loja) => loja.nome),
-      datasets: [
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'item',
+        formatter: (params: any) => {
+          const value = Number(params.value || 0);
+          const percentage = totalVendasLojas ? Math.round((value / totalVendasLojas) * 100) : 0;
+          return `${params.name}: ${currency.format(value)} (${percentage}%)`;
+        },
+      },
+      legend: { bottom: 0, ...LEGEND_STYLE },
+      series: [
         {
-          data: lojas.map((loja) => loja.realizado),
-          backgroundColor: ['#0041aa', '#4077cf', '#f7b044'],
-          borderColor: '#ffffff',
-          borderWidth: 4,
-          hoverOffset: 8,
+          type: 'pie',
+          radius: ['64%', '90%'],
+          center: ['50%', '45%'],
+          data: lojas.map((loja, i) => ({
+            value: loja.realizado,
+            name: loja.nome,
+            itemStyle: { color: ['#0041aa', '#4077cf', '#f7b044'][i] ?? '#4077cf' },
+          })),
+          emphasis: { scaleSize: 8 },
+          itemStyle: { borderColor: '#ffffff', borderWidth: 4 },
+          label: { show: false },
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
         },
       ],
     }),
-    [lojas],
-  );
-
-  const lojasPieOptions = useMemo<ChartOptions<'doughnut'>>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '64%',
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart',
-      },
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            boxWidth: 8,
-            color: '#526174',
-            font: {
-              size: 12,
-              weight: 800,
-            },
-          },
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => {
-              const value = Number(context.parsed || 0);
-              const percentage = totalVendasLojas ? Math.round((value / totalVendasLojas) * 100) : 0;
-              return `${context.label}: ${currency.format(value)} (${percentage}%)`;
-            },
-          },
-        },
-      },
-    }),
-    [totalVendasLojas],
+    [lojas, totalVendasLojas],
   );
 
   const openComanda = async (comanda: ComandaResumo | ComandaDetalhe) => {
@@ -439,50 +392,56 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
         ? 'Acompanhe vendas previstas, realizadas, desistências e desempenho por loja sem entrar na rotina de cobrança.'
         : 'Acompanhe vendas previstas, realizadas, desistências e desempenho por loja.';
 
-  return (
-    <main className="page-band commerce-page">
-      <PageHeader
-        className="commerce-head"
-        eyebrow="Secretaria e Financeiro"
-        title={pageTitle}
-        description={pageSubtitle}
-        actions={!isQueuePage ? (
-        <div className="commerce-head-controls">
-          <div className="creche-period-tabs">
-            {periodos.map((option) => (
-              <button
-                className={periodo === option.value ? 'active' : ''}
-                key={option.value}
-                onClick={() => setPeriodo(option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <div className="commerce-export-actions">
-            <button onClick={() => downloadFechamento('pdf')} type="button">
-              PDF
-            </button>
-            <button onClick={() => downloadFechamento('excel')} type="button">
-              Excel
-            </button>
-          </div>
-        </div>
-        ) : null}
-      />
+  const Shell = embedded ? 'section' : 'main';
 
-      <MetricGrid className="commerce-metrics commerce-finance-metrics">
-        <MetricCard label="Previsto" value={currency.format(dashboard?.kpis.vendasPrevistas ?? 0)} detail="Valor ainda em aberto nas comandas" />
-        <MetricCard label="Realizado" value={currency.format(dashboard?.kpis.vendasPagas ?? 0)} detail={`${dashboard?.kpis.comandasPagas ?? 0} comandas pagas no período`} tone="success" />
-        <MetricCard label="Pendente" value={dashboard?.kpis.comandasAguardando ?? 0} detail="Comandas aguardando pagamento" tone="warning" />
-        <MetricCard label="Desistências" value={dashboard?.kpis.desistencias ?? 0} detail={`${currency.format(dashboard?.kpis.valorDesistido ?? 0)} em venda perdida`} tone="warning" />
-        <MetricCard
-          label="Retiradas"
-          value={(dashboard?.kpis.retiradasPendentes ?? 0) + (dashboard?.kpis.retiradasConcluidas ?? 0)}
-          detail={`${dashboard?.kpis.retiradasPendentes ?? 0} pendente(s), ${dashboard?.kpis.retiradasConcluidas ?? 0} concluída(s)`}
-        />
-      </MetricGrid>
+  return (
+    <Shell className={embedded ? 'commerce-embedded-queue' : 'page-band commerce-page'}>
+      {!embedded ? (
+        <>
+          <PageHeader
+            className="commerce-head"
+            eyebrow="Secretaria e Financeiro"
+            title={pageTitle}
+            description={pageSubtitle}
+            actions={!isQueuePage ? (
+            <div className="commerce-head-controls">
+              <div className="creche-period-tabs">
+                {periodos.map((option) => (
+                  <button
+                    className={periodo === option.value ? 'active' : ''}
+                    key={option.value}
+                    onClick={() => setPeriodo(option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="commerce-export-actions">
+                <button onClick={() => downloadFechamento('pdf')} type="button">
+                  PDF
+                </button>
+                <button onClick={() => downloadFechamento('excel')} type="button">
+                  Excel
+                </button>
+              </div>
+            </div>
+            ) : null}
+          />
+
+          <MetricGrid className="commerce-metrics commerce-finance-metrics">
+            <MetricCard label="Previsto" value={currency.format(dashboard?.kpis.vendasPrevistas ?? 0)} detail="Valor ainda em aberto nas comandas" />
+            <MetricCard label="Realizado" value={currency.format(dashboard?.kpis.vendasPagas ?? 0)} detail={`${dashboard?.kpis.comandasPagas ?? 0} comandas pagas no período`} tone="success" />
+            <MetricCard label="Pendente" value={dashboard?.kpis.comandasAguardando ?? 0} detail="Comandas aguardando pagamento" tone="warning" />
+            <MetricCard label="Desistências" value={dashboard?.kpis.desistencias ?? 0} detail={`${currency.format(dashboard?.kpis.valorDesistido ?? 0)} em venda perdida`} tone="warning" />
+            <MetricCard
+              label="Retiradas"
+              value={(dashboard?.kpis.retiradasPendentes ?? 0) + (dashboard?.kpis.retiradasConcluidas ?? 0)}
+              detail={`${dashboard?.kpis.retiradasPendentes ?? 0} pendente(s), ${dashboard?.kpis.retiradasConcluidas ?? 0} concluída(s)`}
+            />
+          </MetricGrid>
+        </>
+      ) : null}
 
       {error ? <p className="commerce-alert">{error}</p> : null}
 
@@ -550,7 +509,7 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
             </div>
             <div className="commerce-chart-box">
               {dashboard?.serie?.length ? (
-                <Bar data={chartData} options={chartOptions} />
+                <EChartCanvas ariaLabel="Gráfico previsto x realizado das lojas" option={barChartOption} />
               ) : (
                 <div className="executive-empty-chart">Sem movimento no período</div>
               )}
@@ -567,7 +526,7 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
             <div className="executive-commerce-donut commerce-store-donut">
               {totalVendasLojas > 0 ? (
                 <>
-                  <Doughnut data={lojasPieData} options={lojasPieOptions} />
+                  <EChartCanvas ariaLabel="Participação por loja" option={doughnutChartOption} />
                   <div className="executive-commerce-donut-center">
                     <strong>{currency.format(totalVendasLojas)}</strong>
                     <span>realizado</span>
@@ -781,7 +740,7 @@ const LojasSecretariaPage = ({ mode = 'overview' }: { mode?: LojasSecretariaMode
           </div>
         </div>
       ) : null}
-    </main>
+    </Shell>
   );
 };
 

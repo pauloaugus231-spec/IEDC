@@ -6,7 +6,6 @@ import Toast from './Toast';
 import type { ToastType } from './Toast';
 import { useNotificacoes, type NotificacaoNivel } from '../api';
 import { useAuth, type DemoUser, type UserRole } from '../context/AuthContext';
-import '../styles/theme.css';
 import '../styles/institutional.css';
 import '../styles/design-system.css';
 
@@ -173,11 +172,6 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             end: true,
           },
           {
-            label: 'Fila de pagamento',
-            to: '/lojas/secretaria/fila',
-            roles: ['equipe_tecnica', 'financeiro'],
-          },
-          {
             label: 'Histórico de pagamento',
             to: '/lojas/secretaria/historico',
             roles: ['equipe_tecnica', 'financeiro'],
@@ -191,11 +185,6 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             label: 'Relatório financeiro',
             to: '/lojas/secretaria/relatorio-executivo',
             roles: ['gestora', 'financeiro'],
-          },
-          {
-            label: 'Qualidade de dados',
-            to: '/lojas/secretaria/qualidade-dados',
-            roles: ['equipe_tecnica', 'financeiro'],
           },
         ],
       },

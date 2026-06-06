@@ -1,23 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  LinearScale,
-  Tooltip,
-  type ChartOptions,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-import {
   useCrecheDashboard,
   type CrechePeriodoDashboard,
   type CrecheSinalEvasao,
 } from '../api';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE } from '../styles/echarts-theme-iedc';
 import '../styles/institutional.css';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
 const periodOptions: { label: string; value: CrechePeriodoDashboard }[] = [
   { label: 'Semana', value: 'semana' },
@@ -70,87 +61,49 @@ const CrecheDashboardPage = () => {
   const riscoEvasao = dashboard?.riscoEvasao ?? 0;
   const periodoTexto = formatPeriodo(graficoDashboard?.periodo.inicio, graficoDashboard?.periodo.fim);
 
-  const frequenciaChartData = useMemo(
+  const frequenciaChartOption = useMemo<IEDCChartOption>(
     () => ({
-      labels: frequenciaSemanal.map((item) => item.dia),
-      datasets: [
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const p = Array.isArray(params) ? params[0] : params;
+          const point = frequenciaSemanal[p.dataIndex];
+          const extra = point ? `<br/>${point.presentes} presentes / ${point.ausentes} faltas` : '';
+          return `${p.name}<br/>${p.value}% de frequência${extra}`;
+        },
+      },
+      grid: { left: 46, right: 16, top: 12, bottom: 28, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: frequenciaSemanal.map((item) => item.dia),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        interval: 25,
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: '{value}%' },
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+      },
+      series: [
         {
-          label: 'Frequência',
+          type: 'bar',
           data: frequenciaSemanal.map((item) => item.frequencia),
-          backgroundColor: 'rgba(0, 65, 170, 0.82)',
-          borderColor: '#0041aa',
-          borderRadius: 12,
-          borderSkipped: false,
-          borderWidth: 1,
-          hoverBackgroundColor: '#2d6fd2',
-          maxBarThickness: 54,
+          itemStyle: {
+            color: 'rgba(0, 65, 170, 0.82)',
+            borderRadius: [12, 12, 0, 0],
+          },
+          emphasis: { itemStyle: { color: '#2d6fd2' } },
+          barMaxWidth: 54,
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
         },
       ],
-    }),
-    [frequenciaSemanal],
-  );
-
-  const frequenciaChartOptions = useMemo<ChartOptions<'bar'>>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart',
-      },
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => `${context.parsed.y}% de frequência`,
-            afterLabel: (context) => {
-              const point = frequenciaSemanal[context.dataIndex];
-              return point ? `${point.presentes} presentes / ${point.ausentes} faltas` : '';
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: '#7a879a',
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-        y: {
-          min: 0,
-          max: 100,
-          border: {
-            display: false,
-          },
-          grid: {
-            color: 'rgba(104, 119, 142, 0.12)',
-          },
-          ticks: {
-            color: '#7a879a',
-            stepSize: 25,
-            callback: (value) => `${value}%`,
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-      },
     }),
     [frequenciaSemanal],
   );
@@ -227,7 +180,7 @@ const CrecheDashboardPage = () => {
 
           <div className="creche-chart-canvas">
             {frequenciaSemanal.length > 0 ? (
-              <Bar data={frequenciaChartData} options={frequenciaChartOptions} />
+              <EChartCanvas ariaLabel="Gráfico de frequência da E.E.I." option={frequenciaChartOption} />
             ) : (
               <div className="creche-empty-chart">Sem frequência registrada no período</div>
             )}

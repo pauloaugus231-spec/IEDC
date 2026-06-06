@@ -1,20 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip,
-  type ChartOptions,
-} from 'chart.js';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import {
   useCrecheDashboard,
   useLojasDashboard,
   useOcupacaoHistorico,
@@ -23,10 +9,10 @@ import {
   type LojasPeriodo,
   type OcupacaoPeriodo,
 } from '../api';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, AXIS_LABEL_DARK, GRID_LINE_STYLE, LEGEND_STYLE, IEDC_BLUE_800 } from '../styles/echarts-theme-iedc';
 import '../styles/institutional.css';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Filler, Legend);
 
 const currency = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -115,323 +101,188 @@ const InstitutionalDashboardPage = () => {
   const ocupacaoHistoricaTotal = ultimoPontoOcupacao?.total ?? totalVagas;
   const ocupacaoHistoricaOcupadas = ultimoPontoOcupacao?.ocupadas ?? ocupadas;
 
-  const ocupacaoLineData = useMemo(
+  const ocupacaoLineLabels = useMemo(
+    () => ocupacaoHistorico.map((point) => {
+      const data = new Date(`${point.data}T12:00:00`);
+      return data.toLocaleDateString('pt-BR', {
+        day: periodoOcupacao <= 90 ? '2-digit' : undefined,
+        month: 'short',
+      });
+    }),
+    [ocupacaoHistorico, periodoOcupacao],
+  );
+
+  const ocupacaoLineOption = useMemo<IEDCChartOption>(
     () => ({
-      labels: ocupacaoHistorico.map((point) => {
-        const data = new Date(`${point.data}T12:00:00`);
-        return data.toLocaleDateString('pt-BR', {
-          day: periodoOcupacao <= 90 ? '2-digit' : undefined,
-          month: 'short',
-        });
-      }),
-      datasets: [
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        formatter: (params: any) => {
+          const p = Array.isArray(params) ? params[0] : params;
+          const point = ocupacaoHistorico[p.dataIndex];
+          const extra = point ? `<br/>${point.ocupadas} de ${point.total} camas` : '';
+          return `${p.name}<br/>${p.value}% de ocupação${extra}`;
+        },
+      },
+      grid: { left: 46, right: 16, top: 12, bottom: 28, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: ocupacaoLineLabels,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        interval: 25,
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: '{value}%' },
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+      },
+      series: [
         {
-          label: 'Ocupação',
+          type: 'line',
           data: ocupacaoHistorico.map((point) => point.percentual),
-          borderColor: '#0041aa',
-          backgroundColor: 'rgba(0, 65, 170, 0.12)',
-          fill: true,
-          tension: 0.34,
-          borderWidth: 3,
-          pointRadius: periodoOcupacao === 30 ? 2.5 : 0,
-          pointHoverRadius: 5,
-          pointBackgroundColor: '#ffffff',
-          pointBorderColor: '#0041aa',
-          pointBorderWidth: 2,
+          lineStyle: { color: IEDC_BLUE_800, width: 3 },
+          areaStyle: { color: 'rgba(0, 65, 170, 0.12)' },
+          itemStyle: { color: IEDC_BLUE_800, borderColor: '#ffffff', borderWidth: 2 },
+          symbolSize: periodoOcupacao === 30 ? 5 : 0,
+          smooth: true,
+          animationDuration: 850,
         },
       ],
     }),
-    [ocupacaoHistorico, periodoOcupacao],
+    [ocupacaoHistorico, ocupacaoLineLabels, periodoOcupacao],
   );
 
-  const ocupacaoLineOptions = useMemo<ChartOptions<'line'>>(
+  const frequenciaTurmasOption = useMemo<IEDCChartOption>(
     () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => `${context.parsed.y}% de ocupação`,
-            afterLabel: (context) => {
-              const point = ocupacaoHistorico[context.dataIndex];
-              return point ? `${point.ocupadas} de ${point.total} camas` : '';
-            },
-          },
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const p = Array.isArray(params) ? params[0] : params;
+          const turma = turmasCreche[p.dataIndex];
+          const extra = turma ? `<br/>${turma.criancas} crianças ativas` : '';
+          return `${p.name}<br/>${p.value}% de frequência${extra}`;
         },
       },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: '#7a879a',
-            maxTicksLimit: periodoOcupacao >= 180 ? 8 : 10,
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-        y: {
-          min: 0,
-          max: 100,
-          border: {
-            display: false,
-          },
-          grid: {
-            color: 'rgba(104, 119, 142, 0.12)',
-          },
-          ticks: {
-            color: '#7a879a',
-            stepSize: 25,
-            callback: (value) => `${value}%`,
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
+      grid: { left: 8, right: 16, top: 8, bottom: 8, containLabel: true },
+      xAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        interval: 25,
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: '{value}%' },
+        splitLine: { lineStyle: GRID_LINE_STYLE },
       },
-    }),
-    [ocupacaoHistorico, periodoOcupacao],
-  );
-
-  const frequenciaTurmasChartData = useMemo(
-    () => ({
-      labels: turmasCreche.map((turma) => turma.nome),
-      datasets: [
+      yAxis: {
+        type: 'category',
+        data: turmasCreche.map((turma) => turma.nome),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_DARK,
+        inverse: true,
+      },
+      series: [
         {
-          label: 'Frequência',
+          type: 'bar',
           data: turmasCreche.map((turma) => turma.frequencia),
-          backgroundColor: 'rgba(0, 65, 170, 0.82)',
-          borderColor: '#0041aa',
-          borderRadius: 10,
-          borderSkipped: false,
-          borderWidth: 1,
-          hoverBackgroundColor: '#2d6fd2',
-          maxBarThickness: 28,
+          itemStyle: { color: 'rgba(0, 65, 170, 0.82)', borderRadius: [0, 10, 10, 0] },
+          emphasis: { itemStyle: { color: '#2d6fd2' } },
+          barMaxWidth: 28,
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
         },
       ],
     }),
     [turmasCreche],
   );
 
-  const frequenciaTurmasChartOptions = useMemo<ChartOptions<'bar'>>(
+  const lojasBarOption = useMemo<IEDCChartOption>(
     () => ({
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart',
-      },
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => `${context.parsed.x}% de frequência`,
-            afterLabel: (context) => {
-              const turma = turmasCreche[context.dataIndex];
-              return turma ? `${turma.criancas} crianças ativas` : '';
-            },
-          },
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const items = Array.isArray(params) ? params : [params];
+          let html = `<strong>${items[0]?.name ?? ''}</strong>`;
+          for (const item of items) {
+            html += `<br/>${item.seriesName}: ${currency.format(Number(item.value || 0))}`;
+          }
+          return html;
         },
       },
-      scales: {
-        x: {
-          min: 0,
-          max: 100,
-          border: {
-            display: false,
-          },
-          grid: {
-            color: 'rgba(104, 119, 142, 0.12)',
-          },
-          ticks: {
-            color: '#7a879a',
-            stepSize: 25,
-            callback: (value) => `${value}%`,
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-        y: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: '#172033',
-            font: {
-              size: 11,
-              weight: 800,
-            },
-          },
-        },
+      legend: { bottom: 0, ...LEGEND_STYLE },
+      grid: { left: 64, right: 16, top: 12, bottom: 42, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: lojas.map((loja) => loja.nome),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: AXIS_LABEL_DARK,
       },
-    }),
-    [turmasCreche],
-  );
-
-  const lojasBarData = useMemo(
-    () => ({
-      labels: lojas.map((loja) => loja.nome),
-      datasets: [
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: (value: number) => currency.format(value) },
+      },
+      series: [
         {
-          label: 'Previsto',
+          type: 'bar',
+          name: 'Previsto',
           data: lojas.map((loja) => loja.previsto),
-          backgroundColor: 'rgba(64, 119, 207, 0.28)',
-          borderRadius: 10,
-          borderSkipped: false,
-          maxBarThickness: 34,
+          itemStyle: { color: 'rgba(64, 119, 207, 0.28)', borderRadius: [10, 10, 0, 0] },
+          barMaxWidth: 34,
         },
         {
-          label: 'Realizado',
+          type: 'bar',
+          name: 'Realizado',
           data: lojas.map((loja) => loja.realizado),
-          backgroundColor: '#0041aa',
-          borderRadius: 10,
-          borderSkipped: false,
-          maxBarThickness: 34,
+          itemStyle: { color: IEDC_BLUE_800, borderRadius: [10, 10, 0, 0] },
+          barMaxWidth: 34,
         },
       ],
+      animationDuration: 850,
+      animationEasing: 'quarticOut',
     }),
     [lojas],
   );
 
-  const lojasBarOptions = useMemo<ChartOptions<'bar'>>(
+  const lojasDoughnutOption = useMemo<IEDCChartOption>(
     () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart',
-      },
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            boxWidth: 8,
-            color: '#526174',
-            font: {
-              size: 12,
-              weight: 800,
-            },
-          },
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => `${context.dataset.label}: ${currency.format(Number(context.parsed.y || 0))}`,
-          },
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'item',
+        formatter: (params: any) => {
+          const value = Number(params.value || 0);
+          const percentage = totalVendasLojas ? Math.round((value / totalVendasLojas) * 100) : 0;
+          return `${params.name}: ${currency.format(value)} (${percentage}%)`;
         },
       },
-      scales: {
-        x: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: '#172033',
-            font: {
-              size: 12,
-              weight: 800,
-            },
-          },
-        },
-        y: {
-          border: {
-            display: false,
-          },
-          grid: {
-            color: 'rgba(104, 119, 142, 0.12)',
-          },
-          ticks: {
-            color: '#7a879a',
-            callback: (value) => currency.format(Number(value)),
-            font: {
-              size: 11,
-              weight: 700,
-            },
-          },
-        },
-      },
-    }),
-    [],
-  );
-
-  const lojasPieData = useMemo(
-    () => ({
-      labels: lojas.map((loja) => loja.nome),
-      datasets: [
+      legend: { bottom: 0, ...LEGEND_STYLE },
+      series: [
         {
-          data: lojas.map((loja) => loja.realizado),
-          backgroundColor: ['#0041aa', '#4077cf', '#f7b044'],
-          borderColor: '#ffffff',
-          borderWidth: 4,
-          hoverOffset: 8,
+          type: 'pie',
+          radius: ['64%', '90%'],
+          center: ['50%', '45%'],
+          data: lojas.map((loja, i) => ({
+            value: loja.realizado,
+            name: loja.nome,
+            itemStyle: { color: ['#0041aa', '#4077cf', '#f7b044'][i] ?? '#4077cf' },
+          })),
+          emphasis: { scaleSize: 8 },
+          itemStyle: { borderColor: '#ffffff', borderWidth: 4 },
+          label: { show: false },
+          animationDuration: 850,
+          animationEasing: 'quarticOut',
         },
       ],
     }),
-    [lojas],
-  );
-
-  const lojasPieOptions = useMemo<ChartOptions<'doughnut'>>(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '64%',
-      animation: {
-        duration: 850,
-        easing: 'easeOutQuart',
-      },
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            usePointStyle: true,
-            boxWidth: 8,
-            color: '#526174',
-            font: {
-              size: 12,
-              weight: 800,
-            },
-          },
-        },
-        tooltip: {
-          backgroundColor: '#172033',
-          padding: 12,
-          callbacks: {
-            label: (context) => {
-              const value = Number(context.parsed || 0);
-              const percentage = totalVendasLojas ? Math.round((value / totalVendasLojas) * 100) : 0;
-              return `${context.label}: ${currency.format(value)} (${percentage}%)`;
-            },
-          },
-        },
-      },
-    }),
-    [totalVendasLojas],
+    [lojas, totalVendasLojas],
   );
 
   const reports = [
@@ -518,7 +369,7 @@ const InstitutionalDashboardPage = () => {
             </div>
             <div className="executive-line-chart">
               {ocupacaoHistorico.length > 0 ? (
-                <Line data={ocupacaoLineData} options={ocupacaoLineOptions} />
+                <EChartCanvas ariaLabel="Gráfico de ocupação do albergue" option={ocupacaoLineOption} />
               ) : (
                 <div className="executive-empty-chart">
                   {ocupacaoHistoricoLoading ? 'Carregando histórico...' : 'Sem histórico no período'}
@@ -538,7 +389,7 @@ const InstitutionalDashboardPage = () => {
             <span className="executive-frequency-label">média geral no mês</span>
             <div className="executive-side-bar-chart">
               {turmasCreche.length > 0 ? (
-                <Bar data={frequenciaTurmasChartData} options={frequenciaTurmasChartOptions} />
+                <EChartCanvas ariaLabel="Frequência por turma da E.E.I." option={frequenciaTurmasOption} />
               ) : (
                 <div className="executive-empty-chart executive-empty-chart-compact">
                   Sem frequência da E.E.I. no período
@@ -589,7 +440,7 @@ const InstitutionalDashboardPage = () => {
               </div>
               <div className="executive-commerce-chart">
                 {lojas.length > 0 ? (
-                  <Bar data={lojasBarData} options={lojasBarOptions} />
+                  <EChartCanvas ariaLabel="Previsto e realizado das lojas" option={lojasBarOption} />
                 ) : (
                   <div className="executive-empty-chart">
                     {lojasLoading ? 'Carregando movimento comercial...' : 'Sem dados comerciais no período'}
@@ -606,7 +457,7 @@ const InstitutionalDashboardPage = () => {
               <div className="executive-commerce-donut">
                 {totalVendasLojas > 0 ? (
                   <>
-                    <Doughnut data={lojasPieData} options={lojasPieOptions} />
+                    <EChartCanvas ariaLabel="Participação por loja" option={lojasDoughnutOption} />
                     <div className="executive-commerce-donut-center">
                       <strong>{currency.format(totalVendasLojas)}</strong>
                       <span>realizado</span>

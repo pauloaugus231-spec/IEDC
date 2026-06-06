@@ -13,6 +13,8 @@
 }
 
 .login-identity {
+  position: relative;
+  isolation: isolate;
   height: 100%;
   min-height: 0;
   padding: clamp(26px, 3vw, 44px);
@@ -22,7 +24,108 @@
   gap: 28px;
 }
 
+.login-motion-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.login-motion-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.17), transparent 38%),
+    radial-gradient(circle at 28% 18%, rgba(247, 176, 68, 0.32), transparent 30%),
+    radial-gradient(circle at 72% 68%, rgba(255, 255, 255, 0.2), transparent 36%);
+  opacity: 0.82;
+}
+
+.login-network {
+  position: absolute;
+  right: clamp(-16px, 1vw, 24px);
+  bottom: clamp(18px, 6vh, 92px);
+  width: min(740px, 50vw);
+  height: min(520px, 54vh);
+  color: rgba(255, 255, 255, 0.78);
+  filter: drop-shadow(0 24px 58px rgba(0, 18, 54, 0.2));
+  transform-origin: 50% 55%;
+  will-change: opacity, transform;
+}
+
+.login-network-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.login-node {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 132px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.17);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 16px 38px rgba(0, 18, 54, 0.18);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+  padding: 11px 14px;
+  backdrop-filter: blur(14px);
+  will-change: transform;
+}
+
+.login-node-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #f7b044;
+  box-shadow:
+    0 0 0 6px rgba(247, 176, 68, 0.2),
+    0 0 24px rgba(247, 176, 68, 0.4);
+  flex: 0 0 auto;
+}
+
+.login-node-label {
+  white-space: nowrap;
+}
+
+.node-gestao {
+  left: 10%;
+  top: 22%;
+}
+
+.node-albergue {
+  left: 32%;
+  top: 8%;
+}
+
+.node-creche {
+  right: 0;
+  top: 31%;
+}
+
+.node-lojas {
+  left: 18%;
+  bottom: 20%;
+}
+
+.node-financeiro {
+  right: 4%;
+  bottom: 16%;
+}
+
 .login-logo-panel {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   width: fit-content;
@@ -41,6 +144,8 @@
 }
 
 .login-copy {
+  position: relative;
+  z-index: 1;
   max-width: min(640px, 42vw);
   padding-bottom: clamp(58px, 8vh, 108px);
 }
@@ -201,6 +306,51 @@
 .institutional-button:focus-visible {
   outline: 3px solid rgba(64, 119, 207, 0.28);
   outline-offset: 3px;
+}
+
+.login-button:disabled {
+  cursor: wait;
+  opacity: 0.76;
+  transform: none;
+}
+
+@media (max-width: 960px) {
+  .login-network {
+    right: -18px;
+    bottom: 10px;
+    width: min(620px, 96vw);
+    height: 300px;
+    opacity: 0.58;
+  }
+
+  .login-node {
+    min-width: 108px;
+    padding: 9px 11px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-network {
+    display: block;
+    right: -180px;
+    bottom: -34px;
+    width: 620px;
+    height: 270px;
+    opacity: 0.16;
+  }
+
+  .login-motion-layer::before {
+    background:
+      linear-gradient(120deg, rgba(255, 255, 255, 0.14), transparent 38%),
+      radial-gradient(circle at 76% 18%, rgba(247, 176, 68, 0.24), transparent 32%);
+  }
+
+  .login-node {
+    min-width: 96px;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
 }
 
 .institutional-shell {

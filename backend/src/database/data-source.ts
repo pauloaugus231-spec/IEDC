@@ -48,6 +48,6 @@ export const AppDataSource = new DataSource({
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
   migrations: ['src/database/migrations/*.ts'],
-  migrationsTableName: 'migrations',
+  migrationsTableName: 'typeorm_migrations',
   migrationsRun: process.env.DB_MIGRATIONS_RUN === 'true',
 });

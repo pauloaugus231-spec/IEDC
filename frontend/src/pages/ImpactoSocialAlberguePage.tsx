@@ -1,6 +1,6 @@
-import { useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
-import { ResponsiveLine } from '@nivo/line';
-import { ResponsiveRadar } from '@nivo/radar';
+import { useState, useMemo, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, NIVO_COMPAT, IEDC_BLUE_800 } from '../styles/echarts-theme-iedc';
 import {
   createImpactoAlbergueResposta,
   useImpactoSocialAlbergue,
@@ -118,53 +118,6 @@ const comunicacaoOptions = ['Sim', 'Em parte', 'Não', 'Não se aplica'];
 const proximoPassoAjudaOptions = ['Sim', 'Em parte', 'Não', 'Ainda não'];
 const oficinaOptions = ['Sim', 'Não', 'Ainda não, mas tenho interesse', 'Não tenho interesse no momento'];
 
-const impactNivoTheme = {
-  text: {
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-    fontSize: 12,
-    fill: '#526178',
-  },
-  tooltip: {
-    container: {
-      background: '#172033',
-      border: '1px solid rgba(255, 255, 255, 0.12)',
-      borderRadius: '14px',
-      boxShadow: '0 14px 34px rgba(9, 18, 32, 0.24)',
-      color: '#ffffff',
-      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: '12px',
-      fontWeight: 800,
-      padding: '10px 12px',
-    },
-  },
-  axis: {
-    ticks: {
-      text: {
-        fill: '#526178',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        fontSize: 11,
-        fontWeight: 800,
-      },
-      line: {
-        stroke: 'rgba(104, 119, 142, 0.18)',
-      },
-    },
-  },
-  grid: {
-    line: {
-      stroke: 'rgba(104, 119, 142, 0.12)',
-      strokeWidth: 1,
-    },
-  },
-  legends: {
-    text: {
-      fill: '#526178',
-      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-      fontSize: 11,
-      fontWeight: 850,
-    },
-  },
-};
 
 const initialForm: CreateImpactoAlberguePayload = {
   dataReferencia: new Date().toISOString().slice(0, 10),
@@ -255,59 +208,6 @@ function compactRadarLabel(label: string) {
   return map[label] ?? compactChartLabel(label, 14);
 }
 
-function ImpactTooltip({
-  label,
-  value,
-  suffix = 'registros',
-}: {
-  label: string;
-  value: number | string;
-  suffix?: string;
-}) {
-  return (
-    <div className="impact-chart-tooltip">
-      <strong>{label}</strong>
-      <span>{value} {suffix}</span>
-    </div>
-  );
-}
-
-function ImpactRadarGridLabel({
-  anchor,
-  id,
-  x,
-  y,
-}: {
-  anchor: 'start' | 'middle' | 'end';
-  id: string;
-  x: number;
-  y: number;
-}) {
-  const lines = id.split('\n');
-
-  return (
-    <g transform={`translate(${x}, ${y})`}>
-      <text
-        dominantBaseline="central"
-        fill="#526178"
-        fontFamily="Inter, system-ui, -apple-system, sans-serif"
-        fontSize={11}
-        fontWeight={850}
-        textAnchor={anchor}
-      >
-        {lines.map((line, index) => (
-          <tspan
-            dy={lines.length === 1 ? 0 : index === 0 ? -7 : 14}
-            key={line}
-            x={0}
-          >
-            {line}
-          </tspan>
-        ))}
-      </text>
-    </g>
-  );
-}
 
 function FormSection({
   children,
@@ -381,54 +281,54 @@ function PremiumImpactLine({
 }: {
   points: { data: string; respostas: number }[];
 }) {
-  const chartData = [
-    {
-      id: 'Escutas',
-      data: points.map((point) => {
-        const date = new Date(`${point.data}T12:00:00`);
-        return {
-          x: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-          y: point.respostas,
-        };
-      }),
-    },
-  ];
+  const labels = points.map((point) => {
+    const date = new Date(`${point.data}T12:00:00`);
+    return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+  });
 
-  return (
-    <ResponsiveLine
-      axisBottom={{
-        tickPadding: 10,
-        tickRotation: 0,
-        tickSize: 0,
-      }}
-      axisLeft={{
-        tickPadding: 10,
-        tickSize: 0,
-        tickValues: 4,
-      }}
-      areaOpacity={0.16}
-      colors={['#0041aa']}
-      curve="monotoneX"
-      data={chartData}
-      enableArea
-      enableGridX={false}
-      enablePoints
-      lineWidth={4}
-      margin={{ top: 18, right: 28, bottom: 44, left: 46 }}
-      motionConfig="gentle"
-      pointBorderColor="#0041aa"
-      pointBorderWidth={3}
-      pointColor="#ffffff"
-      pointSize={10}
-      theme={impactNivoTheme}
-      tooltip={({ point }) => (
-        <ImpactTooltip label={`${point.seriesId} em ${point.data.xFormatted}`} value={point.data.yFormatted} />
-      )}
-      useMesh
-      xScale={{ type: 'point' }}
-      yScale={{ type: 'linear', min: 0, stacked: false }}
-    />
+  const option = useMemo<IEDCChartOption>(
+    () => ({
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'axis',
+        formatter: (params: any) => {
+          const p = Array.isArray(params) ? params[0] : params;
+          return `Escutas em ${p.name}<br/>${p.value} registros`;
+        },
+      },
+      grid: { left: 46, right: 28, top: 18, bottom: 44, containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: labels,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { ...AXIS_LABEL_STYLE, fontWeight: 800 },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: 'value',
+        min: 0,
+        splitNumber: 4,
+        splitLine: { lineStyle: GRID_LINE_STYLE },
+        axisLabel: AXIS_LABEL_STYLE,
+      },
+      series: [
+        {
+          type: 'line',
+          data: points.map((p) => p.respostas),
+          lineStyle: { color: IEDC_BLUE_800, width: 4 },
+          areaStyle: { color: 'rgba(0, 65, 170, 0.16)' },
+          itemStyle: { color: IEDC_BLUE_800, borderColor: '#ffffff', borderWidth: 3 },
+          symbolSize: 10,
+          smooth: true,
+          animationDuration: 850,
+        },
+      ],
+    }),
+    [points, labels],
   );
+
+  return <EChartCanvas ariaLabel="Evolução das escutas de impacto social" option={option} />;
 }
 
 function PremiumCompleteDistribution({
@@ -478,34 +378,49 @@ function PremiumImpactRadar({
 }: {
   items: { label: string; valor: number }[];
 }) {
-  const chartData = items.map((item) => ({
-    dimensao: compactRadarLabel(item.label),
-    valor: item.valor,
-  }));
-
-  return (
-    <ResponsiveRadar
-      blendMode="multiply"
-      borderWidth={3}
-      colors={['#0041aa']}
-      curve="linearClosed"
-      data={chartData}
-      dotBorderColor="#ffffff"
-      dotBorderWidth={2}
-      dotColor="#f6a623"
-      dotSize={8}
-      fillOpacity={0.24}
-      gridLabel={ImpactRadarGridLabel}
-      gridLabelOffset={16}
-      indexBy="dimensao"
-      keys={['valor']}
-      margin={{ top: 42, right: 72, bottom: 42, left: 72 }}
-      maxValue={100}
-      motionConfig="gentle"
-      theme={impactNivoTheme}
-      valueFormat={(value) => `${value}%`}
-    />
+  const option = useMemo<IEDCChartOption>(
+    () => ({
+      tooltip: {
+        ...TOOLTIP_STYLE,
+        trigger: 'item',
+      },
+      radar: {
+        indicator: items.map((item) => ({
+          name: compactRadarLabel(item.label),
+          max: 100,
+        })),
+        axisName: {
+          color: NIVO_COMPAT.labelColor,
+          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          fontSize: 11,
+          fontWeight: 850,
+        },
+        splitLine: { lineStyle: { color: NIVO_COMPAT.gridColor } },
+        splitArea: { show: false },
+        axisLine: { lineStyle: { color: NIVO_COMPAT.gridColor } },
+      },
+      series: [
+        {
+          type: 'radar',
+          data: [
+            {
+              value: items.map((item) => item.valor),
+              name: 'Impacto',
+              areaStyle: { color: NIVO_COMPAT.areaColor },
+              lineStyle: { color: NIVO_COMPAT.lineColor, width: 3 },
+              itemStyle: { color: NIVO_COMPAT.dotColor, borderColor: NIVO_COMPAT.dotBorder, borderWidth: 2 },
+              symbolSize: 8,
+              label: { show: false },
+            },
+          ],
+          animationDuration: 850,
+        },
+      ],
+    }),
+    [items],
   );
+
+  return <EChartCanvas ariaLabel="Radar de dimensões de impacto social" option={option} />;
 }
 
 const ImpactoSocialAlberguePage = () => {
