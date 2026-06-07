@@ -25,7 +25,10 @@ Familias principais:
 - Superficie: `--iedc-surface`, `--iedc-surface-soft`, `--iedc-bg`.
 - Raio: `--iedc-radius-xs` a `--iedc-radius-xl`.
 - Sombra: sombras curtas e funcionais, sem efeito decorativo pesado.
-- Movimento: 160ms a 220ms, sempre respeitando `prefers-reduced-motion`.
+- Movimento: `--iedc-motion-fast` (160ms), `--iedc-motion` (220ms), `--iedc-motion-slow` (300ms).
+- Easing: `--iedc-ease` (entrada padrao), `--iedc-ease-out` (saida).
+- Slide offsets: `--iedc-slide-y` (12px, paginas), `--iedc-slide-x` (260px, drawers).
+- Todos respeitam `prefers-reduced-motion` via `useMotion` hook.
 
 ## Componentes Piloto
 
@@ -45,7 +48,16 @@ Componentes formais vivem em `frontend/src/components/DesignSystem.tsx`.
 - `MetricCard`: indicador com label, valor, detalhe e tom semantico.
 - `Panel`: superficie de trabalho com titulo, subtitulo e acoes.
 - `TableShell`: moldura padronizada para tabelas.
-- `ModalFrame`: estrutura de modal institucional.
+- `ModalFrame`: estrutura de modal institucional com motion (scale + fade).
+- `ModalOverlay`: backdrop animado com AnimatePresence para modais.
+- `SlidePanel`: painel lateral slide-from-right para drawers.
+
+**Motion hooks** (`frontend/src/hooks/`):
+
+- `useMotion`: pageVariants, containerVariants, itemVariants, modalVariants, slideVariants. Respeita `prefers-reduced-motion`.
+- `usePageTransition`: chave estavel por pathname para AnimatePresence nas rotas.
+
+**Page wrapper** (`frontend/src/components/PageMotion.tsx`): envolve cada rota protegida com animacao de entrada/saida.
 
 A regra de transicao e simples: paginas novas devem usar os componentes. Paginas legadas podem receber classes `ds-*` ou cair na camada de compatibilidade ate serem migradas.
 
@@ -85,3 +97,25 @@ Ordem recomendada:
 5. Relatorios, modais antigos e componentes soltos.
 
 Cada propagacao deve substituir padroes locais por classes `ds-*` quando houver equivalencia. Onde nao houver equivalencia, o componente novo deve nascer no design system antes de ser replicado.
+
+## Politica de Bibliotecas de Componentes Externos
+
+### Ant Design (antd)
+
+**Decisao: nao usar. Dependencia removida em junho/2026.**
+
+O `antd@5` foi incluido no `package.json` durante a prototipagem, mas nunca foi importado em nenhum arquivo do frontend. A decisao de nao adota-lo e deliberada:
+
+1. O sistema IEDC tem identidade visual institucional propria (azul `#0041aa`, tipografia Inter, tokens `--iedc-*`). Ant Design impoe uma linguagem visual propria que conflita com essa identidade.
+2. O design system interno (`DesignSystem.tsx` + `design-system-core.css`) ja cobre os componentes necessarios: PageHeader, MetricGrid, MetricCard, Panel, TableShell, ModalFrame, ModalOverlay, SlidePanel.
+3. Ant Design traria ~300 kB+ de bundle adicional sem beneficio proporcional.
+4. Motion e controlado via Framer Motion + `useMotion` hook, nao via Ant Motion.
+
+**Regra para o futuro:** se um componente complexo for necessario (ex: DatePicker avancado, Tree, Transfer), avalie primeiro se a versao nativa do browser ou um pacote especializado e menor resolve. Nao reintroduza antd como dependencia sem justificativa tecnica documentada aqui.
+
+### Bibliotecas Permitidas
+
+- `framer-motion`: animacoes e transicoes (motion tokens, page transitions, modal animations).
+- `echarts` + `echarts-for-react`: graficos (via `EChartCanvas` wrapper tree-shakeable).
+- `react-router-dom`: roteamento.
+- Pacotes utilitarios pequenos (papaparse, file-saver, html2canvas, jspdf) para funcionalidades pontuais.
