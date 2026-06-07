@@ -32,7 +32,11 @@
   --iedc-focus: 0 0 0 4px rgba(37, 111, 212, 0.16);
   --iedc-motion-fast: 160ms;
   --iedc-motion: 220ms;
+  --iedc-motion-slow: 300ms;
   --iedc-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --iedc-ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --iedc-slide-y: 12px;
+  --iedc-slide-x: 260px;
 }
 
 .ds-app-shell {
