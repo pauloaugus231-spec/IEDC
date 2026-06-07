@@ -1,7 +1,10 @@
 import { lazy, Suspense, type ReactNode } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
+import PageMotion from './components/PageMotion';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { usePageTransition } from './hooks/usePageTransition';
 import { canAccessPath } from './utils/canAccessPath';
 
 const LoginPage = lazy(() => import('./components/LoginPage'));
@@ -65,7 +68,9 @@ function ProtectedLayout({ children }: { children: ReactNode }) {
 
   return (
     <Layout>
-      <Suspense fallback={<RouteFallback />}>{children}</Suspense>
+      <Suspense fallback={<RouteFallback />}>
+        <PageMotion>{children}</PageMotion>
+      </Suspense>
     </Layout>
   );
 }
@@ -85,8 +90,11 @@ function HomeRedirect() {
 }
 
 function AppRoutes() {
+  const { locationKey, location } = usePageTransition();
+
   return (
-    <Routes>
+    <AnimatePresence mode="wait">
+    <Routes location={location} key={locationKey}>
       <Route
         path="/login"
         element={(
@@ -385,6 +393,7 @@ function AppRoutes() {
         )}
       />
     </Routes>
+    </AnimatePresence>
   );
 }
 

@@ -1,4 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { motion } from 'framer-motion';
+import { useMotion } from '../hooks/useMotion';
 
 type Tone = 'default' | 'success' | 'warning' | 'danger' | 'muted';
 
@@ -32,10 +34,18 @@ type MetricGridProps = HTMLAttributes<HTMLElement> & {
 };
 
 export function MetricGrid({ children, className, ...props }: MetricGridProps) {
+  const { containerVariants } = useMotion();
+
   return (
-    <section className={cx('ds-metric-grid', className)} {...props}>
+    <motion.section
+      animate="animate"
+      className={cx('ds-metric-grid', className)}
+      initial="initial"
+      variants={containerVariants}
+      {...props}
+    >
       {children}
-    </section>
+    </motion.section>
   );
 }
 
@@ -47,12 +57,18 @@ type MetricCardProps = HTMLAttributes<HTMLElement> & {
 };
 
 export function MetricCard({ label, value, detail, tone = 'default', className, ...props }: MetricCardProps) {
+  const { itemVariants } = useMotion();
+
   return (
-    <article className={cx('ds-metric-card', tone !== 'default' && tone, className)} {...props}>
+    <motion.article
+      className={cx('ds-metric-card', tone !== 'default' && tone, className)}
+      variants={itemVariants}
+      {...props}
+    >
       <span>{label}</span>
       <strong>{value}</strong>
       {detail ? <small>{detail}</small> : null}
-    </article>
+    </motion.article>
   );
 }
 
