@@ -1,18 +1,9 @@
-import { AuthUser } from '../../auth/auth.types';
-import { UsuarioRole } from '../../entities/usuario.entity';
-
-export type RelatorioFiltroValor = unknown;
-export type RelatorioFiltros = Record<string, RelatorioFiltroValor> & {
-  quarto?: string;
-  genero?: string;
-  lgbt?: boolean;
-  cor?: string;
-};
-export type RelatorioRow = Record<string, string | number | boolean | Date | null | undefined>;
-export type SqlParam = string | number | boolean | Date | null;
-export type RelatorioExecutivoEscopo = 'institucional' | 'albergue' | 'creche' | 'financeiro';
-export type RelatorioExecutivoPeriodo = 'dia' | 'semana' | 'mes' | 'ano';
-export type RelatorioExecutivoTone = 'default' | 'success' | 'warning' | 'danger' | 'muted';
+import type {
+  PeriodoExecutivo,
+  RelatorioExecutivoKpi,
+  RelatorioExecutivoTone,
+  SqlParam,
+} from './relatorios-core-types';
 
 export type Relatorio360MetricId =
   | 'pessoas_atendidas'
@@ -69,65 +60,6 @@ export interface Relatorio360DrilldownRow {
   format?: 'number' | 'currency' | 'percent';
 }
 
-export interface PeriodoExecutivo {
-  escopo: RelatorioExecutivoPeriodo;
-  inicio: string;
-  fim: string;
-  label: string;
-}
-
-export interface RelatorioExecutivoKpi {
-  id: string;
-  label: string;
-  value: number | string;
-  detail: string;
-  tone?: RelatorioExecutivoTone;
-  format?: 'number' | 'currency' | 'percent';
-}
-
-export interface RelatorioExecutivoAlerta {
-  id: string;
-  area: 'albergue' | 'creche' | 'financeiro';
-  title: string;
-  description: string;
-  tone: RelatorioExecutivoTone;
-  href: string;
-  actionLabel: string;
-}
-
-export interface RelatorioExecutivoServico {
-  id: 'albergue' | 'creche' | 'financeiro';
-  title: string;
-  subtitle: string;
-  score: number;
-  status: string;
-  summary: string;
-  href: string;
-  kpis: RelatorioExecutivoKpi[];
-}
-
-export interface RelatorioExecutivoResponse {
-  scope: RelatorioExecutivoEscopo;
-  generatedAt: string;
-  period: PeriodoExecutivo;
-  headline: {
-    title: string;
-    summary: string;
-    status: string;
-    score: number;
-  };
-  kpis: RelatorioExecutivoKpi[];
-  services: RelatorioExecutivoServico[];
-  alerts: RelatorioExecutivoAlerta[];
-  reportBlocks: Array<{
-    id: string;
-    title: string;
-    description: string;
-    status: string;
-    href: string;
-  }>;
-}
-
 export interface RelatorioGestao360Response {
   scope: 'gestao360';
   generatedAt: string;
@@ -180,51 +112,6 @@ export interface RelatorioGestao360DrilldownResponse {
     base: string;
     confidence: Relatorio360Confidence;
   };
-}
-
-export interface AlbergueSnapshot {
-  totalVagas: number;
-  ocupadas: number;
-  checkinsPeriodo: number;
-  checkoutsPeriodo: number;
-  vencidas: number;
-  presencasPendentes: number;
-  pessoasUnicasPeriodo: number;
-}
-
-export interface CrecheSnapshot {
-  totalCriancas: number;
-  turmasAtivas: number;
-  frequenciaMedia: number;
-  semNis: number;
-  ingressosPeriodo: number;
-  riscoEvasao: number;
-}
-
-export interface FinanceiroSnapshot {
-  previsto: number;
-  realizado: number;
-  pendente: number;
-  desistencias: number;
-  valorDesistido: number;
-  retiradasPendentes: number;
-  retiradasConcluidas: number;
-  comandasPagas: number;
-}
-
-export interface FaixaEtariaRow {
-  faixa: string;
-  total: number | string;
-}
-
-export interface PdfAutoTableOptions {
-  head: string[][];
-  body: string[][];
-  startY: number;
-}
-
-export interface PdfWithAutoTable {
-  autoTable(options: PdfAutoTableOptions): void;
 }
 
 export const RELATORIO_360_METRICS: Relatorio360Metric[] = [
@@ -347,54 +234,6 @@ export const RELATORIO_360_COMPATIBILITY: Relatorio360Compatibility[] = [
   },
 ];
 
-export function getExecutivePeriod(value?: string): PeriodoExecutivo {
-  const escopo: RelatorioExecutivoPeriodo =
-    value === 'dia' || value === 'semana' || value === 'ano' ? value : 'mes';
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-
-  const inicio = new Date(hoje);
-  const fim = new Date(hoje);
-
-  if (escopo === 'dia') {
-    fim.setDate(hoje.getDate() + 1);
-  } else if (escopo === 'semana') {
-    inicio.setDate(hoje.getDate() - 6);
-    fim.setDate(hoje.getDate() + 1);
-  } else if (escopo === 'ano') {
-    inicio.setMonth(0, 1);
-    fim.setFullYear(hoje.getFullYear() + 1, 0, 1);
-  } else {
-    inicio.setDate(1);
-    fim.setMonth(hoje.getMonth() + 1, 1);
-  }
-
-  const labels: Record<RelatorioExecutivoPeriodo, string> = {
-    dia: 'Hoje',
-    semana: 'Últimos 7 dias',
-    mes: 'Mês atual',
-    ano: 'Ano atual',
-  };
-
-  return {
-    escopo,
-    inicio: formatDateShared(inicio),
-    fim: formatDateShared(fim),
-    label: labels[escopo],
-  };
-}
-
-export function formatDateShared(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-export function clampScore(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)));
-}
-
 export function racaCorSql(field: string) {
   return `
     CASE
@@ -421,26 +260,4 @@ export async function countSingle(
   } catch {
     return 0;
   }
-}
-
-export function getAllowedExecutiveScopes(actor: AuthUser | undefined): RelatorioExecutivoEscopo[] {
-  if (!actor) return [];
-
-  if (actor.role === UsuarioRole.GESTORA || actor.role === UsuarioRole.EQUIPE_TECNICA) {
-    return ['institucional', 'albergue', 'creche', 'financeiro'];
-  }
-
-  if (actor.role === UsuarioRole.COORDENADOR_ALBERGUE) {
-    return ['albergue'];
-  }
-
-  if (actor.role === UsuarioRole.COORDENADOR_CRECHE) {
-    return ['creche'];
-  }
-
-  if (actor.role === UsuarioRole.FINANCEIRO) {
-    return ['financeiro'];
-  }
-
-  return [];
 }

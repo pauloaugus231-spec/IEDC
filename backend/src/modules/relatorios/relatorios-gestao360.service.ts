@@ -2,28 +2,25 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
+import { type PeriodoExecutivo, type RelatorioExecutivoKpi, type SqlParam, getExecutivePeriod } from './relatorios-core-types';
 import {
-  PeriodoExecutivo,
-  Relatorio360ChartRow,
-  Relatorio360ChartType,
-  Relatorio360Compatibility,
-  Relatorio360Confidence,
-  Relatorio360Dimension,
-  Relatorio360DimensionId,
-  Relatorio360DrilldownRow,
-  Relatorio360Metric,
-  Relatorio360MetricId,
-  RelatorioExecutivoKpi,
-  RelatorioGestao360DrilldownResponse,
-  RelatorioGestao360Response,
+  type Relatorio360ChartRow,
+  type Relatorio360ChartType,
+  type Relatorio360Compatibility,
+  type Relatorio360Confidence,
+  type Relatorio360Dimension,
+  type Relatorio360DimensionId,
+  type Relatorio360DrilldownRow,
+  type Relatorio360Metric,
+  type Relatorio360MetricId,
+  type RelatorioGestao360DrilldownResponse,
+  type RelatorioGestao360Response,
   RELATORIO_360_COMPATIBILITY,
   RELATORIO_360_DIMENSIONS,
   RELATORIO_360_METRICS,
-  SqlParam,
   countSingle,
-  getExecutivePeriod,
   racaCorSql,
-} from './relatorios-shared';
+} from './relatorios-360-types';
 
 @Injectable()
 export class RelatoriosGestao360Service {

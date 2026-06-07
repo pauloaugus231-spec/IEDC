@@ -6,13 +6,8 @@ import { Estadia } from '../../entities/estadia.entity';
 import * as ExcelJS from 'exceljs';
 import * as jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import {
-  FaixaEtariaRow,
-  PdfWithAutoTable,
-  RelatorioFiltros,
-  RelatorioRow,
-  SqlParam,
-} from './relatorios-shared';
+import { RelatorioFiltros, SqlParam } from './relatorios-core-types';
+import { FaixaEtariaRow, PdfWithAutoTable, RelatorioRow } from './relatorios-albergue-types';
 
 @Injectable()
 export class RelatoriosAlbergueService {

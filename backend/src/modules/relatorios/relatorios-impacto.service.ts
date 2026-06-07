@@ -2,19 +2,21 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AuthUser } from '../../auth/auth.types';
 import {
-  AlbergueSnapshot,
-  CrecheSnapshot,
-  FinanceiroSnapshot,
-  PeriodoExecutivo,
-  RelatorioExecutivoAlerta,
-  RelatorioExecutivoEscopo,
-  RelatorioExecutivoKpi,
-  RelatorioExecutivoResponse,
-  RelatorioExecutivoServico,
+  type PeriodoExecutivo,
+  type RelatorioExecutivoEscopo,
+  type RelatorioExecutivoKpi,
+  getExecutivePeriod,
+} from './relatorios-core-types';
+import {
+  type AlbergueSnapshot,
+  type CrecheSnapshot,
+  type FinanceiroSnapshot,
+  type RelatorioExecutivoAlerta,
+  type RelatorioExecutivoResponse,
+  type RelatorioExecutivoServico,
   clampScore,
   getAllowedExecutiveScopes,
-  getExecutivePeriod,
-} from './relatorios-shared';
+} from './relatorios-impacto-types';
 
 @Injectable()
 export class RelatoriosImpactoService {

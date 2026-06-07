@@ -1,16 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { AuthUser } from '../../auth/auth.types';
-import {
-  RelatorioExecutivoResponse,
-  RelatorioFiltros,
-  RelatorioGestao360DrilldownResponse,
-  RelatorioGestao360Response,
-} from './relatorios-shared';
+import { type RelatorioFiltros } from './relatorios-core-types';
+import { type RelatorioExecutivoResponse } from './relatorios-impacto-types';
+import { type RelatorioGestao360DrilldownResponse, type RelatorioGestao360Response } from './relatorios-360-types';
 import { RelatoriosAlbergueService } from './relatorios-albergue.service';
 import { RelatoriosGestao360Service } from './relatorios-gestao360.service';
 import { RelatoriosImpactoService } from './relatorios-impacto.service';
 
-export type { RelatorioExecutivoEscopo, RelatorioFiltros } from './relatorios-shared';
+export type { RelatorioExecutivoEscopo, RelatorioFiltros } from './relatorios-core-types';
 
 @Injectable()
 export class RelatoriosService {
