@@ -18,7 +18,7 @@ import {
 import type { ImpactoDashboardData } from './impacto-types';
 
 type ImpactoDashboardProps = {
-  data: ImpactoDashboardData | undefined;
+  data: ImpactoDashboardData | null | undefined;
   loading: boolean;
   error: unknown;
   periodo: ImpactoSocialPeriodo;

@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMotion } from '../hooks/useMotion';
 
@@ -29,41 +29,49 @@ export function PageHeader({ eyebrow, title, description, actions, className, ch
   );
 }
 
-type MetricGridProps = HTMLAttributes<HTMLElement> & {
+type MetricGridProps = {
   children: ReactNode;
+  className?: string;
+  id?: string;
+  style?: CSSProperties;
 };
 
-export function MetricGrid({ children, className, ...props }: MetricGridProps) {
+export function MetricGrid({ children, className, id, style }: MetricGridProps) {
   const { containerVariants } = useMotion();
 
   return (
     <motion.section
       animate="animate"
       className={cx('ds-metric-grid', className)}
+      id={id}
       initial="initial"
+      style={style}
       variants={containerVariants}
-      {...props}
     >
       {children}
     </motion.section>
   );
 }
 
-type MetricCardProps = HTMLAttributes<HTMLElement> & {
+type MetricCardProps = {
   label: ReactNode;
   value: ReactNode;
   detail?: ReactNode;
   tone?: Tone;
+  className?: string;
+  id?: string;
+  style?: CSSProperties;
 };
 
-export function MetricCard({ label, value, detail, tone = 'default', className, ...props }: MetricCardProps) {
+export function MetricCard({ label, value, detail, tone = 'default', className, id, style }: MetricCardProps) {
   const { itemVariants } = useMotion();
 
   return (
     <motion.article
       className={cx('ds-metric-card', tone !== 'default' && tone, className)}
+      id={id}
+      style={style}
       variants={itemVariants}
-      {...props}
     >
       <span>{label}</span>
       <strong>{value}</strong>
@@ -108,14 +116,17 @@ export function TableShell({ children, className, ...props }: TableShellProps) {
   );
 }
 
-type ModalFrameProps = HTMLAttributes<HTMLDivElement> & {
+type ModalFrameProps = {
   title: ReactNode;
   subtitle?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  className?: string;
+  id?: string;
+  style?: CSSProperties;
 };
 
-export function ModalFrame({ title, subtitle, children, footer, className, ...props }: ModalFrameProps) {
+export function ModalFrame({ title, subtitle, children, footer, className, id, style }: ModalFrameProps) {
   const { modalVariants } = useMotion();
 
   return (
@@ -123,11 +134,12 @@ export function ModalFrame({ title, subtitle, children, footer, className, ...pr
       animate="animate"
       className={cx('ds-modal', className)}
       exit="exit"
+      id={id}
       initial="initial"
       role="dialog"
       aria-modal="true"
+      style={style}
       variants={modalVariants}
-      {...props}
     >
       <div className="ds-panel-head">
         <div>
@@ -192,15 +204,18 @@ export function ModalOverlay({ open, onClose, children, className }: ModalOverla
 
 // ── Slide panel (for drawer/side-panel patterns) ──
 
-type SlidePanelProps = HTMLAttributes<HTMLDivElement> & {
+type SlidePanelProps = {
   children: ReactNode;
+  className?: string;
+  id?: string;
+  style?: CSSProperties;
 };
 
 /**
  * A panel that slides in from the right. Must be placed inside
  * an `AnimatePresence` or `ModalOverlay` to animate out on exit.
  */
-export function SlidePanel({ children, className, ...props }: SlidePanelProps) {
+export function SlidePanel({ children, className, id, style }: SlidePanelProps) {
   const { slideVariants } = useMotion();
 
   return (
@@ -208,11 +223,12 @@ export function SlidePanel({ children, className, ...props }: SlidePanelProps) {
       animate="animate"
       className={cx('ds-modal', className)}
       exit="exit"
+      id={id}
       initial="initial"
       role="dialog"
       aria-modal="true"
+      style={style}
       variants={slideVariants}
-      {...props}
     >
       {children}
     </motion.div>
