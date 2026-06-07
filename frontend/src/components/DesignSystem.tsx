@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useMotion } from '../hooks/useMotion';
 
 type Tone = 'default' | 'success' | 'warning' | 'danger' | 'muted';
@@ -116,8 +116,19 @@ type ModalFrameProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 export function ModalFrame({ title, subtitle, children, footer, className, ...props }: ModalFrameProps) {
+  const { modalVariants } = useMotion();
+
   return (
-    <div className={cx('ds-modal', className)} role="dialog" aria-modal="true" {...props}>
+    <motion.div
+      animate="animate"
+      className={cx('ds-modal', className)}
+      exit="exit"
+      initial="initial"
+      role="dialog"
+      aria-modal="true"
+      variants={modalVariants}
+      {...props}
+    >
       <div className="ds-panel-head">
         <div>
           <h2 className="section-title">{title}</h2>
@@ -126,7 +137,85 @@ export function ModalFrame({ title, subtitle, children, footer, className, ...pr
       </div>
       {children}
       {footer ? <div className="ds-modal-actions">{footer}</div> : null}
-    </div>
+    </motion.div>
+  );
+}
+
+// ── Backdrop / overlay (pairs with ModalFrame or standalone modals) ──
+
+const BACKDROP_VARIANTS = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.22 } },
+  exit: { opacity: 0, transition: { duration: 0.16 } },
+};
+
+type ModalOverlayProps = {
+  open: boolean;
+  onClose?: () => void;
+  children: ReactNode;
+  className?: string;
+};
+
+/**
+ * Animated modal backdrop with `AnimatePresence`. Renders a
+ * blurred overlay that fades in/out, and passes `exit` props
+ * down so child `ModalFrame` animates out correctly.
+ *
+ * ```tsx
+ * <ModalOverlay open={showModal} onClose={() => setShowModal(false)}>
+ *   <ModalFrame title="...">...</ModalFrame>
+ * </ModalOverlay>
+ * ```
+ */
+export function ModalOverlay({ open, onClose, children, className }: ModalOverlayProps) {
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          animate="animate"
+          className={cx('ds-modal-backdrop', className)}
+          exit="exit"
+          initial="initial"
+          onClick={onClose}
+          role="presentation"
+          variants={BACKDROP_VARIANTS}
+        >
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+          <div onClick={(e) => e.stopPropagation()}>
+            {children}
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+// ── Slide panel (for drawer/side-panel patterns) ──
+
+type SlidePanelProps = HTMLAttributes<HTMLDivElement> & {
+  children: ReactNode;
+};
+
+/**
+ * A panel that slides in from the right. Must be placed inside
+ * an `AnimatePresence` or `ModalOverlay` to animate out on exit.
+ */
+export function SlidePanel({ children, className, ...props }: SlidePanelProps) {
+  const { slideVariants } = useMotion();
+
+  return (
+    <motion.div
+      animate="animate"
+      className={cx('ds-modal', className)}
+      exit="exit"
+      initial="initial"
+      role="dialog"
+      aria-modal="true"
+      variants={slideVariants}
+      {...props}
+    >
+      {children}
+    </motion.div>
   );
 }
 
