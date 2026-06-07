@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
 import { BarChart, LineChart, PieChart, RadarChart, type BarSeriesOption, type LineSeriesOption, type PieSeriesOption, type RadarSeriesOption } from 'echarts/charts';
 import {
   AriaComponent,
@@ -56,54 +57,47 @@ type EChartCanvasProps = {
 };
 
 export default function EChartCanvas({ ariaLabel, className, onDataClick, onReady, option }: EChartCanvasProps) {
-  const elementRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<EChartsInstance | null>(null);
+  const handleChartReady = useCallback(
+    (chart: EChartsInstance) => {
+      onReady?.(chart);
+    },
+    [onReady],
+  );
 
   useEffect(() => {
-    if (!elementRef.current) return undefined;
-
-    const chart = echarts.init(elementRef.current, undefined, { renderer: 'canvas' });
-    chartRef.current = chart;
-    onReady?.(chart);
-
-    const observer = new ResizeObserver(() => chart.resize());
-    observer.observe(elementRef.current);
-
     return () => {
-      observer.disconnect();
       onReady?.(null);
-      chart.dispose();
-      chartRef.current = null;
     };
   }, [onReady]);
 
-  useEffect(() => {
-    chartRef.current?.setOption(option, { lazyUpdate: true, notMerge: false });
-  }, [option]);
-
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || !onDataClick) return undefined;
-
-    const handler = (params: unknown) => {
-      if (typeof params === 'object' && params && 'dataIndex' in params) {
-        const p = params as { dataIndex?: number; seriesIndex?: number; name?: string };
-        const dataIndex = Number(p.dataIndex);
+  const emptyEvents: Record<string, (params: Record<string, unknown>) => void> = {};
+  const events = useMemo(() => {
+    if (!onDataClick) return emptyEvents;
+    return {
+      click: (params: Record<string, unknown>) => {
+        const dataIndex = Number(params.dataIndex ?? 0);
         if (Number.isFinite(dataIndex)) {
           onDataClick({
             dataIndex,
-            seriesIndex: Number(p.seriesIndex ?? 0),
-            name: String(p.name ?? ''),
+            seriesIndex: Number(params.seriesIndex ?? 0),
+            name: String(params.name ?? ''),
           });
         }
-      }
-    };
-
-    chart.on('click', handler);
-    return () => {
-      chart.off('click', handler);
+      },
     };
   }, [onDataClick]);
 
-  return <div aria-label={ariaLabel} className={className} ref={elementRef} role="img" style={{ width: '100%', height: '100%' }} />;
+  return (
+    <div aria-label={ariaLabel} className={className} role="img" style={{ width: '100%', height: '100%' }}>
+      <ReactEChartsCore
+        echarts={echarts}
+        lazyUpdate
+        notMerge={false}
+        onChartReady={handleChartReady}
+        onEvents={events}
+        option={option}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
+  );
 }

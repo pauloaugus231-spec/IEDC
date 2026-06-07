@@ -1,19 +1,6 @@
-import { BarChart, LineChart, type BarSeriesOption, type LineSeriesOption } from 'echarts/charts';
-import {
-  AriaComponent,
-  GridComponent,
-  LegendComponent,
-  TooltipComponent,
-  type AriaComponentOption,
-  type GridComponentOption,
-  type LegendComponentOption,
-  type TooltipComponentOption,
-} from 'echarts/components';
-import { graphic, type ComposeOption } from 'echarts/core';
-import * as echarts from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
+import { graphic } from 'echarts/core';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getRelatorioFinanceiroDrilldown,
   useRelatorioFinanceiro,
@@ -22,11 +9,10 @@ import {
   type RelatorioFinanceiroDrilldown,
   type RelatorioFinanceiroValor,
 } from '../api';
+import EChartCanvas, { type EChartsInstance, type IEDCChartOption } from '../components/EChartCanvas';
 import { BarChart2, Download, RefreshCw, X } from '../components/Icons';
 import { useLojasRealtime } from '../hooks/useLojasRealtime';
 import '../styles/financial-report.css';
-
-echarts.use([AriaComponent, BarChart, CanvasRenderer, GridComponent, LegendComponent, LineChart, TooltipComponent]);
 
 const periodOptions: { label: string; value: LojasPeriodo }[] = [
   { label: 'Dia', value: 'dia' },
@@ -42,18 +28,6 @@ const chartModes = [
 ] as const;
 
 type ChartMode = (typeof chartModes)[number]['value'];
-type EChartsInstance = ReturnType<typeof echarts.init>;
-type FinancialChartOption = ComposeOption<
-  AriaComponentOption | BarSeriesOption | GridComponentOption | LegendComponentOption | LineSeriesOption | TooltipComponentOption
->;
-
-type EChartCanvasProps = {
-  ariaLabel: string;
-  className?: string;
-  onDataClick?: (dataIndex: number) => void;
-  onReady?: (chart: EChartsInstance | null) => void;
-  option: FinancialChartOption;
-};
 
 const currency = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -66,52 +40,6 @@ const chartColors = {
   realizado: '#0041aa',
   desistencias: '#b42318',
 };
-
-function EChartCanvas({ ariaLabel, className, onDataClick, onReady, option }: EChartCanvasProps) {
-  const elementRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<EChartsInstance | null>(null);
-
-  useEffect(() => {
-    if (!elementRef.current) return undefined;
-
-    const chart = echarts.init(elementRef.current, undefined, { renderer: 'canvas' });
-    chartRef.current = chart;
-    onReady?.(chart);
-
-    const observer = new ResizeObserver(() => chart.resize());
-    observer.observe(elementRef.current);
-
-    return () => {
-      observer.disconnect();
-      onReady?.(null);
-      chart.dispose();
-      chartRef.current = null;
-    };
-  }, [onReady]);
-
-  useEffect(() => {
-    chartRef.current?.setOption(option, { lazyUpdate: true, notMerge: false });
-  }, [option]);
-
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart || !onDataClick) return undefined;
-
-    const handler = (params: unknown) => {
-      if (typeof params === 'object' && params && 'dataIndex' in params) {
-        const dataIndex = Number((params as { dataIndex?: number }).dataIndex);
-        if (Number.isFinite(dataIndex)) onDataClick(dataIndex);
-      }
-    };
-
-    chart.on('click', handler);
-    return () => {
-      chart.off('click', handler);
-    };
-  }, [onDataClick]);
-
-  return <div aria-label={ariaLabel} className={className} ref={elementRef} role="img" />;
-}
 
 function formatValue(value: number, format: RelatorioFinanceiroValor['format']) {
   if (format === 'currency') return currency.format(value);
@@ -154,7 +82,7 @@ function statusLabel(status: string) {
   return labels[status] || status;
 }
 
-function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'], mode: ChartMode, periodo: LojasPeriodo): FinancialChartOption {
+function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'], mode: ChartMode, periodo: LojasPeriodo): IEDCChartOption {
   const tooltipBase = {
     backgroundColor: '#ffffff',
     borderColor: '#d8e4f2',
@@ -185,7 +113,7 @@ function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'
       top: 36,
     },
     tooltip: tooltipBase,
-  } satisfies FinancialChartOption;
+  } satisfies IEDCChartOption;
 
   if (!data) {
     return {
@@ -441,7 +369,7 @@ const FinancialReportPage = () => {
     void openDrilldown('status', 'realizado');
   }, [data, drilldown, openDrilldown]);
 
-  const handleChartClick = useCallback((dataIndex: number) => {
+  const handleChartClick = useCallback(({ dataIndex }: { dataIndex: number }) => {
     if (!data) return;
 
     if (chartMode === 'lojas') {
