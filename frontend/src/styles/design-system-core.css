@@ -592,6 +592,9 @@
 }
 
 .ds-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-height: 126px;
   border: 1px solid rgba(0, 65, 170, 0.1);
   border-radius: var(--iedc-radius-lg);
@@ -601,15 +604,23 @@
   padding: 18px;
 }
 
-.ds-metric-card span,
-.ds-metric-card small {
+.ds-metric-card span {
+  font-size: 12px;
+  font-weight: 800;
   color: var(--iedc-muted);
-  font-weight: 850;
+}
+
+.ds-metric-card small {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--iedc-muted);
+  line-height: 1.4;
 }
 
 .ds-metric-card strong {
   color: var(--iedc-blue-800);
   font-size: clamp(30px, 3vw, 42px);
+  font-weight: 900;
   line-height: 1;
 }
 
@@ -668,7 +679,7 @@
 .ds-toolbar.audit-toolbar label {
   color: #29354a;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0.01em;
 }
 
