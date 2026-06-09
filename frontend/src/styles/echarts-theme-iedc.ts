@@ -82,19 +82,36 @@ export const TOOLTIP_STYLE = {
   },
 };
 
+export function formatCurrencyAxis(value: number) {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+
+  if (abs >= 1_000_000) {
+    const compact = abs / 1_000_000;
+    return `${sign}R$ ${compact.toLocaleString('pt-BR', { maximumFractionDigits: compact >= 10 ? 0 : 1 })} mi`;
+  }
+
+  if (abs >= 1_000) {
+    const compact = abs / 1_000;
+    return `${sign}R$ ${compact.toLocaleString('pt-BR', { maximumFractionDigits: compact >= 10 ? 0 : 1 })} mil`;
+  }
+
+  return `${sign}R$ ${abs.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`;
+}
+
 // --- Shared axis/grid defaults ---
 export const AXIS_LABEL_STYLE = {
   color: IEDC_MUTED,
   fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
   fontSize: 11,
-  fontWeight: 700 as const,
+  fontWeight: 650 as const,
 };
 
 export const AXIS_LABEL_DARK = {
   ...AXIS_LABEL_STYLE,
   color: IEDC_TEXT,
   fontSize: 12,
-  fontWeight: 800 as const,
+  fontWeight: 750 as const,
 };
 
 export const GRID_LINE_STYLE = {
@@ -111,7 +128,7 @@ export const LEGEND_STYLE = {
     color: '#526174',
     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
     fontSize: 12,
-    fontWeight: 800 as const,
+    fontWeight: 750 as const,
   },
 };
 

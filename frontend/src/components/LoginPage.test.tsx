@@ -116,9 +116,9 @@ describe('LoginPage', () => {
     // Primeiro fetch: /api/auth/profiles → fallback (nok)
     // Segundo fetch: /api/auth/login → sucesso com usuário gestora
     // Terceiro fetch: /api/auth/me → sucesso
-    let fetchCallCount = 0;
+    let _fetchCallCount = 0;
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-      fetchCallCount++;
+      _fetchCallCount++;
       if (typeof url === 'string' && url.includes('/api/auth/login')) {
         return Promise.resolve({
           ok: true,

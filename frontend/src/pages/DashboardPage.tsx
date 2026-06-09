@@ -4,7 +4,7 @@ import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { PageHeader } from '../components/DesignSystem';
 import PessoaCasaModal from '../components/PessoaCasaModal';
 import PresenceFloater from '../components/PresenceFloater';
-import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, IEDC_TEXT } from '../styles/echarts-theme-iedc';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE } from '../styles/echarts-theme-iedc';
 import { clearTriagemCensoStorage, getTriagemCensoStorageState } from '../utils';
 
 // --- INTERFACES ---
@@ -111,7 +111,7 @@ const DashboardPage = () => {
   const totalVagas = ocupacao?.total.total ?? 0;
   const ocupacaoPercent = totalVagas > 0 ? Math.round((totalOcupadas / totalVagas) * 100) : 0;
 
-  const maiorCapacidadeHistorica = Math.max(totalVagas, ...historyData.map((item) => item.total), 1);
+  const maiorOcupacaoHistorica = Math.max(...historyData.map((item) => item.ocupadas), totalOcupadas, 1);
   const maiorIngressoHistorico = Math.max(...historyData.map((item) => item.ingressos), 0);
 
   const labels = useMemo(
@@ -136,15 +136,14 @@ const DashboardPage = () => {
           for (const item of items) {
             const name = item.seriesName ?? '';
             if (name === 'Ocupação') html += `<br/>Ocupação: ${item.value} ocupadas`;
-            else if (name === 'Capacidade máxima') html += `<br/>Capacidade máxima: ${item.value} camas`;
             else if (name === 'Novos ingressos') html += `<br/>Novos ingressos: ${item.value}`;
           }
-          if (point) html += `<br/>${point.percentual}% de ocupação no dia`;
+          if (point) html += `<br/>${point.percentual}% de ocupação · capacidade ${point.total} camas`;
           return html;
         },
       },
       legend: { show: false },
-      grid: { left: 46, right: 52, top: 12, bottom: 28, containLabel: false },
+      grid: { left: 40, right: 48, top: 18, bottom: 32, containLabel: false },
       xAxis: {
         type: 'category',
         data: labels,
@@ -156,7 +155,7 @@ const DashboardPage = () => {
         {
           type: 'value',
           min: 0,
-          max: Math.ceil(maiorCapacidadeHistorica * 1.08),
+          max: Math.max(5, Math.ceil(maiorOcupacaoHistorica * 1.4)),
           splitLine: { lineStyle: GRID_LINE_STYLE },
           axisLabel: AXIS_LABEL_STYLE,
         },
@@ -182,16 +181,6 @@ const DashboardPage = () => {
         },
         {
           type: 'line',
-          name: 'Capacidade máxima',
-          data: historyData.map((item) => item.total || totalVagas),
-          yAxisIndex: 0,
-          lineStyle: { color: IEDC_TEXT, width: 2, type: [7, 6] },
-          symbol: 'none',
-          smooth: false,
-          animationDuration: 1000,
-        },
-        {
-          type: 'line',
           name: 'Novos ingressos',
           data: historyData.map((item) => item.ingressos),
           yAxisIndex: 1,
@@ -203,7 +192,7 @@ const DashboardPage = () => {
         },
       ],
     }),
-    [historyData, totalVagas, labels, maiorCapacidadeHistorica, maiorIngressoHistorico],
+    [historyData, labels, maiorOcupacaoHistorica, maiorIngressoHistorico],
   );
 
   return (
@@ -267,7 +256,7 @@ const DashboardPage = () => {
                     <div>
                         <h3>Histórico de ocupação</h3>
                         <p>
-                            Ocupadas, capacidade máxima e novos ingressos por plantão.
+                            Ocupadas e novos ingressos por plantão, com capacidade como referência.
                         </p>
                     </div>
                     <div className="albergue-chart-period">
@@ -291,7 +280,7 @@ const DashboardPage = () => {
                         Ocupação
                     </span>
                     <span>
-                        <i className="legend-line capacity" />
+                        <i className="legend-dot capacity-context" />
                         Capacidade {totalVagas}
                     </span>
                     <span>

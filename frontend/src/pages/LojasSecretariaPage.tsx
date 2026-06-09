@@ -13,7 +13,7 @@ import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import { useAuth } from '../context/AuthContext';
 import { useLojasRealtime, type LojasRealtimeEvent } from '../hooks/useLojasRealtime';
-import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, LEGEND_STYLE, IEDC_BLUE_800 } from '../styles/echarts-theme-iedc';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, LEGEND_STYLE, IEDC_BLUE_800, formatCurrencyAxis } from '../styles/echarts-theme-iedc';
 import '../styles/institutional.css';
 
 const currency = new Intl.NumberFormat('pt-BR', {
@@ -201,7 +201,7 @@ const LojasSecretariaPage = ({
         },
       },
       legend: { bottom: 0, ...LEGEND_STYLE },
-      grid: { left: 64, right: 16, top: 12, bottom: 42, containLabel: false },
+      grid: { left: 56, right: 18, top: 18, bottom: 44, containLabel: false },
       xAxis: {
         type: 'category',
         data: serieLabels,
@@ -211,8 +211,9 @@ const LojasSecretariaPage = ({
       },
       yAxis: {
         type: 'value',
+        splitNumber: 4,
         splitLine: { lineStyle: GRID_LINE_STYLE },
-        axisLabel: { ...AXIS_LABEL_STYLE, formatter: (value: number) => currency.format(value) },
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: (value: number) => formatCurrencyAxis(value) },
       },
       series: [
         {

@@ -61,6 +61,57 @@ Documentos de frentes removidas ou fora do escopo ficam em:
 
 `docs/archive`
 
+## Deploy no servidor
+
+### Primeiro boot
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/pauloaugus231-spec/IEDC.git
+cd IEDC
+
+# 2. Crie o arquivo de ambiente a partir do exemplo
+cp .env.docker.example .env
+# Edite .env e preencha POSTGRES_PASSWORD, JWT_SECRET e IEDC_DEFAULT_PASSWORD
+
+# 3. Suba os containers
+docker compose up -d --build
+```
+
+O backend aplica as migrations automaticamente no primeiro boot. No banco novo, apenas o usuario `suporte` e criado (senha = `IEDC_DEFAULT_PASSWORD`).
+
+### Atualizacao automatica as 00h
+
+Para que o servidor atualize automaticamente quando uma nova versao for publicada no GitHub:
+
+```bash
+# Configure o cron (execute como o usuario que tem acesso ao Docker)
+crontab -e
+```
+
+Adicione a linha:
+
+```
+0 0 * * * /caminho/para/IEDC/ops/deploy.sh >> /var/log/iedc-deploy.log 2>&1
+```
+
+Substitua `/caminho/para/IEDC` pelo caminho real do repositorio no servidor.
+
+O script so reconstroi se houver commit novo. Se o sistema ja esta atualizado, ele registra isso no log e sai sem fazer nada.
+
+### Rotacao de log (opcional)
+
+```bash
+# /etc/logrotate.d/iedc-deploy
+/var/log/iedc-deploy.log {
+    weekly
+    rotate 8
+    compress
+    missingok
+    notifempty
+}
+```
+
 ## Documentos operacionais da V1
 
 - `docs/qa/V1_PROFILE_QA_2026-05-28.md`

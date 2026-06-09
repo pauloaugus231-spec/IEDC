@@ -10,14 +10,14 @@
   margin: 0;
   color: var(--iedc-text);
   font-size: 16px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .albergue-chart-head p {
   margin: 4px 0 0;
   color: var(--iedc-muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .albergue-chart-period {
@@ -25,7 +25,7 @@
   background: var(--iedc-blue-100);
   color: var(--iedc-blue-900);
   font-size: 11px;
-  font-weight: 950;
+  font-weight: 900;
   padding: 6px 10px;
   white-space: nowrap;
 }
@@ -37,7 +37,7 @@
 }
 
 .albergue-chart-canvas {
-  height: 218px;
+  height: 250px;
 }
 
 .albergue-report-chart-box.centered {
@@ -50,7 +50,7 @@
   min-height: 160px;
   place-items: center;
   color: var(--iedc-muted);
-  font-weight: 850;
+  font-weight: 800;
   text-align: center;
 }
 
@@ -62,7 +62,7 @@
   margin-top: 14px;
   color: var(--iedc-muted);
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .albergue-chart-legend span {
@@ -84,6 +84,11 @@
 
 .legend-dot.occupancy {
   background: #2563eb;
+}
+
+.legend-dot.capacity-context {
+  border: 2px solid var(--iedc-text);
+  background: transparent;
 }
 
 .legend-line {
@@ -110,7 +115,7 @@
   margin-bottom: 8px;
   color: rgba(255, 255, 255, 0.74);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .albergue-occupancy-ring {
@@ -134,7 +139,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 24px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .albergue-occupancy-stats {
@@ -180,7 +185,7 @@
 .albergue-exit-title {
   color: #7f1d1d;
   font-size: 18px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1.2;
 }
 
@@ -188,7 +193,7 @@
   margin-top: 4px;
   color: #991b1b;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .albergue-exit-number {
@@ -207,7 +212,7 @@
   margin-top: 8px;
   color: #991b1b;
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -239,7 +244,7 @@
   margin-bottom: 5px;
   color: #29354a;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .albergue-filter-grid input,
@@ -303,7 +308,7 @@
 .albergue-age-row em {
   color: var(--iedc-text);
   font-style: normal;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .albergue-report-chart-grid {
@@ -315,6 +320,8 @@
 
 .albergue-report-table {
   max-height: 420px;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .albergue-report-table .report-table {
@@ -323,7 +330,7 @@
 
 .albergue-report-table .report-table td:first-child {
   color: var(--iedc-text);
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .albergue-report-table .report-table td:nth-child(2) {
@@ -338,7 +345,7 @@
   align-items: center;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1;
   padding: 5px 8px;
 }

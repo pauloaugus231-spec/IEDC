@@ -11,7 +11,7 @@ import {
 } from '../api';
 import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
-import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, AXIS_LABEL_DARK, GRID_LINE_STYLE, LEGEND_STYLE, IEDC_BLUE_800 } from '../styles/echarts-theme-iedc';
+import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, AXIS_LABEL_DARK, GRID_LINE_STYLE, LEGEND_STYLE, IEDC_BLUE_800, formatCurrencyAxis } from '../styles/echarts-theme-iedc';
 import '../styles/institutional.css';
 
 const currency = new Intl.NumberFormat('pt-BR', {
@@ -111,6 +111,13 @@ const InstitutionalDashboardPage = () => {
     }),
     [ocupacaoHistorico, periodoOcupacao],
   );
+  const ocupacaoPercentuais = ocupacaoHistorico.map((point) => point.percentual);
+  const maiorOcupacaoPercentual = ocupacaoPercentuais.length ? Math.max(...ocupacaoPercentuais) : ocupacaoPercentual;
+  const ocupacaoBaixoSinal = ocupacaoPercentuais.length > 0 && maiorOcupacaoPercentual <= 3;
+  const ocupacaoBaixoSinalLabel = ocupacaoHistoricaOcupadas === 1
+    ? 'cama ocupada no período analisado'
+    : 'camas ocupadas no período analisado';
+  const frequenciaComSinal = turmasCreche.some((turma) => turma.frequencia > 0);
 
   const ocupacaoLineOption = useMemo<IEDCChartOption>(
     () => ({
@@ -124,7 +131,7 @@ const InstitutionalDashboardPage = () => {
           return `${p.name}<br/>${p.value}% de ocupação${extra}`;
         },
       },
-      grid: { left: 46, right: 16, top: 12, bottom: 28, containLabel: false },
+      grid: { left: 42, right: 18, top: 12, bottom: 30, containLabel: false },
       xAxis: {
         type: 'category',
         data: ocupacaoLineLabels,
@@ -169,7 +176,7 @@ const InstitutionalDashboardPage = () => {
           return `${p.name}<br/>${p.value}% de frequência${extra}`;
         },
       },
-      grid: { left: 8, right: 16, top: 8, bottom: 8, containLabel: true },
+      grid: { left: 8, right: 16, top: 10, bottom: 10, containLabel: true },
       xAxis: {
         type: 'value',
         min: 0,
@@ -217,7 +224,7 @@ const InstitutionalDashboardPage = () => {
         },
       },
       legend: { bottom: 0, ...LEGEND_STYLE },
-      grid: { left: 64, right: 16, top: 12, bottom: 42, containLabel: false },
+      grid: { left: 56, right: 18, top: 18, bottom: 44, containLabel: false },
       xAxis: {
         type: 'category',
         data: lojas.map((loja) => loja.nome),
@@ -227,8 +234,9 @@ const InstitutionalDashboardPage = () => {
       },
       yAxis: {
         type: 'value',
+        splitNumber: 4,
         splitLine: { lineStyle: GRID_LINE_STYLE },
-        axisLabel: { ...AXIS_LABEL_STYLE, formatter: (value: number) => currency.format(value) },
+        axisLabel: { ...AXIS_LABEL_STYLE, formatter: (value: number) => formatCurrencyAxis(value) },
       },
       series: [
         {
@@ -368,7 +376,13 @@ const InstitutionalDashboardPage = () => {
               </span>
             </div>
             <div className="executive-line-chart">
-              {ocupacaoHistorico.length > 0 ? (
+              {ocupacaoBaixoSinal ? (
+                <div className="executive-low-signal">
+                  <strong>{ocupacaoHistoricaOcupadas}</strong>
+                  <span>{ocupacaoBaixoSinalLabel}</span>
+                  <em>{ocupacaoHistoricaTotal ? `${Math.max(ocupacaoHistoricaTotal - ocupacaoHistoricaOcupadas, 0)} vagas livres` : 'Capacidade aguardando leitura'}</em>
+                </div>
+              ) : ocupacaoHistorico.length > 0 ? (
                 <EChartCanvas ariaLabel="Gráfico de ocupação do albergue" option={ocupacaoLineOption} />
               ) : (
                 <div className="executive-empty-chart">
@@ -388,11 +402,13 @@ const InstitutionalDashboardPage = () => {
             <strong className="executive-frequency-total">{frequenciaMedia}%</strong>
             <span className="executive-frequency-label">média geral no mês</span>
             <div className="executive-side-bar-chart">
-              {turmasCreche.length > 0 ? (
+              {turmasCreche.length > 0 && frequenciaComSinal ? (
                 <EChartCanvas ariaLabel="Frequência por turma da E.E.I." option={frequenciaTurmasOption} />
               ) : (
-                <div className="executive-empty-chart executive-empty-chart-compact">
-                  Sem frequência da E.E.I. no período
+                <div className="executive-low-signal executive-low-signal-compact">
+                  <strong>{totalCriancas}</strong>
+                  <span>crianças ativas na base</span>
+                  <em>{turmasCreche.length > 0 ? 'Sem frequência registrada no mês' : 'Sem turmas registradas no período'}</em>
                 </div>
               )}
             </div>

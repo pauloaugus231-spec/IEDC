@@ -12,6 +12,7 @@ import {
 import EChartCanvas, { type EChartsInstance, type IEDCChartOption } from '../components/EChartCanvas';
 import { BarChart2, Download, RefreshCw, X } from '../components/Icons';
 import { useLojasRealtime } from '../hooks/useLojasRealtime';
+import { formatCurrencyAxis } from '../styles/echarts-theme-iedc';
 import '../styles/financial-report.css';
 
 const periodOptions: { label: string; value: LojasPeriodo }[] = [
@@ -129,7 +130,7 @@ function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'
 
     return {
       ...common,
-      grid: { ...common.grid, left: 86, top: 26 },
+      grid: { ...common.grid, left: 78, top: 26 },
       tooltip: {
         ...tooltipBase,
         formatter: (params: unknown) => {
@@ -151,11 +152,12 @@ function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'
       xAxis: {
         axisLabel: {
           color: '#617089',
-          formatter: (value: number) => currency.format(Number(value)),
+          formatter: (value: number) => formatCurrencyAxis(Number(value)),
         },
         axisLine: { show: false },
         axisTick: { show: false },
         splitLine: { lineStyle: { color: '#edf3f8' } },
+        splitNumber: 4,
         type: 'value',
       },
       yAxis: {
@@ -223,11 +225,12 @@ function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'
       yAxis: {
         axisLabel: {
           color: '#617089',
-          formatter: (value: number) => currency.format(Number(value)),
+          formatter: (value: number) => formatCurrencyAxis(Number(value)),
         },
         axisLine: { show: false },
         axisTick: { show: false },
         splitLine: { lineStyle: { color: '#edf3f8' } },
+        splitNumber: 4,
         type: 'value',
       },
       series: [
@@ -290,11 +293,12 @@ function buildChartOption(data: ReturnType<typeof useRelatorioFinanceiro>['data'
     yAxis: {
       axisLabel: {
         color: '#617089',
-        formatter: (value: number) => currency.format(Number(value)),
+        formatter: (value: number) => formatCurrencyAxis(Number(value)),
       },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: '#edf3f8' } },
+      splitNumber: 4,
       type: 'value',
     },
     series: [

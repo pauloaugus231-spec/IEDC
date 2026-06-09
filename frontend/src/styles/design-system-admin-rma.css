@@ -51,7 +51,7 @@
   margin: 0;
   color: var(--iedc-text);
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -62,7 +62,7 @@
   color: var(--iedc-blue-800);
   background: var(--iedc-blue-100);
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
   padding: 4px 8px;
   text-align: center;
 }
@@ -126,7 +126,7 @@
   border: 1px solid transparent;
   border-radius: 999px;
   font-size: 10px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0.04em;
   padding: 5px 8px;
   text-transform: uppercase;
@@ -206,7 +206,7 @@
   overflow: hidden;
   color: var(--iedc-subtle);
   font-size: 10px;
-  font-weight: 850;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -240,7 +240,7 @@
   cursor: pointer;
   font: inherit;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   padding: 7px 10px;
   transition:
     background-color var(--iedc-motion-fast) var(--iedc-ease),
@@ -282,7 +282,7 @@
   margin: 0 0 12px;
   color: var(--iedc-text);
   font-size: 13px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .admin-scale-day.today h3 {
@@ -294,7 +294,7 @@
   background: var(--iedc-blue-800);
   color: #ffffff;
   font-size: 10px;
-  font-weight: 950;
+  font-weight: 900;
   padding: 3px 8px;
   text-transform: uppercase;
 }
@@ -328,7 +328,7 @@
   background: var(--iedc-amber-700);
   color: #ffffff;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .admin-shift-avatar.night {
@@ -338,13 +338,13 @@
 .admin-shift-name {
   color: var(--iedc-text);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .admin-shift-period {
   color: var(--iedc-muted);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .rma-page {
@@ -426,7 +426,7 @@
 .rma-upload-zone small {
   color: var(--iedc-muted);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .rma-upload-action {
@@ -635,14 +635,14 @@
   margin: 0 0 5px;
   color: var(--iedc-text);
   font-size: clamp(22px, 2.2vw, 30px);
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .rma-result-banner p {
   margin: 0;
   color: var(--iedc-muted);
   font-size: 15px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .rma-result-banner > strong {
@@ -683,7 +683,7 @@
   margin: 0;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
   padding: 7px 11px;
   text-transform: uppercase;
 }

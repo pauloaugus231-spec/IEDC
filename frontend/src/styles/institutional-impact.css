@@ -55,7 +55,7 @@
 .impact-hero p:not(.institutional-eyebrow) {
   color: rgba(255, 255, 255, 0.82);
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.7;
   margin-top: 16px;
   max-width: 760px;
@@ -100,7 +100,7 @@
 .impact-toolbar span {
   color: #68778e;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .impact-period-tabs,
@@ -144,14 +144,14 @@
   color: #68778e;
   display: block;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .impact-kpis strong {
   color: #0041aa;
   display: block;
   font-size: 40px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1;
   margin: 10px 0;
 }
@@ -202,7 +202,7 @@
   color: #68778e;
   display: block;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   margin-top: 5px;
 }
 
@@ -269,7 +269,7 @@
   color: #0041aa;
   display: inline-flex;
   font-size: 18px;
-  font-weight: 950;
+  font-weight: 900;
   gap: 5px;
   justify-self: end;
   white-space: nowrap;
@@ -367,7 +367,7 @@
 .impact-donut-center strong {
   color: #0041aa;
   font-size: 38px;
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1;
 }
 
@@ -418,7 +418,7 @@
   color: #526178;
   display: flex;
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
   gap: 7px;
   line-height: 1.25;
   min-width: 0;
@@ -439,7 +439,7 @@
   border-radius: 18px;
   color: #68778e;
   display: flex;
-  font-weight: 850;
+  font-weight: 800;
   height: 100%;
   justify-content: center;
 }
@@ -465,7 +465,7 @@
   border-radius: 12px;
   color: #0041aa;
   display: flex;
-  font-weight: 950;
+  font-weight: 900;
   height: 34px;
   justify-content: center;
   width: 34px;
@@ -478,7 +478,7 @@
 
 .impact-ranking p {
   color: #263247;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .impact-ranking strong {
@@ -589,7 +589,7 @@
 .impact-modal header span {
   color: #ffc857;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -694,7 +694,7 @@
   display: flex;
   flex: 0 0 auto;
   font-size: 13px;
-  font-weight: 950;
+  font-weight: 900;
   height: 44px;
   justify-content: center;
   width: 44px;
@@ -714,7 +714,7 @@
 .impact-form-section-title p {
   color: #68778e;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   margin-top: 5px;
 }
 
@@ -755,7 +755,7 @@
   color: #263247;
   display: flex;
   font-size: 13px;
-  font-weight: 950;
+  font-weight: 900;
   gap: 10px;
   line-height: 1.35;
 }
@@ -770,7 +770,7 @@
   flex: 0 0 auto;
   font-size: 11px;
   font-style: normal;
-  font-weight: 950;
+  font-weight: 900;
   height: 24px;
   justify-content: center;
   min-width: 24px;
@@ -829,14 +829,14 @@
 .impact-question-fieldset legend strong {
   color: #263247;
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .impact-question-fieldset legend em {
   color: #68778e;
   font-size: 12px;
   font-style: normal;
-  font-weight: 750;
+  font-weight: 700;
   grid-column: 2;
 }
 
@@ -856,7 +856,7 @@
   cursor: pointer;
   display: flex;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   gap: 10px;
   line-height: 1.28;
   min-height: 44px;

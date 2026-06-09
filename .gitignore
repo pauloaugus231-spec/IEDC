@@ -50,3 +50,9 @@ backend/database/*.sqlite*
 # Uploads (optional - remove if you want to track uploads)
 uploads/
 .gstack/
+
+# Prompts de trabalho (artefatos de sessão, não fazem parte do runtime)
+PROMPT_*.md
+
+# Documentos internos de planejamento
+*.docx

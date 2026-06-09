@@ -13,7 +13,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "echarts": "^6.1.0",
+    "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.6",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.26",

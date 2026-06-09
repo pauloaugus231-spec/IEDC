@@ -192,7 +192,6 @@ export function ModalOverlay({ open, onClose, children, className }: ModalOverla
           role="presentation"
           variants={BACKDROP_VARIANTS}
         >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
           <div onClick={(e) => e.stopPropagation()}>
             {children}
           </div>

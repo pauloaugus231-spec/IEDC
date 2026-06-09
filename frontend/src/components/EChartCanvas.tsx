@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import ReactEChartsCore from 'echarts-for-react/lib/core';
+import { useCallback, useEffect, useMemo, type ComponentType, type CSSProperties } from 'react';
+import ReactEChartsCoreModule from 'echarts-for-react/lib/core';
 import { BarChart, LineChart, PieChart, RadarChart, type BarSeriesOption, type LineSeriesOption, type PieSeriesOption, type RadarSeriesOption } from 'echarts/charts';
 import {
   AriaComponent,
@@ -48,6 +48,20 @@ export type IEDCChartOption = ComposeOption<
 
 export type EChartsInstance = ReturnType<typeof echarts.init>;
 
+type ReactEChartsCoreProps = {
+  echarts: typeof echarts;
+  lazyUpdate?: boolean;
+  notMerge?: boolean;
+  onChartReady?: (chart: EChartsInstance) => void;
+  onEvents?: Record<string, (params: Record<string, unknown>) => void>;
+  option: IEDCChartOption;
+  style?: CSSProperties;
+};
+
+const ReactEChartsCore = (
+  (ReactEChartsCoreModule as { default?: unknown }).default ?? ReactEChartsCoreModule
+) as ComponentType<ReactEChartsCoreProps>;
+
 type EChartCanvasProps = {
   ariaLabel: string;
   className?: string;
@@ -88,7 +102,7 @@ export default function EChartCanvas({ ariaLabel, className, onDataClick, onRead
   }, [onDataClick]);
 
   return (
-    <div aria-label={ariaLabel} className={className} role="img" style={{ width: '100%', height: '100%' }}>
+    <div aria-label={ariaLabel} className={className} role="img" style={{ width: '100%', height: '100%', minWidth: 0 }}>
       <ReactEChartsCore
         echarts={echarts}
         lazyUpdate

@@ -47,7 +47,7 @@
   margin: 10px 0 8px;
   color: #ffffff;
   font-size: clamp(2rem, 4vw, 4.5rem);
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0;
   line-height: 0.96;
   text-wrap: balance;
@@ -58,7 +58,7 @@
   margin: 0;
   color: rgba(255, 255, 255, 0.86);
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.55;
 }
 
@@ -77,7 +77,7 @@
 .finance-hero-status small {
   color: rgba(255, 255, 255, 0.76);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .finance-hero-status strong {
@@ -87,7 +87,7 @@
   color: var(--iedc-blue-900);
   box-shadow: 0 6px 14px rgba(7, 24, 55, 0.12);
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 900;
   padding: 6px 10px;
 }
 
@@ -249,14 +249,14 @@
 .finance-kpi small {
   color: var(--iedc-muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   line-height: 1.35;
 }
 
 .finance-kpi strong {
   color: var(--iedc-blue-900);
   font-size: clamp(1.35rem, 2vw, 2rem);
-  font-weight: 950;
+  font-weight: 900;
   line-height: 1;
   overflow-wrap: anywhere;
 }
@@ -315,7 +315,7 @@
   margin: 8px 0 0;
   color: var(--iedc-text);
   font-size: 22px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0;
   line-height: 1.12;
   text-wrap: balance;
@@ -334,7 +334,7 @@
   background: var(--iedc-blue-100);
   color: var(--iedc-blue-800);
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .finance-reading-panel button {
@@ -350,6 +350,7 @@
 
 .finance-chart-shell {
   position: relative;
+  height: 440px;
   min-height: 440px;
   margin-top: 16px;
   border: 1px solid var(--iedc-line-soft);
@@ -405,7 +406,7 @@
   margin: 0;
   color: var(--iedc-text);
   font-size: 24px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0;
   line-height: 1.08;
 }
@@ -437,13 +438,13 @@
 .finance-reading-values span {
   color: var(--iedc-muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .finance-reading-values strong {
   color: var(--iedc-blue-900);
   font-size: 17px;
-  font-weight: 950;
+  font-weight: 900;
   overflow-wrap: anywhere;
   text-align: right;
 }
@@ -477,14 +478,14 @@
 .finance-reading-empty strong {
   color: var(--iedc-text);
   font-size: 17px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .finance-reading-empty span {
   max-width: 28ch;
   color: var(--iedc-muted);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.45;
 }
 
@@ -514,7 +515,7 @@
   border-bottom: 1px solid var(--iedc-line-soft);
   color: var(--iedc-text);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   padding: 13px 10px;
   text-align: left;
   vertical-align: middle;
@@ -523,7 +524,7 @@
 .finance-ledger-table th {
   color: var(--iedc-muted);
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .finance-status-pill {
@@ -589,13 +590,13 @@
 .finance-method-list small {
   color: var(--iedc-muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .finance-method-list strong {
   color: var(--iedc-green-700);
   font-size: 15px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .finance-method-list small {
@@ -608,7 +609,7 @@
   background: var(--iedc-bg-soft);
   color: var(--iedc-muted);
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
   padding: 14px;
   text-align: center;
 }

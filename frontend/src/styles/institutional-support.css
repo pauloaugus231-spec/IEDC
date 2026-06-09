@@ -108,7 +108,7 @@
   width: fit-content;
   border-radius: 999px;
   font-size: 11px !important;
-  font-weight: 950 !important;
+  font-weight: 900 !important;
   line-height: 1;
   padding: 7px 9px;
 }
@@ -141,12 +141,12 @@
 
 .institutional-note.danger {
   color: #b42318;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .institutional-note.warning {
   color: #8f5b10;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .support-modal-backdrop {
@@ -220,7 +220,7 @@
   gap: 7px;
   color: #29354a;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .audit-toolbar input,
@@ -366,7 +366,7 @@
   background: #eef4fb;
   color: #526174;
   font-size: 12px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .data-quality-area-status.ok {
@@ -452,7 +452,7 @@
   background: #eef4fb;
   color: #526174;
   font-size: 11px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .data-quality-pill.critico {
@@ -514,7 +514,7 @@
   background: #f7faff;
   color: #0041aa;
   font-size: 13px;
-  font-weight: 950;
+  font-weight: 900;
   text-decoration: none;
 }
 
@@ -566,7 +566,7 @@
   display: block;
   color: #172033;
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .system-health-row div > span {
@@ -602,7 +602,7 @@
 .system-health-definition dt {
   color: #68778e;
   font-size: 11px;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -662,7 +662,7 @@
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 800;
   padding: 10px 12px;
   text-decoration: none;
 }

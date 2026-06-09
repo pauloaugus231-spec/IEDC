@@ -35,9 +35,11 @@ const DataQualityPage = lazy(() => import('./pages/DataQualityPage'));
 
 function NotFound() {
   return (
-    <div style={{ textAlign: 'center', marginTop: 64 }}>
+    <div className="not-found-shell">
+      <span className="not-found-code">404</span>
       <h1>Página não encontrada</h1>
-      <p>Verifique o endereço ou volte para o <a href="/gestao">Dashboard</a>.</p>
+      <p>O endereço acessado não existe ou você não tem permissão para vê-lo.</p>
+      <a className="not-found-link" href="/gestao">Voltar ao Dashboard</a>
     </div>
   );
 }
