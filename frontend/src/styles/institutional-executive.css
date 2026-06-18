@@ -1799,7 +1799,7 @@
   }
 
   .login-logo-panel img {
-    width: min(420px, 38vw);
+    width: min(380px, 34vw);
   }
 
   .login-copy {
@@ -1807,7 +1807,7 @@
   }
 
   .login-copy h1 {
-    font-size: clamp(30px, 3.4vw, 46px);
+    font-size: clamp(30px, 3.2vw, 44px);
   }
 
   .login-copy p {
@@ -1816,7 +1816,7 @@
   }
 
   .login-card {
-    padding: 22px;
+    padding: 24px;
   }
 }
 
@@ -1832,8 +1832,8 @@
   .login-identity {
     height: auto;
     min-height: auto;
-    padding: 30px 28px 24px;
-    gap: 32px;
+    padding: 28px 28px 22px;
+    gap: 28px;
   }
 
   .login-copy {
@@ -1850,7 +1850,7 @@
   .login-form-panel {
     height: auto;
     min-height: auto;
-    padding: 22px 28px 32px;
+    padding: 24px 28px 34px;
   }
 
   .dashboard-hero,
@@ -1962,33 +1962,34 @@
 
 @media (max-width: 640px) {
   .login-identity {
-    padding: 28px 22px 20px;
-    gap: 26px;
+    padding: 26px 22px 18px;
+    gap: 24px;
   }
 
   .login-logo-panel,
   .login-logo-panel img {
-    width: min(280px, 74vw);
+    width: min(258px, 72vw);
   }
 
   .login-copy h1 {
-    font-size: 32px;
-    line-height: 1.02;
-    max-width: 11ch;
+    font-size: 30px;
+    line-height: 1.06;
+    max-width: 12ch;
   }
 
   .login-copy p {
     margin-top: 12px;
-    font-size: 15px;
+    font-size: 14px;
+    line-height: 1.48;
   }
 
   .login-form-panel {
-    padding: 18px 22px 28px;
+    padding: 20px 22px 30px;
   }
 
   .login-card {
-    border-radius: 18px;
-    padding: 22px;
+    border-radius: 8px;
+    padding: 24px 22px;
   }
 
   .login-card h2 {
