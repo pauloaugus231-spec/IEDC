@@ -26,6 +26,8 @@
     "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts",
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seeds.ts",
+    "import:legacy": "node scripts/import-legacy-albergue.mjs",
+    "import:legacy:report": "node scripts/import-legacy-albergue.mjs --report-only",
     "generate-people": "node scripts/generate-random-people.js"
   },
   "dependencies": {

@@ -43,15 +43,6 @@ export class Ocorrencia {
   @Column({ length: 100 })
   criado_por!: string;
 
-  @Column({ type: 'text', nullable: true })
-
-
-  @Column({ type: 'boolean', default: false })
-
-
-  @Column({ length: 100, nullable: true })
-
-
   @CreateDateColumn()
   created_at!: Date;
 
