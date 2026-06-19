@@ -77,10 +77,10 @@ docker compose ps
 
 ## Agendamento
 
-Exemplo de cron diario as 02:30:
+Exemplo de cron diario as 00:15:
 
 ```cron
-30 2 * * * PROJECT_DIR=/opt/iedc /opt/iedc/ops/backup/backup-docker.sh >> /var/log/iedc-backup.log 2>&1
+15 0 * * * PROJECT_DIR=/opt/iedc /opt/iedc/ops/backup/backup-docker.sh >> /var/log/iedc-backup.log 2>&1
 ```
 
 ## Teste periodico

@@ -44,13 +44,13 @@ Use `IEDC_UPDATE_SKIP_BACKUP=true` apenas em manutencao controlada. Atualizar se
 
 ## Agendamento opcional com cron
 
-Para checar diariamente uma branch estavel:
+Para checar diariamente uma branch estavel, depois do backup das 00:15:
 
 ```cron
-15 4 * * * PROJECT_DIR=/opt/iedc IEDC_UPDATE_BRANCH=main /opt/iedc/ops/deploy/update-from-repository.sh >> /var/log/iedc-update.log 2>&1
+0 1 * * * PROJECT_DIR=/opt/iedc IEDC_UPDATE_BRANCH=main /opt/iedc/ops/deploy/update-from-repository.sh >> /var/log/iedc-update.log 2>&1
 ```
 
-Para V1, a recomendacao prudente e rodar manualmente depois de uma versao aprovada. Agendamento automatico deve entrar apenas quando a rotina de release estiver madura.
+Para V1, a recomendacao prudente e rodar manualmente depois de uma versao aprovada. Se optar por automatizar, use 00:15 para backup e 01:00 para update, mantendo o backend livre para o cron interno da meia-noite.
 
 ## Regra institucional
 

@@ -111,8 +111,18 @@ RCLONE_DESTINATION=iedc-drive-crypt:Backups Sistema IEDC
 Exemplo com cron:
 
 ```cron
-30 2 * * * PROJECT_DIR=/opt/iedc /opt/iedc/ops/backup/backup-docker.sh >> /var/log/iedc-backup.log 2>&1
+15 0 * * * PROJECT_DIR=/opt/iedc /opt/iedc/ops/backup/backup-docker.sh >> /var/log/iedc-backup.log 2>&1
 ```
+
+## Atualizacao automatica
+
+Se voce automatizar a atualizacao, deixe ela para depois do backup:
+
+```cron
+0 1 * * * PROJECT_DIR=/opt/iedc IEDC_UPDATE_BRANCH=main /opt/iedc/ops/deploy/update-from-repository.sh >> /var/log/iedc-update.log 2>&1
+```
+
+Assim o backup roda as 00:15 e o update roda as 01:00, sem disputar a meia-noite com o cron interno do backend.
 
 ## Restauracao rapida
 

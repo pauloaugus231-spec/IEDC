@@ -80,7 +80,7 @@ docker compose up -d --build
 
 O backend aplica as migrations automaticamente no primeiro boot. No banco novo, apenas o usuario `suporte` e criado (senha = `IEDC_DEFAULT_PASSWORD`).
 
-### Atualizacao automatica as 00h
+### Atualizacao automatica com backup antes
 
 Para que o servidor atualize automaticamente quando uma nova versao for publicada no GitHub:
 
@@ -89,15 +89,17 @@ Para que o servidor atualize automaticamente quando uma nova versao for publicad
 crontab -e
 ```
 
-Adicione a linha:
+Adicione as linhas:
 
 ```
-0 0 * * * /caminho/para/IEDC/ops/deploy.sh >> /var/log/iedc-deploy.log 2>&1
+15 0 * * * /caminho/para/IEDC/ops/backup/backup-docker.sh >> /var/log/iedc-backup.log 2>&1
+0 1 * * * /caminho/para/IEDC/ops/deploy.sh >> /var/log/iedc-deploy.log 2>&1
 ```
 
 Substitua `/caminho/para/IEDC` pelo caminho real do repositorio no servidor.
 
-O script so reconstroi se houver commit novo. Se o sistema ja esta atualizado, ele registra isso no log e sai sem fazer nada.
+O backup roda primeiro, as 00:15, e o update roda depois, as 01:00.
+O script de deploy so reconstroi se houver commit novo. Se o sistema ja esta atualizado, ele registra isso no log e sai sem fazer nada.
 
 ### Rotacao de log (opcional)
 
