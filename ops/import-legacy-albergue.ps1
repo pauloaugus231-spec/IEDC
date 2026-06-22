@@ -34,16 +34,12 @@ try {
     backend node scripts/import-legacy-albergue.mjs --reset
   if ($LASTEXITCODE -ne 0) { throw 'A importacao do legado falhou.' }
 
-  docker compose exec -T postgres-albergue sh -lc @'
-psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
-SELECT
+  docker compose exec -T postgres-albergue psql -v ON_ERROR_STOP=1 -U iedc_albergue_app -d iedc_albergue -c "SELECT
   (SELECT COUNT(*) FROM pessoas) AS pessoas,
   (SELECT COUNT(*) FROM estadias) AS estadias,
   (SELECT COUNT(*) FROM bloqueios) AS bloqueios,
   (SELECT COUNT(*) FROM ocorrencias) AS ocorrencias,
-  (SELECT COUNT(*) FROM solicitacoes) AS solicitacoes;
-"
-'@
+  (SELECT COUNT(*) FROM solicitacoes) AS solicitacoes;"
   if ($LASTEXITCODE -ne 0) { throw 'A validacao das contagens falhou.' }
 
   docker compose ps
