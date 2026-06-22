@@ -97,7 +97,6 @@ const EDITABLE_FIELDS = [
   'condicoes_cronicas',
   'medicamentos_uso_continuo',
   'lgbt',
-  'foto_url',
 ] as const satisfies ReadonlyArray<keyof Omit<PessoaForm, 'id'>>;
 
 type EditableField = typeof EDITABLE_FIELDS[number];
@@ -128,6 +127,16 @@ function editablePayload(form: PessoaForm): PessoaPayload {
     const value = form[field];
     if (field === 'tipo_vaga' && value === '') return payload;
     payload[field] = value === '' ? null : value;
+    return payload;
+  }, {});
+}
+
+export function changedPessoaPayload(form: PessoaForm, original: PessoaForm): PessoaPayload {
+  const current = editablePayload(form);
+  const baseline = editablePayload(original);
+
+  return EDITABLE_FIELDS.reduce<PessoaPayload>((payload, field) => {
+    if (current[field] !== baseline[field]) payload[field] = current[field];
     return payload;
   }, {});
 }
@@ -294,7 +303,9 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const validationFields = ['nome', 'cpf', 'nis', 'cep'] as const satisfies readonly EditableField[];
+    const changedPayload = changedPessoaPayload(form, originalForm);
+    const validationFields = (['nome', 'cpf', 'nis', 'cep'] as const satisfies readonly EditableField[])
+      .filter((field) => field === 'nome' || Object.prototype.hasOwnProperty.call(changedPayload, field));
     const errors = validationFields.filter((field) => validations[field](String(form[field] || '')));
     if (errors.length) {
       setTouched((previous) => errors.reduce((acc, field) => ({ ...acc, [field]: true }), previous));
@@ -306,7 +317,7 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
 
     setSaving(true);
     try {
-      await onSave(editablePayload(form));
+      await onSave(changedPayload);
     } finally {
       setSaving(false);
     }

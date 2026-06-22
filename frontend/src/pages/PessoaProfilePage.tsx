@@ -367,8 +367,8 @@ const PessoaProfilePage: React.FC = () => {
       setShowEditar(false);
       showToast('Dados atualizados.');
       fetchData();
-    } catch {
-      showToast('Erro ao salvar dados.', 'error');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Erro ao salvar dados.', 'error');
     }
   };
 

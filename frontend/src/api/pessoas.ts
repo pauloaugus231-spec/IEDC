@@ -128,6 +128,7 @@ export async function checkoutPessoa(pessoa_id: string, funcionario?: string, ob
 // Hook para buscar todos os usuários cadastrados, ordenados por nome
 export function useTodasPessoas(reload = 0) {
   const [data, setData] = useState<PessoaApi[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,9 +137,16 @@ export function useTodasPessoas(reload = 0) {
     setError(null);
     apiFetch<PessoaApi[] | PaginatedResponse<PessoaApi>>(`/api/pessoas?limit=1000`)
       .then((res) => {
-        if (Array.isArray(res)) setData(res);
-        else if (isPaginatedResponse(res)) setData(res.data);
-        else setData([]);
+        if (Array.isArray(res)) {
+          setData(res);
+          setTotal(res.length);
+        } else if (isPaginatedResponse(res)) {
+          setData(res.data);
+          setTotal(res.total ?? res.data.length);
+        } else {
+          setData([]);
+          setTotal(0);
+        }
       })
       .catch(e => {
         setError(e.message);
@@ -146,7 +154,7 @@ export function useTodasPessoas(reload = 0) {
       .finally(() => setLoading(false));
   }, [reload]);
 
-  return { data, loading, error };
+  return { data, total, loading, error };
 }
 
 function isPaginatedResponse<T>(value: unknown): value is PaginatedResponse<T> {

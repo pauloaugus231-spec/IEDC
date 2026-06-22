@@ -74,7 +74,7 @@ const SearchPage = () => {
   const navigate = useNavigate();
 
   const { data: pessoasBusca, loading: loadingBusca, error } = useHospedes(debouncedSearch, reload);
-  const { data: todasPessoas, loading: loadingTodas } = useTodasPessoas(reload);
+  const { data: todasPessoas, total: totalPessoas, loading: loadingTodas } = useTodasPessoas(reload);
 
   useEffect(() => {
     setVisibleCount(24);
@@ -83,13 +83,13 @@ const SearchPage = () => {
   window.reloadTodasPessoas = () => setReload((current) => current + 1);
 
   const stats = useMemo(() => {
-    const total = todasPessoas?.length ?? 0;
+    const total = totalPessoas;
     const hospedados = todasPessoas?.filter((pessoa) => pessoa.status_cadastro === 'ativa').length ?? 0;
     const aprovados = todasPessoas?.filter((pessoa) => pessoa.status_cadastro === 'aprovado').length ?? 0;
     const liberados = todasPessoas?.filter((pessoa) => pessoa.liberacao_antecipada).length ?? 0;
 
     return { total, hospedados, aprovados, liberados };
-  }, [todasPessoas]);
+  }, [todasPessoas, totalPessoas]);
 
   const handleCheckinSuccess = () => {
     setPessoaParaCheckin(null);
