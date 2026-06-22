@@ -27,61 +27,61 @@ export class Pessoa {
   @Column({ length: 255, nullable: true })
   nome_social?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   cpf?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   rg?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   nis?: string;
 
   @Column({ type: 'date', nullable: true })
   data_nascimento?: Date;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ length: 255, nullable: true })
   naturalidade?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   telefone?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   sexo?: string;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ length: 255, nullable: true })
   genero?: string;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ length: 255, nullable: true })
   cor?: string;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ length: 255, nullable: true })
   raca?: string;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ length: 255, nullable: true })
   sexualidade?: string;
 
   @Column({ length: 255, nullable: true })
   endereco?: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ length: 255, nullable: true })
   cidade?: string;
 
   @Column({ length: 2, nullable: true })
   uf?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   cep?: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ length: 255, nullable: true })
   nome_mae?: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ length: 255, nullable: true })
   nome_pai?: string;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ length: 255, nullable: true })
   contato_emergencia?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ length: 255, nullable: true })
   telefone_emergencia?: string;
 
   @Column({ type: 'text', nullable: true })
