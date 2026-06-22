@@ -28,6 +28,8 @@
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seeds.ts",
     "import:legacy": "node scripts/import-legacy-albergue.mjs",
     "import:legacy:report": "node scripts/import-legacy-albergue.mjs --report-only",
+    "sync:na-casa": "node scripts/sync-na-casa.mjs --apply",
+    "sync:na-casa:dry-run": "node scripts/sync-na-casa.mjs --dry-run",
     "generate-people": "node scripts/generate-random-people.js"
   },
   "dependencies": {
