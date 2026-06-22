@@ -40,20 +40,20 @@ export class CheckoutAutomaticoService {
     console.log('🔄 INICIANDO CHECKOUT AUTOMÁTICO');
     console.log('🔄 ========================================');
     console.log('⏰ Data/Hora:', dataHoraExecucao.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
-    console.log('\n📖 LÓGICA DE ESTADIA (15 NOITES):');
+    console.log('\n📖 LÓGICA DE ESTADIA (30 NOITES):');
     console.log('   • Check-in dia 20/12 → Dia 20 já conta como 1ª noite');
-    console.log('   • Período: 15 noites (20/12 a 03/01)');
-    console.log('   • Data limite: 03/01 (última noite permitida)');
-    console.log('   • Checkout automático: Meia-noite de 03/01 para 04/01');
-    console.log('   • Resultado: Cama livre para nova triagem às 18h30 do dia 04/01');
+    console.log('   • Período: 30 noites (20/12 a 18/01)');
+    console.log('   • Data limite: 18/01 (última noite permitida)');
+    console.log('   • Checkout automático: Meia-noite de 18/01 para 19/01');
+    console.log('   • Resultado: Cama livre para nova triagem às 18h30 do dia 19/01');
     console.log('');
 
     try {
       // BUSCAR ESTADIAS VENCIDAS
       // Condição: data_limite <= CURRENT_DATE (corrigido de < para <=)
-      // Lógica: Se data_limite = 07/01 (hoje), significa que a última noite foi 06/01
-      //         Portanto, o checkout deve acontecer à meia-noite de 07/01 (hoje)
-      // Exemplo: Check-in 23/12 → 15 noites → data_limite 06/01 → checkout 07/01 00:00
+      // Lógica: Se data_limite = 19/01 (hoje), significa que a última noite foi 18/01
+      //         Portanto, o checkout deve acontecer à meia-noite de 19/01 (hoje)
+      // Exemplo: Check-in 21/12 → 30 noites → data_limite 19/01 → checkout 19/01 00:00
       const estadiasVencidas = await this.estadiaRepository.query<EstadiaVencidaRow[]>(`
         SELECT 
           e.id as estadia_id,

@@ -8,6 +8,9 @@ import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { DiasCruzGateway } from '../websocket/websocket.gateway';
 
+const DIAS_ESTADIA_NOVA = 30;
+const DIAS_ATE_LIMITE_NOVA = DIAS_ESTADIA_NOVA - 1;
+
 interface DuplicacaoCamaRow {
   cama_id: string;
   count: string;
@@ -103,7 +106,7 @@ export class EstadiasService {
         throw new ConflictException(`Pessoa ${pessoa.nome} já possui uma estadia ativa desde ${estadiaAtivaExistente.data_checkin.toLocaleDateString('pt-BR')}.`);
       }
 
-      // Verificar regra de 15 noites após checkout
+      // Verificar regra de retorno após checkout
       const ultimaEstadia = await transactionalEntityManager.findOne(Estadia, {
         where: { pessoa_id },
         order: { data_checkout: 'DESC' },
@@ -160,16 +163,16 @@ export class EstadiasService {
 
       // 5. Criar a nova estadia
       // REGRA: Check-in no dia X conta como 1ª noite
-      // Para 15 noites: última noite é dia X+14
-      // Exemplo: Check-in 20/12 → noites: 20,21,22...03/01 (15 noites)
-      // data_limite = 03/01 (última noite permitida)
+      // Para 30 dias: última noite é dia X+29
+      // Exemplo: Check-in 20/12 → noites: 20/12...18/01 (30 noites)
+      // data_limite = 18/01 (última noite permitida)
       const now = new Date();
       const data_limite = new Date(now);
-      data_limite.setDate(now.getDate() + 14); // 14 dias APÓS check-in = 15 noites totais
+      data_limite.setDate(now.getDate() + DIAS_ATE_LIMITE_NOVA); // 29 dias APÓS check-in = 30 noites totais
       data_limite.setHours(0, 0, 0, 0); // Zerar horas para comparação precisa
 
       console.log(`📅 Check-in: ${now.toISOString()}`);
-      console.log(`📅 Data limite: ${data_limite.toISOString()} (15 noites)`);
+      console.log(`📅 Data limite: ${data_limite.toISOString()} (30 noites)`);
 
       const novaEstadia = this.estadiaRepository.create({
         pessoa_id,

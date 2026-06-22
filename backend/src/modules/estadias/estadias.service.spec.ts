@@ -86,7 +86,7 @@ describe('EstadiasService — regras de negócio', () => {
     txManager.findOne.mockResolvedValueOnce({ id: 'p1', nome: 'Maria' });
     // Sem estadia ativa
     txManager.findOne.mockResolvedValueOnce(null);
-    // Sem estadia anterior (regra 15 noites)
+    // Sem estadia anterior (regra de retorno)
     txManager.findOne.mockResolvedValueOnce(null);
     // Cama encontrada mas ocupada
     txManager.findOne.mockResolvedValueOnce({

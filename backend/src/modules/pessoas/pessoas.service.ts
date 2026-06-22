@@ -66,8 +66,8 @@ export class PessoasService {
 
     // ✅ OTIMIZADO: Buscar apenas a página atual
     const data = await queryBuilder
-      .orderBy('pessoa.created_at', 'DESC') // Usa índice idx_pessoas_created_at
-      .addOrderBy('pessoa.nome', 'ASC')
+      .orderBy('LOWER(pessoa.nome)', 'ASC')
+      .addOrderBy('pessoa.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getMany();

@@ -7,7 +7,7 @@ export enum StatusEstadia {
   FINALIZADA = 'finalizada',
   CANCELADA = 'cancelada',
   ABANDONO = 'abandono',        // Pessoa abandonou a vaga
-  CHECKOUT_AUTOMATICO = 'checkout_automatico', // Saída automática após 15 dias
+  CHECKOUT_AUTOMATICO = 'checkout_automatico', // Saída automática após 30 dias
 }
 
 export enum MotivoSaida {
