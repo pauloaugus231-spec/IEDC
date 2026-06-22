@@ -52,7 +52,13 @@ Nesse caso, ajuste a senha no banco ou mantenha o mesmo segredo antigo no `.env`
 Acesse:
 
 ```text
-http://IP_DO_SERVIDOR
+http://iedc.local/
+```
+
+Se o DNS local ou o arquivo `hosts` ainda nao estiverem prontos, use temporariamente o IP:
+
+```text
+http://192.168.0.60/
 ```
 
 ## Atualizacao do sistema
