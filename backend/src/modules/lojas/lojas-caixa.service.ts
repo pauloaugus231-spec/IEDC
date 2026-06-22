@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { AbrirCaixaDto, FecharCaixaDto } from './dto/lojas-operacao.dto';
 import { LojasEventsService } from './lojas-events.service';
 import { LojasSchemaService } from './lojas-schema.service';
@@ -29,7 +31,7 @@ export interface CaixaRow {
 @Injectable()
 export class LojasCaixaService {
   constructor(
-    private readonly dataSource: DataSource,
+    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly events: LojasEventsService,
   ) {}

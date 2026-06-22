@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import {
   AdicionarItemDto,
   AtualizarStatusComandaDto,
@@ -31,7 +33,7 @@ interface ProdutoItemRow {
 @Injectable()
 export class LojasComandasService {
   constructor(
-    private readonly dataSource: DataSource,
+    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly catalogo: LojasCatalogoService,
     private readonly caixa: LojasCaixaService,

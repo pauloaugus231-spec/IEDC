@@ -1,5 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import {
   type PeriodoExecutivo,
@@ -20,7 +22,7 @@ import {
 
 @Injectable()
 export class RelatoriosImpactoService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
 
   async getRelatorioExecutivo(
     actor: AuthUser | undefined,

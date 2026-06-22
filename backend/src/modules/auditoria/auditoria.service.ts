@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { Repository } from 'typeorm';
 import { AuthUser } from '../../auth/auth.types';
 import { Auditoria, AuditoriaStatus } from '../../entities/auditoria.entity';
@@ -69,7 +70,7 @@ export class AuditoriaService {
   private readonly logger = new Logger(AuditoriaService.name);
 
   constructor(
-    @InjectRepository(Auditoria)
+    @InjectRepository(Auditoria, CORE_DATABASE_CONNECTION)
     private readonly auditoriaRepository: Repository<Auditoria>,
   ) {}
 

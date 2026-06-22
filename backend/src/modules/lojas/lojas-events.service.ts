@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { DiasCruzGateway } from '../websocket/websocket.gateway';
 import { LojasEventPayload } from './lojas-shared';
 
 @Injectable()
 export class LojasEventsService {
   constructor(
-    private readonly dataSource: DataSource,
+    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly gateway: DiasCruzGateway,
   ) {}
 

@@ -44,11 +44,24 @@ node backend/scripts/import-legacy-albergue.mjs --report-only
 
 ## Como importar
 
-Requer `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` e `DB_NAME` apontando para o Postgres alvo.
+Requer `DB_ALBERGUE_HOST`, `DB_ALBERGUE_PORT`, `DB_ALBERGUE_USER`,
+`DB_ALBERGUE_PASSWORD` e `DB_ALBERGUE_NAME` apontando exclusivamente para o
+Postgres do Albergue.
 
 ```powershell
 node backend/scripts/import-legacy-albergue.mjs --reset
 ```
+
+No Windows, o procedimento completo e validado pode ser executado na raiz do
+repositorio:
+
+```powershell
+.\ops\import-legacy-albergue.ps1 `
+  -DumpPath 'C:\Users\Usuario\Downloads\backup_triagem_20260618_1513.sql' `
+  -Reset
+```
+
+O script sobe o Compose, importa no banco isolado e imprime as contagens finais.
 
 Use `--reset` para limpar as tabelas principais antes de reaplicar o legado em um banco novo.
 

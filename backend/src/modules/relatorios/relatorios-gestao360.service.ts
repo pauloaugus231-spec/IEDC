@@ -1,5 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { type PeriodoExecutivo, type RelatorioExecutivoKpi, type SqlParam, getExecutivePeriod } from './relatorios-core-types';
@@ -24,7 +26,7 @@ import {
 
 @Injectable()
 export class RelatoriosGestao360Service {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
 
   async getRelatorioGestao360(
     actor: AuthUser | undefined,

@@ -757,15 +757,15 @@ async function main() {
 
   const { Pool } = await import('pg');
   const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT || 5432),
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || 'albergue',
+    host: process.env.DB_ALBERGUE_HOST || 'localhost',
+    port: Number(process.env.DB_ALBERGUE_PORT || 5433),
+    user: process.env.DB_ALBERGUE_USER || 'iedc_albergue_app',
+    password: process.env.DB_ALBERGUE_PASSWORD,
+    database: process.env.DB_ALBERGUE_NAME || 'iedc_albergue',
   };
 
   if (!dbConfig.password) {
-    die('DB_PASSWORD is required for import.');
+    die('DB_ALBERGUE_PASSWORD is required for import.');
   }
 
   const pool = new Pool(dbConfig);

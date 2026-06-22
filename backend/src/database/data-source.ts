@@ -9,9 +9,6 @@ import { Colaborador } from '../entities/colaborador.entity';
 import { Turno } from '../entities/turno.entity';
 import { RegraEscala } from '../entities/regra-escala.entity';
 import { Plantao } from '../entities/plantao.entity';
-import { Usuario } from '../entities/usuario.entity';
-import { Auditoria } from '../entities/auditoria.entity';
-import { ObservabilityEvent } from '../entities/observability-event.entity';
 
 function resolveDatabaseEnv(name: string, fallback?: string) {
   const value = process.env[name];
@@ -25,11 +22,11 @@ function resolveDatabaseEnv(name: string, fallback?: string) {
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: resolveDatabaseEnv('DB_HOST', 'localhost'),
-  port: parseInt(resolveDatabaseEnv('DB_PORT', '5432') || '5432'),
-  username: resolveDatabaseEnv('DB_USER', 'postgres'),
-  password: resolveDatabaseEnv('DB_PASSWORD'),
-  database: resolveDatabaseEnv('DB_NAME', 'albergue'),
+  host: resolveDatabaseEnv('DB_ALBERGUE_HOST', 'localhost'),
+  port: parseInt(resolveDatabaseEnv('DB_ALBERGUE_PORT', '5433') || '5433'),
+  username: resolveDatabaseEnv('DB_ALBERGUE_USER', 'iedc_albergue_app'),
+  password: resolveDatabaseEnv('DB_ALBERGUE_PASSWORD'),
+  database: resolveDatabaseEnv('DB_ALBERGUE_NAME', 'iedc_albergue'),
   entities: [
     Pessoa,
     Estadia,
@@ -41,13 +38,10 @@ export const AppDataSource = new DataSource({
     Turno,
     RegraEscala,
     Plantao,
-    Usuario,
-    Auditoria,
-    ObservabilityEvent,
   ],
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
-  migrations: ['src/database/migrations/*.ts'],
+  migrations: ['src/database/migrations/albergue/*.ts'],
   migrationsTableName: 'typeorm_migrations',
   migrationsRun: process.env.DB_MIGRATIONS_RUN === 'true',
 });

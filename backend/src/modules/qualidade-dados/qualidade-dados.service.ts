@@ -1,5 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
 
@@ -113,7 +115,7 @@ export interface QualidadeDadosResponse {
 
 @Injectable()
 export class QualidadeDadosService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
 
   async listar(actor: AuthUser | null, area?: string): Promise<QualidadeDadosResponse> {
     const allowedAreas = this.getAllowedAreas(actor);

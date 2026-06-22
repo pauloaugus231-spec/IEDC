@@ -3,11 +3,12 @@ import { constants } from 'fs';
 import { join } from 'path';
 import { Socket } from 'net';
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, MoreThan, Repository } from 'typeorm';
 import { AuthUser } from '../../auth/auth.types';
 import { ObservabilityEvent, ObservabilityEventLevel } from '../../entities/observability-event.entity';
 import { RegisterFrontendErrorDto } from './dto/register-frontend-error.dto';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 
 type ComponentStatus = 'ok' | 'warning' | 'down' | 'unknown';
 
@@ -39,8 +40,9 @@ export class ObservabilityService {
   private readonly logger = new Logger(ObservabilityService.name);
 
   constructor(
-    @InjectRepository(ObservabilityEvent)
+    @InjectRepository(ObservabilityEvent, CORE_DATABASE_CONNECTION)
     private readonly eventsRepository: Repository<ObservabilityEvent>,
+    @InjectDataSource(CORE_DATABASE_CONNECTION)
     private readonly dataSource: DataSource,
   ) {}
 

@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { ObservabilityService } from '../observability/observability.service';
@@ -25,7 +27,7 @@ export class NotificacoesService {
   private readonly logger = new Logger(NotificacoesService.name);
 
   constructor(
-    private readonly dataSource: DataSource,
+    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly observabilityService: ObservabilityService,
   ) {}
 

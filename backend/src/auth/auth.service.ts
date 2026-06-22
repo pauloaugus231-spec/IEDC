@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../config/database.config';
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { Repository } from 'typeorm';
@@ -140,7 +141,7 @@ const ROLE_PROFILES: Record<UsuarioRole, RoleProfile> = {
 @Injectable()
 export class AuthService implements OnModuleInit {
   constructor(
-    @InjectRepository(Usuario)
+    @InjectRepository(Usuario, CORE_DATABASE_CONNECTION)
     private readonly usuariosRepository: Repository<Usuario>,
     private readonly jwtService: JwtService,
     @Optional()

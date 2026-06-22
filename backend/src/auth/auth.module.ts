@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Usuario } from '../entities/usuario.entity';
+import { CORE_DATABASE_CONNECTION } from '../config/database.config';
 import { AuditoriaModule } from '../modules/auditoria/auditoria.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -22,7 +23,7 @@ export function resolveJwtExpiresIn(): JwtSignOptions['expiresIn'] {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Usuario]),
+    TypeOrmModule.forFeature([Usuario], CORE_DATABASE_CONNECTION),
     AuditoriaModule,
     JwtModule.register({
       secret: resolveJwtSecret(),

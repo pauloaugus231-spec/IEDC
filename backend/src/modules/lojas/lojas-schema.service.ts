@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { LOJAS_OFICIAIS, QueryRunnerLike } from './lojas-shared';
 
 @Injectable()
@@ -8,7 +10,7 @@ export class LojasSchemaService {
   private estruturaPronta = false;
   private estruturaPromise: Promise<void> | null = null;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
 
   async ensureEstrutura() {
     if (this.estruturaPronta) {

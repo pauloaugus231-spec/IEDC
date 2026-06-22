@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
 import { EEI_TURMAS, EEI_TURMA_ORDER_SQL, firstReturnedRow } from './creche-shared';
 
 @Injectable()
@@ -8,7 +10,7 @@ export class CrecheSchemaService {
   private estruturaEeiPronta = false;
   private estruturaEeiPromise: Promise<void> | null = null;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
 
   async ensureEstruturaEei() {
     if (this.estruturaEeiPronta) {

@@ -40,7 +40,10 @@ import { RolesGuard } from './auth/roles.guard';
 import { HealthController } from './health.controller';
 
 // Configuração do banco
-import { databaseConfig } from './config/database.config';
+import {
+  albergueDatabaseConfig,
+  coreDatabaseConfig,
+} from './config/database.config';
 
 function parsePositiveIntegerEnv(name: string, fallback: number): number {
   const value = Number(process.env[name]);
@@ -70,7 +73,11 @@ function parsePositiveIntegerEnv(name: string, fallback: number): number {
 
     // TypeORM
     TypeOrmModule.forRootAsync({
-      useFactory: () => databaseConfig,
+      useFactory: () => albergueDatabaseConfig,
+    }),
+    TypeOrmModule.forRootAsync({
+      name: 'core',
+      useFactory: () => coreDatabaseConfig,
     }),
 
     // Cache de aplicação. Redis segue disponível no compose para evolução operacional futura.
