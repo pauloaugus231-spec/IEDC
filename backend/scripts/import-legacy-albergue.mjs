@@ -332,8 +332,18 @@ function parseLegacyDate(value) {
     const day = m2[1].padStart(2, '0');
     const month = m2[2].padStart(2, '0');
     const year = m2[3].padStart(4, '0');
-    if (Number(day) >= 1 && Number(day) <= 31 && Number(month) >= 1 && Number(month) <= 12) {
-      return `${year}-${month}-${day}`;
+    const parsedYear = Number(year);
+    const parsedMonth = Number(month);
+    const parsedDay = Number(day);
+    if (parsedDay >= 1 && parsedDay <= 31 && parsedMonth >= 1 && parsedMonth <= 12) {
+      const candidate = new Date(Date.UTC(parsedYear, parsedMonth - 1, parsedDay));
+      if (
+        candidate.getUTCFullYear() === parsedYear &&
+        candidate.getUTCMonth() === parsedMonth - 1 &&
+        candidate.getUTCDate() === parsedDay
+      ) {
+        return `${year}-${month}-${day}`;
+      }
     }
   }
   return null;
