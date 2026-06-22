@@ -141,6 +141,8 @@ Assim o backup roda as 00:15 e o update roda as 01:00, sem disputar a meia-noite
 
 O atualizador controlado ja faz `git pull`, `docker compose build` e `docker compose up -d --build --force-recreate --remove-orphans`, que e o fluxo recomendado para refletir mudancas sem precisar entrar no servidor toda vez.
 
+Se a publicacao vier direto do GitHub Actions por push em `main`, veja a documentacao em `ops/deploy/GITHUB_ACTIONS_DEPLOY.md`.
+
 ## Restauracao rapida
 
 Banco:

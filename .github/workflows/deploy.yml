@@ -1,0 +1,62 @@
+name: Deploy IEDC
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-iedc-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy no servidor
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_PROJECT_DIR: ${{ secrets.DEPLOY_PROJECT_DIR }}
+      DEPLOY_BRANCH: main
+      DEPLOY_REMOTE: ${{ secrets.DEPLOY_REMOTE }}
+      DEPLOY_HEALTH_URL: ${{ secrets.DEPLOY_HEALTH_URL }}
+
+    steps:
+      - name: Disparar deploy remoto
+        shell: bash
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          : "${SSH_HOST:?Defina DEPLOY_SSH_HOST}"
+          : "${SSH_USER:?Defina DEPLOY_SSH_USER}"
+          : "${SSH_PRIVATE_KEY:?Defina DEPLOY_SSH_PRIVATE_KEY}"
+
+          SSH_PORT="${SSH_PORT:-22}"
+          DEPLOY_PROJECT_DIR="${DEPLOY_PROJECT_DIR:-/opt/iedc}"
+          DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+          DEPLOY_REMOTE="${DEPLOY_REMOTE:-origin}"
+          DEPLOY_HEALTH_URL="${DEPLOY_HEALTH_URL:-http://127.0.0.1/api/health}"
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          key_file="$(mktemp)"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$key_file"
+          chmod 600 "$key_file"
+
+          if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          fi
+
+          ssh -i "$key_file" -p "$SSH_PORT" -o BatchMode=yes "${SSH_USER}@${SSH_HOST}" \
+            "sudo -n env PROJECT_DIR='$DEPLOY_PROJECT_DIR' IEDC_UPDATE_BRANCH='$DEPLOY_BRANCH' IEDC_UPDATE_REMOTE='$DEPLOY_REMOTE' IEDC_HEALTH_URL='$DEPLOY_HEALTH_URL' /opt/iedc/ops/deploy/update-from-repository.sh"
+
+          rm -f "$key_file"
