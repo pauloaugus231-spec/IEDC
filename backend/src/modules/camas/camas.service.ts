@@ -1,7 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Cama, Casa, PosicaoCama, StatusCama } from '../../entities/cama.entity';
+import { Cama } from '../../entities/cama.entity';
+import { buildCamasOficiais } from './camas.layout';
 
 @Injectable()
 export class CamasService implements OnModuleInit {
@@ -21,48 +22,7 @@ export class CamasService implements OnModuleInit {
       return;
     }
 
-    const camas: Partial<Cama>[] = [];
-
-    // Quarto Masculino: 50 vagas
-    for (let i = 1; i <= 50; i++) {
-      camas.push({
-        numero: i,
-        casa: Casa.MASCULINA,
-        posicao: i % 2 === 0 ? PosicaoCama.INFERIOR : PosicaoCama.SUPERIOR,
-        status: StatusCama.DISPONIVEL,
-      });
-    }
-
-    // Quarto Feminino: 20 vagas
-    for (let i = 1; i <= 20; i++) {
-      camas.push({
-        numero: i,
-        casa: Casa.MISTA_MULHERES,
-        posicao: i % 2 === 0 ? PosicaoCama.INFERIOR : PosicaoCama.SUPERIOR,
-        status: StatusCama.DISPONIVEL,
-      });
-    }
-
-    // Quarto Idosos: 16 vagas
-    for (let i = 1; i <= 16; i++) {
-      camas.push({
-        numero: i,
-        casa: Casa.IDOSOS,
-        posicao: i % 2 === 0 ? PosicaoCama.INFERIOR : PosicaoCama.SUPERIOR,
-        status: StatusCama.DISPONIVEL,
-      });
-    }
-
-    // Quarto LGBT: 4 vagas
-    for (let i = 1; i <= 4; i++) {
-      camas.push({
-        numero: i,
-        casa: Casa.LGBT,
-        posicao: i % 2 === 0 ? PosicaoCama.INFERIOR : PosicaoCama.SUPERIOR,
-        status: StatusCama.DISPONIVEL,
-      });
-    }
-
+    const camas: Partial<Cama>[] = buildCamasOficiais();
     await this.camasRepository.save(camas);
     console.log('Camas criadas com sucesso!');
   }

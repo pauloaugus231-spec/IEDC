@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkoutPessoa, type PessoaApi, type PessoaEstadiaResumo, useHospedes, useTodasPessoas } from '../api';
+import {
+  checkoutPessoa,
+  type PessoaApi,
+  type PessoaEstadiaResumo,
+  usePessoasPaginadas,
+  useResumoPessoas,
+} from '../api';
 import CadastroPessoaModal from '../components/CadastroPessoaModal';
 import CheckinModal from '../components/CheckinModal';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
@@ -67,29 +73,50 @@ const SearchPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 350);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos');
-  const [visibleCount, setVisibleCount] = useState(24);
   const [reload, setReload] = useState(0);
   const [pessoaParaCheckin, setPessoaParaCheckin] = useState<PessoaApi | null>(null);
   const [cadastroOpen, setCadastroOpen] = useState(false);
   const navigate = useNavigate();
+  const statusQuery = statusFilter === 'hospedados'
+    ? 'ativa'
+    : statusFilter === 'aprovados'
+      ? 'aprovado'
+      : statusFilter === 'inativos'
+        ? 'inativo'
+        : undefined;
+  const onlyLiberados = statusFilter === 'liberados';
 
-  const { data: pessoasBusca, loading: loadingBusca, error } = useHospedes(debouncedSearch, reload);
-  const { data: todasPessoas, total: totalPessoas, loading: loadingTodas } = useTodasPessoas(reload);
-
-  useEffect(() => {
-    setVisibleCount(24);
-  }, [debouncedSearch, statusFilter]);
+  const {
+    data: pessoas,
+    total: totalPessoas,
+    page,
+    totalPages,
+    hasNextPage,
+    hasPreviousPage,
+    loading,
+    error,
+    goToPage,
+    nextPage,
+    previousPage,
+  } = usePessoasPaginadas({
+    search: debouncedSearch,
+    status: statusQuery,
+    onlyLiberados,
+    reload,
+    limit: 24,
+  });
+  const { data: resumoPessoas } = useResumoPessoas(reload);
 
   window.reloadTodasPessoas = () => setReload((current) => current + 1);
 
   const stats = useMemo(() => {
-    const total = totalPessoas;
-    const hospedados = todasPessoas?.filter((pessoa) => pessoa.status_cadastro === 'ativa').length ?? 0;
-    const aprovados = todasPessoas?.filter((pessoa) => pessoa.status_cadastro === 'aprovado').length ?? 0;
-    const liberados = todasPessoas?.filter((pessoa) => pessoa.liberacao_antecipada).length ?? 0;
+    const total = resumoPessoas?.total ?? totalPessoas;
+    const hospedados = resumoPessoas?.hospedados ?? 0;
+    const aprovados = resumoPessoas?.aprovados ?? 0;
+    const liberados = resumoPessoas?.liberados ?? 0;
 
     return { total, hospedados, aprovados, liberados };
-  }, [todasPessoas, totalPessoas]);
+  }, [resumoPessoas, totalPessoas]);
 
   const handleCheckinSuccess = () => {
     setPessoaParaCheckin(null);
@@ -108,27 +135,26 @@ const SearchPage = () => {
     }
   };
 
-  const listaProcessada = useMemo(() => {
-    const baseList = debouncedSearch ? pessoasBusca : todasPessoas;
-    if (!baseList) return [];
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    goToPage(1);
+  };
 
-    return baseList
-      .filter((p) => {
-        if (statusFilter === 'todos') return true;
-        if (statusFilter === 'hospedados') return p.status_cadastro === 'ativa';
-        if (statusFilter === 'aprovados') return p.status_cadastro === 'aprovado';
-        if (statusFilter === 'liberados') return p.liberacao_antecipada;
-        if (statusFilter === 'inativos') return p.status_cadastro === 'inativo' && !p.liberacao_antecipada;
-        return true;
-      })
-      .sort((a, b) => (
-        (getNomePrincipal(a) || '').toLowerCase().localeCompare((getNomePrincipal(b) || '').toLowerCase())
-      ));
-  }, [debouncedSearch, pessoasBusca, todasPessoas, statusFilter]);
+  const handleStatusChange = (nextStatus: StatusFilter) => {
+    setStatusFilter(nextStatus);
+    goToPage(1);
+  };
 
-  const listaVisivel = listaProcessada.slice(0, visibleCount);
-  const temMais = listaProcessada.length > visibleCount;
-  const isLoading = loadingBusca || loadingTodas;
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setStatusFilter('todos');
+    goToPage(1);
+  };
+
+  const listaProcessada = pessoas;
+  const isLoading = loading;
+  const paginaAtual = totalPages > 0 ? page : 1;
+  const totalPaginas = totalPages > 0 ? totalPages : 1;
 
   return (
     <main className="page-band people-search-page">
@@ -163,24 +189,24 @@ const SearchPage = () => {
           </svg>
           <input
             autoComplete="off"
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => handleSearchChange(event.target.value)}
             placeholder="Buscar por nome, nome social, CPF ou NIS"
             type="text"
             value={searchTerm}
           />
           {searchTerm && (
-            <button onClick={() => setSearchTerm('')} type="button">
+            <button onClick={handleClearSearch} type="button">
               Limpar
             </button>
           )}
         </div>
 
         <div className="people-filter-row" aria-label="Filtros de status">
-          <FilterChip active={statusFilter === 'todos'} count={stats.total} label="Todos" onClick={() => setStatusFilter('todos')} />
-          <FilterChip active={statusFilter === 'hospedados'} count={stats.hospedados} label="Hospedados" onClick={() => setStatusFilter('hospedados')} />
-          <FilterChip active={statusFilter === 'aprovados'} count={stats.aprovados} label="Aprovados" onClick={() => setStatusFilter('aprovados')} />
-          <FilterChip active={statusFilter === 'liberados'} count={stats.liberados} label="Liberados" onClick={() => setStatusFilter('liberados')} />
-          <FilterChip active={statusFilter === 'inativos'} label="Inativos" onClick={() => setStatusFilter('inativos')} />
+          <FilterChip active={statusFilter === 'todos'} count={stats.total} label="Todos" onClick={() => handleStatusChange('todos')} />
+          <FilterChip active={statusFilter === 'hospedados'} count={stats.hospedados} label="Hospedados" onClick={() => handleStatusChange('hospedados')} />
+          <FilterChip active={statusFilter === 'aprovados'} count={stats.aprovados} label="Aprovados" onClick={() => handleStatusChange('aprovados')} />
+          <FilterChip active={statusFilter === 'liberados'} count={stats.liberados} label="Liberados" onClick={() => handleStatusChange('liberados')} />
+          <FilterChip active={statusFilter === 'inativos'} label="Inativos" onClick={() => handleStatusChange('inativos')} />
         </div>
       </section>
 
@@ -188,12 +214,12 @@ const SearchPage = () => {
         <div>
           <h2>{debouncedSearch ? 'Resultado da busca' : 'Cadastros recentes'}</h2>
           <span>
-            {isLoading ? 'Carregando registros...' : `${listaProcessada.length} registros encontrados`}
+            {isLoading && listaProcessada.length === 0 ? 'Carregando registros...' : `${totalPessoas} registros encontrados`}
           </span>
         </div>
       </section>
 
-      {isLoading && listaVisivel.length === 0 && (
+      {isLoading && listaProcessada.length === 0 && (
         <div className="people-card-list">
           {[1, 2, 3, 4].map((item) => <SkeletonCard key={item} />)}
         </div>
@@ -206,18 +232,18 @@ const SearchPage = () => {
         </section>
       )}
 
-      {!isLoading && !error && listaVisivel.length === 0 && (
+      {!isLoading && !error && listaProcessada.length === 0 && (
         <section className="people-empty-state">
           <strong>Nenhuma pessoa encontrada</strong>
           <p>Revise o termo pesquisado ou limpe os filtros ativos.</p>
-          <button className="report-button secondary" onClick={() => { setSearchTerm(''); setStatusFilter('todos'); }} type="button">
+          <button className="report-button secondary" onClick={handleClearSearch} type="button">
             Limpar busca
           </button>
         </section>
       )}
 
       <section className="people-card-list">
-        {listaVisivel.map((pessoa) => {
+        {listaProcessada.map((pessoa) => {
           const activeStay = getActiveStay(pessoa);
           const casa = getCasaLabel(activeStay?.cama?.casa);
           const dataEntrada = formatDate(activeStay?.data_checkin);
@@ -270,10 +296,21 @@ const SearchPage = () => {
         })}
       </section>
 
-      {!isLoading && temMais && (
-        <button className="people-load-more" onClick={() => setVisibleCount((count) => count + 24)} type="button">
-          Carregar mais {listaProcessada.length - visibleCount} registros
-        </button>
+      {!isLoading && totalPessoas > 0 && (
+        <section className="people-pagination" aria-label="Paginação da lista de pessoas">
+          <div className="people-pagination-info">
+            <strong>Página {paginaAtual} de {totalPaginas}</strong>
+            <span>{totalPessoas} registros encontrados</span>
+          </div>
+          <div className="people-pagination-actions">
+            <button className="report-button secondary" onClick={previousPage} type="button" disabled={!hasPreviousPage}>
+              Anterior
+            </button>
+            <button className="report-button" onClick={nextPage} type="button" disabled={!hasNextPage}>
+              Próxima
+            </button>
+          </div>
+        </section>
       )}
 
       {pessoaParaCheckin && (

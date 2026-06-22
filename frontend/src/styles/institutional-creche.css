@@ -2395,6 +2395,36 @@
   padding: 10px 13px;
 }
 
+.people-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  border: 1px solid #d9e1ee;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 14px 16px;
+}
+
+.people-pagination-info {
+  display: grid;
+  gap: 4px;
+  color: #46566d;
+}
+
+.people-pagination-info strong {
+  color: #172033;
+  font-size: 16px;
+}
+
+.people-pagination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .people-load-more {
   width: 100%;
   margin-top: 18px;
@@ -2405,6 +2435,21 @@
   font: inherit;
   font-weight: 900;
   padding: 13px;
+}
+
+@media (max-width: 720px) {
+  .people-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .people-pagination-actions {
+    justify-content: stretch;
+  }
+
+  .people-pagination-actions .report-button {
+    flex: 1 1 0;
+  }
 }
 
 .people-empty-state {

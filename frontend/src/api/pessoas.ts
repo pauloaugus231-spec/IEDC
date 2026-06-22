@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from './http';
 
 export type StatusCadastroPessoa = 'aprovado' | 'ativa' | 'inativo';
@@ -60,9 +60,42 @@ export type PessoaPayload = Partial<Omit<PessoaApi, 'id' | 'estadias' | 'bloquei
 
 interface PaginatedResponse<T> {
   data: T[];
-  total?: number;
-  page?: number;
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PessoasResumo {
+  total: number;
+  hospedados: number;
+  aprovados: number;
+  liberados: number;
+}
+
+export interface PessoasPaginaQuery {
+  search?: string;
+  status?: StatusCadastroPessoa | 'todos';
+  onlyLiberados?: boolean;
   limit?: number;
+  reload?: number;
+}
+
+export interface PessoasPaginaState {
+  data: PessoaApi[];
+  total: number;
+  page: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  loading: boolean;
+  error: string | null;
+  goToPage: (page: number) => void;
+  nextPage: () => void;
+  previousPage: () => void;
+  refresh: () => void;
 }
 
 // Editar pessoa
@@ -126,39 +159,24 @@ export async function checkoutPessoa(pessoa_id: string, funcionario?: string, ob
 }
 
 // Hook para buscar todos os usuários cadastrados, ordenados por nome
-export function useTodasPessoas(reload = 0) {
-  const [data, setData] = useState<PessoaApi[]>([]);
-  const [total, setTotal] = useState(0);
+export function useResumoPessoas(reload = 0) {
+  const [data, setData] = useState<PessoasResumo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    apiFetch<PessoaApi[] | PaginatedResponse<PessoaApi>>(`/api/pessoas?limit=1000`)
-      .then((res) => {
-        if (Array.isArray(res)) {
-          setData(res);
-          setTotal(res.length);
-        } else if (isPaginatedResponse(res)) {
-          setData(res.data);
-          setTotal(res.total ?? res.data.length);
-        } else {
-          setData([]);
-          setTotal(0);
-        }
-      })
-      .catch(e => {
+    apiFetch<PessoasResumo>('/api/pessoas/resumo')
+      .then(setData)
+      .catch((e) => {
         setError(e.message);
+        setData(null);
       })
       .finally(() => setLoading(false));
   }, [reload]);
 
-  return { data, total, loading, error };
-}
-
-function isPaginatedResponse<T>(value: unknown): value is PaginatedResponse<T> {
-  return Boolean(value && typeof value === 'object' && Array.isArray((value as { data?: unknown }).data));
+  return { data, loading, error };
 }
 
 export function useHospedes(query: string, reload = 0) {
@@ -177,6 +195,126 @@ export function useHospedes(query: string, reload = 0) {
   }, [query, reload]);
 
   return { data, loading, error };
+}
+
+export function usePessoasPaginadas({
+  search,
+  status,
+  onlyLiberados = false,
+  limit = 24,
+  reload = 0,
+}: PessoasPaginaQuery = {}): PessoasPaginaState {
+  const [data, setData] = useState<PessoaApi[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+
+  const normalizedSearch = search?.trim() ?? '';
+  const normalizedStatus = status && status !== 'todos' ? status : undefined;
+  const safeLimit = Math.min(Math.max(Math.trunc(limit || 24), 1), 100);
+
+  const buildUrl = useCallback((pageNumber: number) => {
+    const params = new URLSearchParams({
+      page: String(pageNumber),
+      limit: String(safeLimit),
+    });
+
+    if (normalizedSearch) {
+      params.set('search', normalizedSearch);
+    }
+
+    if (normalizedStatus) {
+      params.set('status', normalizedStatus);
+    }
+
+    if (onlyLiberados) {
+      params.set('liberados', 'true');
+    }
+
+    return `/api/pessoas?${params.toString()}`;
+  }, [normalizedSearch, normalizedStatus, onlyLiberados, safeLimit]);
+
+  const fetchPage = useCallback(async (pageNumber: number) => {
+    return apiFetch<PaginatedResponse<PessoaApi>>(buildUrl(pageNumber));
+  }, [buildUrl]);
+
+  const loadPage = useCallback(async (pageNumber: number) => {
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
+    setData([]);
+    setTotal(0);
+    setTotalPages(0);
+    setHasNextPage(false);
+    setHasPreviousPage(false);
+
+    try {
+      const result = await fetchPage(pageNumber);
+
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
+      setData(result.data);
+      setTotal(result.total);
+      setPage(result.page);
+      setTotalPages(result.totalPages);
+      setHasNextPage(result.hasNextPage);
+      setHasPreviousPage(result.hasPreviousPage);
+    } catch (err) {
+      if (requestId === requestIdRef.current) {
+        setError(err instanceof Error ? err.message : 'Erro inesperado.');
+      }
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [fetchPage]);
+
+  useEffect(() => {
+    void loadPage(page);
+
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [loadPage, page, reload]);
+
+  const goToPage = useCallback((nextPage: number) => {
+    setPage(Math.max(1, Math.trunc(nextPage || 1)));
+  }, []);
+
+  const previousPage = useCallback(() => {
+    setPage((current) => Math.max(current - 1, 1));
+  }, []);
+
+  const nextPage = useCallback(() => {
+    setPage((current) => current + 1);
+  }, []);
+
+  const refresh = useCallback(() => {
+    void loadPage(page);
+  }, [loadPage, page]);
+
+  return {
+    data,
+    total,
+    page,
+    totalPages,
+    hasNextPage,
+    hasPreviousPage,
+    loading,
+    error,
+    goToPage,
+    nextPage,
+    previousPage,
+    refresh,
+  };
 }
 
 // Buscar pessoas hospedadas por casa

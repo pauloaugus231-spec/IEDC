@@ -29,6 +29,16 @@ import { LiberarAntecipadamenteDto } from './dto/liberar-antecipadamente.dto';
 export class PessoasController {
   constructor(private readonly pessoasService: PessoasService) {}
 
+  private clampPositiveInteger(value: string | undefined, fallback: number, max: number): number {
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return fallback;
+    }
+
+    return Math.min(Math.trunc(parsed), max);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Criar nova pessoa' })
   @ApiResponse({ status: 201, description: 'Pessoa criada com sucesso', type: Pessoa })
@@ -42,24 +52,26 @@ export class PessoasController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, enum: StatusCadastro })
+  @ApiQuery({ name: 'liberados', required: false, type: Boolean })
   @ApiResponse({ status: 200, description: 'Lista de pessoas' })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('status') status?: string,
+    @Query('liberados') liberados?: string,
   ) {
-    // Garante que page e limit são numéricos
-    const pageNum = page ? Number(page) : 1;
-    const limitNum = limit ? Number(limit) : 10;
-    
-    // Converte string para enum StatusCadastro
+    const pageNum = this.clampPositiveInteger(page, 1, Number.MAX_SAFE_INTEGER);
+    const limitNum = this.clampPositiveInteger(limit, 24, 100);
+    const searchTerm = search?.trim() || undefined;
+    const somenteLiberados = liberados === 'true' || liberados === '1';
+
     let statusEnum: StatusCadastro | undefined;
     if (status) {
-      statusEnum = Object.values(StatusCadastro).find(s => s === status) as StatusCadastro;
+      statusEnum = Object.values(StatusCadastro).find((s) => s === status) as StatusCadastro;
     }
-    
-    return this.pessoasService.findAll(pageNum, limitNum, search, statusEnum);
+
+    return this.pessoasService.findAll(pageNum, limitNum, searchTerm, statusEnum, somenteLiberados);
   }
 
   @Get('ativos')
@@ -67,6 +79,13 @@ export class PessoasController {
   @ApiResponse({ status: 200, description: 'Lista de pessoas ativas' })
   findAtivos(): Promise<Pessoa[]> {
     return this.pessoasService.findAtivos();
+  }
+
+  @Get('resumo')
+  @ApiOperation({ summary: 'Resumo agregado de pessoas do Albergue' })
+  @ApiResponse({ status: 200, description: 'Contagens agregadas de pessoas' })
+  getResumo() {
+    return this.pessoasService.getResumo();
   }
 
   @Get('search')

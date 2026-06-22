@@ -68,11 +68,20 @@ Depois de uma versao aprovada no GitHub:
 ```bash
 cd /opt/iedc
 git pull
-docker compose up -d --build
+docker compose up -d --build --force-recreate --remove-orphans
 docker image prune -f
 ```
 
 Se a nova versao trouxer migrations, elas rodam automaticamente com `DB_MIGRATIONS_RUN=true`. Antes de atualizar o servidor, valide a versao no Mac ou em um ambiente de teste com banco descartavel.
+
+Se o ambiente continuar mostrando tela antiga, use este caminho de manutencao:
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+Isso garante a troca completa dos containers quando houver suspeita de processo antigo preso no runtime.
 
 Para atualizacao controlada, com backup antes do pull e healthcheck depois do deploy:
 
@@ -129,6 +138,8 @@ Se voce automatizar a atualizacao, deixe ela para depois do backup:
 ```
 
 Assim o backup roda as 00:15 e o update roda as 01:00, sem disputar a meia-noite com o cron interno do backend.
+
+O atualizador controlado ja faz `git pull`, `docker compose build` e `docker compose up -d --build --force-recreate --remove-orphans`, que e o fluxo recomendado para refletir mudancas sem precisar entrar no servidor toda vez.
 
 ## Restauracao rapida
 

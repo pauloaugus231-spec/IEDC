@@ -34,6 +34,7 @@ export class PessoasService {
     limit: number = 20,
     search?: string,
     status?: StatusCadastro,
+    onlyLiberados = false,
   ): Promise<PaginatedResult<Pessoa>> {
     // ✅ OTIMIZADO: Query Builder com paginação e índices
     const queryBuilder = this.pessoaRepository
@@ -56,17 +57,43 @@ export class PessoasService {
       queryBuilder.andWhere('pessoa.status_cadastro = :pessoaStatus', { pessoaStatus: status });
     }
 
+    if (onlyLiberados) {
+      queryBuilder.andWhere('pessoa.liberacao_antecipada = true');
+    }
+
     // ✅ OTIMIZADO: COUNT separado (mais rápido)
     const total = await queryBuilder.getCount();
 
     // ✅ OTIMIZADO: Buscar apenas a página atual
     const data = await queryBuilder
       .orderBy('pessoa.created_at', 'DESC') // Usa índice idx_pessoas_created_at
+      .addOrderBy('pessoa.nome', 'ASC')
       .skip((page - 1) * limit)
       .take(limit)
       .getMany();
 
     return createPaginatedResult(data, total, page, limit);
+  }
+
+  async getResumo(): Promise<{
+    total: number;
+    hospedados: number;
+    aprovados: number;
+    liberados: number;
+  }> {
+    const [total, hospedados, aprovados, liberados] = await Promise.all([
+      this.pessoaRepository.count({ where: { ativo: true } }),
+      this.pessoaRepository.count({ where: { ativo: true, status_cadastro: StatusCadastro.ATIVA } }),
+      this.pessoaRepository.count({ where: { ativo: true, status_cadastro: StatusCadastro.APROVADO } }),
+      this.pessoaRepository.count({ where: { ativo: true, liberacao_antecipada: true } }),
+    ]);
+
+    return {
+      total,
+      hospedados,
+      aprovados,
+      liberados,
+    };
   }
 
   async findOne(id: string): Promise<Pessoa> {

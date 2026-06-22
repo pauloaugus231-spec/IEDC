@@ -57,7 +57,7 @@ docker compose config >/dev/null
 
 echo "Recriando containers..."
 docker compose build
-docker compose up -d --remove-orphans
+docker compose up -d --build --force-recreate --remove-orphans
 
 echo "Aguardando saude da API em $HEALTH_URL..."
 healthy="false"

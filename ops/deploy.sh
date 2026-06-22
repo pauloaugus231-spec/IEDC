@@ -28,6 +28,6 @@ echo "$LOG_PREFIX Aplicando atualizacao..."
 git pull origin "$BRANCH" --ff-only
 
 echo "$LOG_PREFIX Reconstruindo e reiniciando containers..."
-docker compose up -d --build
+docker compose up -d --build --force-recreate --remove-orphans
 
 echo "$LOG_PREFIX Deploy concluido com sucesso. Versao: $(git rev-parse --short HEAD)"
