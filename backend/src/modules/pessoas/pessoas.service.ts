@@ -66,7 +66,7 @@ export class PessoasService {
 
     // ✅ OTIMIZADO: Buscar apenas a página atual
     const data = await queryBuilder
-      .orderBy('LOWER(pessoa.nome)', 'ASC')
+      .orderBy('pessoa.nome', 'ASC')
       .addOrderBy('pessoa.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
