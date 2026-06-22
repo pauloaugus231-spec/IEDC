@@ -30,7 +30,8 @@ describe('NotificacoesService', () => {
     uptimeSeconds: 1,
     memory: { rssMb: 1, heapUsedMb: 1, heapTotalMb: 1 },
     dependencies: {
-      database: { status: 'ok', latencyMs: 1, message: 'ok' },
+      coreDatabase: { status: 'ok', latencyMs: 1, message: 'ok' },
+      albergueDatabase: { status: 'ok', latencyMs: 1, message: 'ok' },
       redis: { status: 'unknown', latencyMs: null, message: 'não configurado' },
       uploads: { status: 'ok', path: '/tmp', message: 'ok' },
     },

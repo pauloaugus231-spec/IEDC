@@ -43,7 +43,9 @@ export class ObservabilityService {
     @InjectRepository(ObservabilityEvent, CORE_DATABASE_CONNECTION)
     private readonly eventsRepository: Repository<ObservabilityEvent>,
     @InjectDataSource(CORE_DATABASE_CONNECTION)
-    private readonly dataSource: DataSource,
+    private readonly coreDataSource: DataSource,
+    @InjectDataSource()
+    private readonly albergueDataSource: DataSource,
   ) {}
 
   async registrarEvento(input: RegistrarEventoInput): Promise<void> {
@@ -133,8 +135,9 @@ export class ObservabilityService {
   }
 
   async getSystemStatus() {
-    const [database, redis, uploads, backup, recentCounts] = await Promise.all([
-      this.checkDatabase(),
+    const [coreDatabase, albergueDatabase, redis, uploads, backup, recentCounts] = await Promise.all([
+      this.checkDatabase(this.coreDataSource),
+      this.checkDatabase(this.albergueDataSource),
       this.checkRedis(),
       this.checkUploads(),
       this.getBackupStatus(),
@@ -142,7 +145,13 @@ export class ObservabilityService {
     ]);
 
     return {
-      status: this.resolveOverallStatus([database.status, redis.status, uploads.status, backup.status]),
+      status: this.resolveOverallStatus([
+        coreDatabase.status,
+        albergueDatabase.status,
+        redis.status,
+        uploads.status,
+        backup.status,
+      ]),
       checkedAt: new Date().toISOString(),
       service: 'iedc-backend',
       version: process.env.APP_VERSION || 'local',
@@ -150,7 +159,8 @@ export class ObservabilityService {
       uptimeSeconds: Math.round(process.uptime()),
       memory: this.getMemoryUsage(),
       dependencies: {
-        database,
+        coreDatabase,
+        albergueDatabase,
         redis,
         uploads,
       },
@@ -160,14 +170,22 @@ export class ObservabilityService {
   }
 
   async getReadinessStatus() {
-    const [database, uploads] = await Promise.all([this.checkDatabase(), this.checkUploads()]);
-    const status = database.status === 'ok' && uploads.status === 'ok' ? 'ok' : 'down';
+    const [coreDatabase, albergueDatabase, uploads] = await Promise.all([
+      this.checkDatabase(this.coreDataSource),
+      this.checkDatabase(this.albergueDataSource),
+      this.checkUploads(),
+    ]);
+    const status =
+      coreDatabase.status === 'ok' && albergueDatabase.status === 'ok' && uploads.status === 'ok'
+        ? 'ok'
+        : 'down';
 
     return {
       status,
       checkedAt: new Date().toISOString(),
       dependencies: {
-        database,
+        coreDatabase,
+        albergueDatabase,
         uploads,
       },
     };
@@ -217,11 +235,11 @@ export class ObservabilityService {
     }
   }
 
-  private async checkDatabase() {
+  private async checkDatabase(dataSource: DataSource) {
     const startedAt = Date.now();
 
     try {
-      await this.dataSource.query('SELECT 1');
+      await dataSource.query('SELECT 1');
       return {
         status: 'ok' as ComponentStatus,
         latencyMs: Date.now() - startedAt,
