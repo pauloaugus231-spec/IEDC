@@ -7,6 +7,7 @@ import { Ocorrencia, TipoOcorrencia, SeveridadeOcorrencia } from '../../entities
 import { Cama, StatusCama } from '../../entities/cama.entity';
 import { Bloqueio, TipoBloqueio } from '../../entities/bloqueio.entity';
 import { Resend } from 'resend';
+import { getNomePrincipal } from '../../common/utils/pessoa-nome.util';
 
 export interface NovoCadastroTriagem {
   nome: string;
@@ -172,7 +173,7 @@ export class TriagemService {
         if (novosCadastros.length > 0 && incluirDadosSensiveis) {
           novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} Novo(s) Cadastro(s) Hoje:*\n\n`;
           novosCadastros.forEach((cadastro, index) => {
-            novosCadastrosTexto += `${index + 1}. *${cadastro.nome}*`;
+            novosCadastrosTexto += `${index + 1}. *${getNomePrincipal(cadastro)}*`;
             
             // Adicionar indicador LGBT
             if (cadastro.lgbt) {
@@ -181,9 +182,9 @@ export class TriagemService {
             
             novosCadastrosTexto += `\n`;
             
-            // Adicionar nome social se preenchido
-            if (cadastro.nome_social) {
-              novosCadastrosTexto += `   • Nome Social: ${cadastro.nome_social}\n`;
+            // O nome civil permanece disponível apenas como informação cadastral complementar.
+            if (cadastro.nome_social?.trim()) {
+              novosCadastrosTexto += `   • Nome civil: ${cadastro.nome}\n`;
             }
             
             novosCadastrosTexto += `   • Nascimento: ${cadastro.dataNascimento} (${cadastro.idade} anos)\n`;
@@ -241,8 +242,13 @@ export class TriagemService {
               <h2 style="color: #059669; margin-top: 0;">✨ ${novosCadastros.length} Novo(s) Cadastro(s) Hoje</h2>
               ${novosCadastros.map((cadastro) => `
                 <div style="background-color: white; padding: 15px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #D1FAE5;">
-                  <h3 style="margin-top: 0; color: #1F2937;">${cadastro.nome}</h3>
+                  <h3 style="margin-top: 0; color: #1F2937;">${getNomePrincipal(cadastro)}</h3>
                   <table style="width: 100%; font-size: 14px;">
+                    ${cadastro.nome_social?.trim() ? `
+                    <tr>
+                      <td style="padding: 5px 0; color: #6B7280;"><strong>Nome civil:</strong></td>
+                      <td style="padding: 5px 0;">${cadastro.nome}</td>
+                    </tr>` : ''}
                     <tr>
                       <td style="padding: 5px 0; color: #6B7280;"><strong>Data de Nascimento:</strong></td>
                       <td style="padding: 5px 0;">${cadastro.dataNascimento} (${cadastro.idade} anos)</td>

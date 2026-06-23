@@ -6,7 +6,7 @@ export interface PessoaNomePrincipal {
 
 export const getNomePrincipal = (pessoa?: PessoaNomePrincipal | null) => {
   if (!pessoa) return 'Pessoa não encontrada';
-  return pessoa.nome_social || pessoa.nome || 'Nome não disponível';
+  return pessoa.nome_social?.trim() || pessoa.nome?.trim() || 'Nome não disponível';
 };
 
 export const PLANTAO_RESET_HOUR = 7;

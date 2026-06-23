@@ -30,6 +30,7 @@ interface PessoaHospedada {
     pessoa: {
       id: string;
       nome: string;
+      nome_social?: string | null;
       cpf?: string;
       lgbt?: boolean;
       status_cadastro: string;
@@ -224,10 +225,13 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
   const camasFiltradas = useMemo(() => {
     if (!filtro) return camas;
     const termo = filtro.toLowerCase();
-    return camas.filter(c => 
-      c.estadia?.pessoa?.nome?.toLowerCase().includes(termo) || 
-      c.numero.toString().includes(termo)
-    );
+    return camas.filter(c => {
+      const pessoa = c.estadia?.pessoa;
+      return (pessoa && (
+        getNomePrincipal(pessoa).toLocaleLowerCase('pt-BR').includes(termo)
+        || pessoa.nome.toLocaleLowerCase('pt-BR').includes(termo)
+      )) || c.numero.toString().includes(termo);
+    });
   }, [camas, filtro]);
 
   // Lista de pessoas ocupadas (para modo lista)
@@ -523,7 +527,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                           <>
                                             <div className="camas-section-label ocupadas">Troca mútua (ocupadas)</div>
                                             {camasDestino.filter(c => c.estadia && c.id !== cama.id).map(cd => {
-                                              const nomeOcupante = cd.estadia?.pessoa?.nome || 'Ocupante';
+                                              const nomeOcupante = getNomePrincipal(cd.estadia?.pessoa);
                                               return (
                                                 <button 
                                                   key={cd.id} 

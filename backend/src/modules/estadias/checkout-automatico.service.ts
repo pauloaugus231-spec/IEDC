@@ -60,7 +60,7 @@ export class CheckoutAutomaticoService {
           e.pessoa_id,
           e.status,
           e.data_limite,
-          p.nome as pessoa_nome,
+          COALESCE(NULLIF(BTRIM(p.nome_social), ''), p.nome) as pessoa_nome,
           CURRENT_DATE as data_hoje,
           (CURRENT_DATE - e.data_limite) as dias_vencidos
         FROM estadias e

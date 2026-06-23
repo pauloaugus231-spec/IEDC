@@ -256,7 +256,7 @@ const PessoaProfilePage: React.FC = () => {
   const camposAfericao = useMemo(() => {
     if (!pessoa) return [];
     return [
-      { label: 'Nome', value: pessoa.nome },
+      { label: 'Nome civil', value: pessoa.nome },
       { label: 'CPF', value: pessoa.cpf },
       { label: 'Nascimento', value: pessoa.data_nascimento },
       { label: 'NIS', value: pessoa.nis },
@@ -419,7 +419,7 @@ const PessoaProfilePage: React.FC = () => {
           <div className="profile-heading">
             <span className={`profile-status-pill ${statusOperacional.tone}`}>{statusOperacional.label}</span>
             <h1>{getNomePrincipal(pessoa)}</h1>
-            {pessoa.nome_social && <p>Nome civil: {pessoa.nome}</p>}
+            {pessoa.nome_social?.trim() && <p>Nome civil: {pessoa.nome}</p>}
             <div className="profile-quick-tags">
               {idade !== null && <span>{idade} anos</span>}
               <span>{pessoa.cpf || 'CPF não informado'}</span>

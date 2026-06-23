@@ -7,6 +7,7 @@ import { Cama, StatusCama, Casa } from '../../entities/cama.entity';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { DiasCruzGateway } from '../websocket/websocket.gateway';
+import { getNomePrincipal } from '../../common/utils/pessoa-nome.util';
 
 const DIAS_ESTADIA_NOVA = 30;
 const DIAS_ATE_LIMITE_NOVA = DIAS_ESTADIA_NOVA - 1;
@@ -103,7 +104,7 @@ export class EstadiasService {
       });
 
       if (estadiaAtivaExistente) {
-        throw new ConflictException(`Pessoa ${pessoa.nome} já possui uma estadia ativa desde ${estadiaAtivaExistente.data_checkin.toLocaleDateString('pt-BR')}.`);
+        throw new ConflictException(`Pessoa ${getNomePrincipal(pessoa)} já possui uma estadia ativa desde ${estadiaAtivaExistente.data_checkin.toLocaleDateString('pt-BR')}.`);
       }
 
       // Verificar regra de retorno após checkout
@@ -126,7 +127,7 @@ export class EstadiasService {
             pessoa.data_liberacao_antecipada = undefined;
             await transactionalEntityManager.save(pessoa);
           } else {
-            throw new ConflictException(`Pessoa ${pessoa.nome} deve aguardar 15 noites após o checkout. Último checkout: ${checkout.toLocaleDateString('pt-BR')}.`);
+            throw new ConflictException(`Pessoa ${getNomePrincipal(pessoa)} deve aguardar 15 noites após o checkout. Último checkout: ${checkout.toLocaleDateString('pt-BR')}.`);
           }
         }
       }
@@ -148,7 +149,7 @@ export class EstadiasService {
 
       if (estadiaExistenteNaCama) {
         throw new ConflictException(
-          `ERRO: Cama ${cama.numero} (${cama.casa}) já está ocupada por ${estadiaExistenteNaCama.pessoa?.nome || 'outro hóspede'}. ` +
+          `ERRO: Cama ${cama.numero} (${cama.casa}) já está ocupada por ${getNomePrincipal(estadiaExistenteNaCama.pessoa, 'outro hóspede')}. ` +
           `Por favor, selecione outra cama disponível.`
         );
       }
@@ -335,7 +336,7 @@ export class EstadiasService {
         id: e.id,
         pessoa: {
           id: e.pessoa?.id,
-          nome: e.pessoa?.nome,
+          nome: getNomePrincipal(e.pessoa),
         },
         cama: {
           id: e.cama_id,
@@ -417,8 +418,8 @@ export class EstadiasService {
       // Retornar resultado
       return { 
         message: estadiaDestino 
-          ? `Troca mútua realizada: ${estadiaOrigem.pessoa?.nome} ↔ ${estadiaDestino.pessoa?.nome}` 
-          : `Transferência realizada: ${estadiaOrigem.pessoa?.nome} movido com sucesso`,
+          ? `Troca mútua realizada: ${getNomePrincipal(estadiaOrigem.pessoa)} ↔ ${getNomePrincipal(estadiaDestino.pessoa)}`
+          : `Transferência realizada: ${getNomePrincipal(estadiaOrigem.pessoa)} movido com sucesso`,
         tipo: estadiaDestino ? 'troca_mutua' : 'transferencia'
       };
     });
@@ -428,8 +429,8 @@ export class EstadiasService {
     
     return { 
       message: estadiaDestino 
-        ? `Troca mútua realizada: ${estadiaOrigem?.pessoa?.nome} ↔ ${estadiaDestino?.pessoa?.nome}` 
-        : `Transferência realizada: ${estadiaOrigem?.pessoa?.nome} movido com sucesso`,
+        ? `Troca mútua realizada: ${getNomePrincipal(estadiaOrigem?.pessoa)} ↔ ${getNomePrincipal(estadiaDestino?.pessoa)}`
+        : `Transferência realizada: ${getNomePrincipal(estadiaOrigem?.pessoa)} movido com sucesso`,
       tipo: estadiaDestino ? 'troca_mutua' : 'transferencia'
     };
   }
@@ -549,7 +550,7 @@ export class EstadiasService {
           await this.camaRepository.save(camaLivre);
 
           resultados.push({
-            pessoa: estadiaParaMover.pessoa.nome,
+            pessoa: getNomePrincipal(estadiaParaMover.pessoa),
             camaOrigem: camaAtual.numero,
             casaOrigem: camaAtual.casa,
             camaDestino: camaLivre.numero,
@@ -597,7 +598,7 @@ export class EstadiasService {
           arr.push({
             estadia_id: estadia.id,
             pessoa_id: estadia.pessoa_id,
-            pessoa_nome: estadia.pessoa?.nome,
+            pessoa_nome: getNomePrincipal(estadia.pessoa),
             data_checkin: estadia.data_checkin,
             cama_id: estadia.cama_id,
             cama_numero: estadia.cama.numero,

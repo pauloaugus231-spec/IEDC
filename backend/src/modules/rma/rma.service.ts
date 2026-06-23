@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Pessoa } from '../../entities/pessoa.entity';
 import { Estadia, StatusEstadia } from '../../entities/estadia.entity';
+import { getNomePrincipal } from '../../common/utils/pessoa-nome.util';
 import { 
   PessoaGesuas, 
   PessoaConsolidada, 
@@ -129,7 +130,10 @@ export class RmaService {
         }
         
         // Comparar por Nome (prioridade 2)
-        if (!encontrou && this.compararNomes(pessoaGesuas.nome, pessoa.nome)) {
+        if (!encontrou && (
+          this.compararNomes(pessoaGesuas.nome, getNomePrincipal(pessoa))
+          || this.compararNomes(pessoaGesuas.nome, pessoa.nome)
+        )) {
           encontradas.push(this.criarPessoaConsolidada(pessoa, estadia));
           estadiasEncontradas.add(estadia.id);
           encontrou = true;
@@ -243,7 +247,7 @@ export class RmaService {
 
   private criarPessoaConsolidada(pessoa: Pessoa, estadia: Estadia): PessoaConsolidada {
     return {
-      nome: pessoa.nome,
+      nome: getNomePrincipal(pessoa),
       cpf: pessoa.cpf || undefined,
       dataNascimento: pessoa.data_nascimento || undefined,
       nis: pessoa.nis || undefined,

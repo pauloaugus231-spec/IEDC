@@ -51,6 +51,7 @@ export class CamasService implements OnModuleInit {
         'estadia.status as estadia_status',
         'pessoa.id as pessoa_id',
         'pessoa.nome as pessoa_nome',
+        'pessoa.nome_social as pessoa_nome_social',
         'pessoa.cpf as pessoa_cpf',
         'pessoa.lgbt as pessoa_lgbt',
         'pessoa.status_cadastro as pessoa_status_cadastro',
@@ -72,6 +73,7 @@ export class CamasService implements OnModuleInit {
         pessoa: {
           id: row.pessoa_id,
           nome: row.pessoa_nome,
+          nome_social: row.pessoa_nome_social,
           cpf: row.pessoa_cpf,
           lgbt: row.pessoa_lgbt,
           status_cadastro: row.pessoa_status_cadastro,

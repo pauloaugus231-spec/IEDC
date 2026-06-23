@@ -6,6 +6,7 @@ import {
   getOperationalPlantaoKey,
   getOperationalPlantaoKeyFromValue,
   getTriagemCensoStorageState,
+  getNomePrincipal,
 } from "../utils";
 
 type Quarto = "Masculino" | "Feminino" | "Idosos" | "LGBT+";
@@ -113,7 +114,7 @@ const PresencasPage: React.FC = () => {
         
         return {
           id: pessoa.id,
-          nome: pessoa.nome,
+          nome: getNomePrincipal(pessoa),
           quarto,
           cama: cama?.numero || 0,
           presente: presenteValue, // Novatos já vêm marcados

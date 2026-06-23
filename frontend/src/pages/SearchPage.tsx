@@ -264,7 +264,7 @@ const SearchPage = () => {
 
                 <div className="people-card-meta">
                   <span>{maskCpf(pessoa.cpf)}</span>
-                  {pessoa.nome_social && <span>Nome social informado</span>}
+                  {pessoa.nome_social?.trim() && <span>Nome social informado</span>}
                   {pessoa.lgbt && <span className="identity-badge">LGBT+</span>}
                 </div>
 

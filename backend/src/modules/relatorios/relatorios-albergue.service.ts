@@ -46,7 +46,9 @@ export class RelatoriosAlbergueService {
     }
 
     const query = this.pessoaRepository.createQueryBuilder('pessoa')
-      .select(camposValidos.map(campo => `pessoa.${campo}`))
+      .select(camposValidos.map(campo => campo === 'nome'
+        ? "COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome) AS nome"
+        : `pessoa.${campo} AS ${campo}`))
       .where('pessoa.ativo = true');
 
     const temFiltroDatas = inicio && fim && inicio.trim() !== '' && fim.trim() !== '';
@@ -81,6 +83,10 @@ export class RelatoriosAlbergueService {
         }
       }
     });
+
+    if (camposValidos.includes('nome')) {
+      query.orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC');
+    }
 
     const data = await query.getRawMany<RelatorioRow>();
 
@@ -274,11 +280,12 @@ export class RelatoriosAlbergueService {
     const query = this.estadiaRepository.createQueryBuilder('estadia')
       .leftJoinAndSelect('estadia.pessoa', 'pessoa')
       .select([
-        'pessoa.nome',
-        'estadia.data_checkin',
-        'estadia.data_checkout',
-        'estadia.dias_permanencia',
-      ]);
+        "COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome) AS pessoa_nome",
+        'estadia.data_checkin AS estadia_data_checkin',
+        'estadia.data_checkout AS estadia_data_checkout',
+        'estadia.dias_permanencia AS estadia_dias_permanencia',
+      ])
+      .orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC');
 
     if (inicio && fim) {
       query.andWhere('estadia.data_checkin BETWEEN :inicio AND :fim', { inicio, fim });

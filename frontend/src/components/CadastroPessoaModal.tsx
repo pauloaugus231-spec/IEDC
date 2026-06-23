@@ -271,7 +271,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
             <div className="cadastro-aside-person">
               <strong>{getNomeExibicao()}</strong>
               <span>{form.cpf || 'CPF não informado'}</span>
-              {form.nomeSocial && <em>Nome social informado</em>}
+              {form.nomeSocial?.trim() && <em>Nome social informado</em>}
             </div>
 
             <div className="cadastro-progress-card">

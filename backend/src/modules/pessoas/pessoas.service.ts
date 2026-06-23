@@ -66,7 +66,7 @@ export class PessoasService {
 
     // ✅ OTIMIZADO: Buscar apenas a página atual
     const data = await queryBuilder
-      .orderBy('pessoa.nome', 'ASC')
+      .orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC')
       .addOrderBy('pessoa.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
@@ -154,7 +154,7 @@ export class PessoasService {
       );
     }
 
-    qb.take(20).orderBy('pessoa.nome', 'ASC');
+    qb.take(20).orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC');
     return qb.getMany();
   }
 

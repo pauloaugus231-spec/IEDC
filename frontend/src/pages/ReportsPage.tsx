@@ -6,10 +6,13 @@ import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { MetricCard, MetricGrid, PageHeader, Panel, TableShell } from '../components/DesignSystem';
 import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE, CHART_COLORS_GENERO, CHART_COLORS_RACA } from '../styles/echarts-theme-iedc';
 import { downloadExcelCompatibleTable } from '../utils/spreadsheet';
+import { getNomePrincipal } from '../utils';
 
 interface ReportRow {
   nome?: string | null;
   pessoa_nome?: string | null;
+  nome_social?: string | null;
+  pessoa_nome_social?: string | null;
   cpf?: string | null;
   pessoa_cpf?: string | null;
   nis?: string | null;
@@ -56,6 +59,13 @@ function normalizeReportRows(response: CustomReportResponse): ReportRow[] {
   return Array.isArray(response.data) ? response.data : [];
 }
 
+function getNomeRelatorio(row: ReportRow): string {
+  return getNomePrincipal({
+    nome: row.nome || row.pessoa_nome,
+    nome_social: row.nome_social || row.pessoa_nome_social,
+  });
+}
+
 
 const ReportsPage = () => {
   // Dados Brutos
@@ -99,7 +109,7 @@ const ReportsPage = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      let url = '/api/relatorios/custom?campos=nome,cpf,data_nascimento,nis,cor,sexo,genero,raca,lgbt';
+      let url = '/api/relatorios/custom?campos=nome,nome_social,cpf,data_nascimento,nis,cor,sexo,genero,raca,lgbt';
       
       if (filtrosAvancados.dataInicio && filtrosAvancados.dataFim) {
         url += `&inicio=${filtrosAvancados.dataInicio}&fim=${filtrosAvancados.dataFim}`;
@@ -364,7 +374,7 @@ const ReportsPage = () => {
     }
 
     const tableRows = filteredData.map(row => [
-      mascararNome(row.nome || row.pessoa_nome),
+      mascararNome(getNomeRelatorio(row)),
       mascararCPF(row.cpf || row.pessoa_cpf),
       row.genero || row.pessoa_genero || '-',
       row.cor || row.pessoa_cor || row.raca || '-',
@@ -384,7 +394,7 @@ const ReportsPage = () => {
 
   const downloadExcel = () => {
     const excelData = filteredData.map(row => ({
-      Nome: mascararNome(row.nome || row.pessoa_nome),
+      Nome: mascararNome(getNomeRelatorio(row)),
       CPF: mascararCPF(row.cpf || row.pessoa_cpf),
       NIS: row.nis || row.pessoa_nis || '-',
       Gênero: row.genero || row.pessoa_genero || 'Não informado',
@@ -587,12 +597,12 @@ const ReportsPage = () => {
             <tbody>
               {filteredData.length > 0 ? (
                 [...filteredData]
-                  .sort((a, b) => (a.nome || a.pessoa_nome || '').localeCompare(b.nome || b.pessoa_nome || ''))
+                  .sort((a, b) => getNomeRelatorio(a).localeCompare(getNomeRelatorio(b), 'pt-BR'))
                   .map((d, idx) => (
                     <tr key={idx}>
                       <td>
                         {(d.lgbt || d.pessoa_lgbt) && <span title="LGBT+" className="albergue-identity-tag">LGBT+</span>}
-                        {mascararNome(d.nome || d.pessoa_nome)}
+                        {mascararNome(getNomeRelatorio(d))}
                       </td>
                       <td>{mascararCPF(d.cpf || d.pessoa_cpf)}</td>
                       <td>
