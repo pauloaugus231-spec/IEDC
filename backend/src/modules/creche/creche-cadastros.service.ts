@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ESCOLA_DATABASE_CONNECTION } from '../../config/database.config';
 import {
   AcompanhamentoPayload,
   CreateCriancaPayload,
@@ -16,7 +16,7 @@ import { CrecheSchemaService } from './creche-schema.service';
 @Injectable()
 export class CrecheCadastrosService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: CrecheSchemaService,
   ) {}
 

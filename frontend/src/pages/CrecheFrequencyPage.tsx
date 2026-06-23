@@ -118,7 +118,7 @@ const CrecheFrequencyPage = () => {
         description="Registro diário simples para alimentar o painel da E.E.I., sinais de evasão e relatórios mensais."
         actions={(
           <>
-          <Link className="creche-head-link secondary" to="/creche">
+          <Link className="creche-head-link secondary" to="/escola">
             Painel da E.E.I.
           </Link>
           <button className="creche-head-link" disabled={saving || !frequencia} onClick={save} type="button">
@@ -165,7 +165,7 @@ const CrecheFrequencyPage = () => {
           {frequencia?.registros.map((registro) => (
             <article className="creche-presence-row" key={registro.criancaId}>
               <div>
-                <Link to={`/creche/criancas/${registro.codigo}`}>
+                <Link to={`/escola/criancas/${registro.codigo}`}>
                   <strong>{registro.nome}</strong>
                 </Link>
                 <span>{registro.codigo} · NIS {registro.nis || 'pendente'}</span>

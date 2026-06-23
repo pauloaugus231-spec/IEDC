@@ -12,7 +12,7 @@ import { QualidadeDadosResponse, QualidadeDadosService } from './qualidade-dados
   UsuarioRole.EDUCADOR_ALBERGUE,
   UsuarioRole.COORDENADOR_CRECHE,
   UsuarioRole.EDUCADOR_CRECHE,
-  UsuarioRole.FINANCEIRO,
+  UsuarioRole.COMERCIAL,
 )
 export class QualidadeDadosController {
   constructor(private readonly qualidadeDadosService: QualidadeDadosService) {}

@@ -142,10 +142,10 @@ const CrecheTeachersPage = () => {
         description="Cadastre profissionais, defina função e direcione cada turma para sua responsável sem duplicar dados."
         actions={(
           <>
-          <Link className="creche-head-link secondary" to="/creche/turmas">
+          <Link className="creche-head-link secondary" to="/escola/turmas">
             Turmas
           </Link>
-          <Link className="creche-head-link secondary" to="/creche">
+          <Link className="creche-head-link secondary" to="/escola">
             Painel E.E.I.
           </Link>
           <button className="creche-head-link" onClick={openNew} type="button">

@@ -39,7 +39,7 @@ export interface FinanceiroSnapshot {
 
 export interface RelatorioExecutivoAlerta {
   id: string;
-  area: 'albergue' | 'creche' | 'financeiro';
+  area: 'albergue' | 'creche' | 'comercial';
   title: string;
   description: string;
   tone: RelatorioExecutivoTone;
@@ -48,7 +48,7 @@ export interface RelatorioExecutivoAlerta {
 }
 
 export interface RelatorioExecutivoServico {
-  id: 'albergue' | 'creche' | 'financeiro';
+  id: 'albergue' | 'creche' | 'comercial';
   title: string;
   subtitle: string;
   score: number;
@@ -88,7 +88,7 @@ export function getAllowedExecutiveScopes(actor: AuthUser | undefined): Relatori
   if (!actor) return [];
 
   if (actor.role === UsuarioRole.GESTORA || actor.role === UsuarioRole.EQUIPE_TECNICA) {
-    return ['institucional', 'albergue', 'creche', 'financeiro'];
+    return ['institucional', 'albergue', 'creche', 'comercial'];
   }
 
   if (actor.role === UsuarioRole.COORDENADOR_ALBERGUE) {
@@ -99,8 +99,8 @@ export function getAllowedExecutiveScopes(actor: AuthUser | undefined): Relatori
     return ['creche'];
   }
 
-  if (actor.role === UsuarioRole.FINANCEIRO) {
-    return ['financeiro'];
+  if (actor.role === UsuarioRole.COMERCIAL) {
+    return ['comercial'];
   }
 
   return [];

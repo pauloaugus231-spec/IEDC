@@ -8,7 +8,7 @@ export type ManagedUserRole =
   | 'equipe_tecnica'
   | 'educador_albergue'
   | 'educador_creche'
-  | 'financeiro'
+  | 'comercial'
   | 'loja_bazar'
   | 'loja_brecho'
   | 'loja_feirao';
@@ -19,7 +19,7 @@ export type ManagedServiceScope =
   | 'albergue'
   | 'creche'
   | 'institucional'
-  | 'financeiro'
+  | 'comercial'
   | 'bazar'
   | 'brecho'
   | 'feirao';

@@ -44,6 +44,12 @@ function NotFound() {
   );
 }
 
+function LegacyCrecheRedirect() {
+  const location = useLocation();
+  const suffix = location.pathname.slice('/creche'.length);
+  return <Navigate replace to={`/escola${suffix}${location.search}${location.hash}`} />;
+}
+
 function RouteFallback() {
   return (
     <div className="route-loading" role="status">
@@ -186,7 +192,7 @@ function AppRoutes() {
         path="/lojas/secretaria/qualidade-dados"
         element={(
           <ProtectedLayout>
-            <DataQualityPage area="financeiro" />
+            <DataQualityPage area="comercial" />
           </ProtectedLayout>
         )}
       />
@@ -232,7 +238,7 @@ function AppRoutes() {
       />
       <Route path="/gestao/relatorios" element={<Navigate replace to="/gestao" />} />
       <Route
-        path="/creche"
+        path="/escola"
         element={(
           <ProtectedLayout>
             <CrecheDashboardPage />
@@ -240,16 +246,16 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/relatorios"
+        path="/escola/relatorios"
         element={(
           <ProtectedLayout>
             <CrecheReportsPage />
           </ProtectedLayout>
         )}
       />
-      <Route path="/creche/relatorio-executivo" element={<Navigate replace to="/creche/relatorios" />} />
+      <Route path="/escola/relatorio-executivo" element={<Navigate replace to="/escola/relatorios" />} />
       <Route
-        path="/creche/qualidade-dados"
+        path="/escola/qualidade-dados"
         element={(
           <ProtectedLayout>
             <DataQualityPage area="creche" />
@@ -257,7 +263,7 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/professoras"
+        path="/escola/professoras"
         element={(
           <ProtectedLayout>
             <CrecheTeachersPage />
@@ -265,7 +271,7 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/turmas"
+        path="/escola/turmas"
         element={(
           <ProtectedLayout>
             <CrecheClassPage />
@@ -273,7 +279,7 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/turmas/:id"
+        path="/escola/turmas/:id"
         element={(
           <ProtectedLayout>
             <CrecheClassPage />
@@ -281,7 +287,7 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/criancas"
+        path="/escola/criancas"
         element={(
           <ProtectedLayout>
             <CrecheChildrenPage />
@@ -289,7 +295,7 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/criancas/:id"
+        path="/escola/criancas/:id"
         element={(
           <ProtectedLayout>
             <CrecheChildProfilePage />
@@ -297,13 +303,14 @@ function AppRoutes() {
         )}
       />
       <Route
-        path="/creche/frequencia"
+        path="/escola/frequencia"
         element={(
           <ProtectedLayout>
             <CrecheFrequencyPage />
           </ProtectedLayout>
         )}
       />
+      <Route path="/creche/*" element={<LegacyCrecheRedirect />} />
       <Route
         path="/albergue"
         element={(

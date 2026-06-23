@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import {
   AdicionarItemDto,
   AtualizarStatusComandaDto,
@@ -33,7 +33,7 @@ interface ProdutoItemRow {
 @Injectable()
 export class LojasComandasService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly catalogo: LojasCatalogoService,
     private readonly caixa: LojasCaixaService,
@@ -69,8 +69,8 @@ export class LojasComandasService {
       lojaSlugParam = `$${params.length}`;
       where.push(`EXISTS (
         SELECT 1
-        FROM comercio_comanda_itens filtro_i
-        JOIN comercio_lojas filtro_l ON filtro_l.id = filtro_i.loja_id
+        FROM comercial.comanda_itens filtro_i
+        JOIN comercial.lojas filtro_l ON filtro_l.id = filtro_i.loja_id
         WHERE filtro_i.comanda_id = c.id AND filtro_l.slug = ${lojaSlugParam}
       )`);
     }
@@ -85,15 +85,15 @@ export class LojasComandasService {
             SUM(i.total_item)::numeric(12,2) AS total,
             COUNT(*)::int AS itens,
             string_agg(DISTINCT l.nome, ', ' ORDER BY l.nome) AS lojas
-          FROM comercio_comanda_itens i
-          JOIN comercio_lojas l ON l.id = i.loja_id
+          FROM comercial.comanda_itens i
+          JOIN comercial.lojas l ON l.id = i.loja_id
           GROUP BY i.comanda_id
         ),
         pagamentos AS (
           SELECT
             comanda_id,
             SUM(valor)::numeric(12,2) AS pago
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           GROUP BY comanda_id
         ),
         retiradas AS (
@@ -102,7 +102,7 @@ export class LojasComandasService {
             COUNT(*)::int AS total,
             COUNT(*) FILTER (WHERE status = 'aguardando_retirada')::int AS pendentes,
             COUNT(*) FILTER (WHERE status = 'retirado')::int AS concluidas
-          FROM comercio_retiradas
+          FROM comercial.retiradas
           GROUP BY comanda_id
         ),
         loja_itens AS (
@@ -111,8 +111,8 @@ export class LojasComandasService {
             i.loja_id AS loja_id,
             SUM(i.total_item)::numeric(12,2) AS total,
             COUNT(*)::int AS itens
-          FROM comercio_comanda_itens i
-          JOIN comercio_lojas l ON l.id = i.loja_id
+          FROM comercial.comanda_itens i
+          JOIN comercial.lojas l ON l.id = i.loja_id
           ${lojaSlugParam ? `WHERE l.slug = ${lojaSlugParam}` : 'WHERE false'}
           GROUP BY i.comanda_id, i.loja_id
         )
@@ -127,7 +127,7 @@ export class LojasComandasService {
           to_char(c.updated_at, 'YYYY-MM-DD HH24:MI') AS "atualizadaEm",
           to_char(c.finalizada_em, 'YYYY-MM-DD HH24:MI') AS "finalizadaEm",
           cli.id AS "clienteId",
-          cli.nome AS cliente,
+          c.nome_pessoa_snapshot AS cliente,
           cli.telefone AS "clienteTelefone",
           COALESCE(i.total, 0)::float AS total,
           COALESCE(p.pago, 0)::float AS pago,
@@ -144,13 +144,13 @@ export class LojasComandasService {
           COALESCE(rt.total, 0)::int AS "retiradasTotal",
           COALESCE(rt.pendentes, 0)::int AS "retiradasPendentes",
           COALESCE(rt.concluidas, 0)::int AS "retiradasConcluidas"
-        FROM comercio_comandas c
-        JOIN comercio_clientes cli ON cli.id = c.cliente_id
+        FROM comercial.comandas c
+        JOIN comercial.clientes cli ON cli.id = c.pessoa_id
         LEFT JOIN itens i ON i.comanda_id = c.id
         LEFT JOIN pagamentos p ON p.comanda_id = c.id
         LEFT JOIN retiradas rt ON rt.comanda_id = c.id
         LEFT JOIN loja_itens li ON li.comanda_id = c.id
-        LEFT JOIN comercio_retiradas r ON r.comanda_id = c.id AND r.loja_id = li.loja_id
+        LEFT JOIN comercial.retiradas r ON r.comanda_id = c.id AND r.loja_id = li.loja_id
         ${whereSql}
         ORDER BY c.updated_at DESC, c.created_at DESC
         LIMIT 80
@@ -166,8 +166,8 @@ export class LojasComandasService {
     const [existente] = await this.dataSource.query(
       `
         SELECT id
-        FROM comercio_comandas
-        WHERE cliente_id = $1::uuid
+        FROM comercial.comandas
+        WHERE pessoa_id = $1::uuid
           AND status IN ('aberta', 'aguardando_pagamento')
         ORDER BY created_at DESC
         LIMIT 1
@@ -182,7 +182,7 @@ export class LojasComandasService {
     const [proximo] = await this.dataSource.query(`
       SELECT
         COALESCE(MAX(NULLIF(regexp_replace(codigo, '\\D', '', 'g'), '')::int), 0) + 1 AS numero
-      FROM comercio_comandas
+      FROM comercial.comandas
     `) as Array<{ numero: number | string }>;
 
     const id = randomUUID();
@@ -190,10 +190,13 @@ export class LojasComandasService {
 
     await this.dataSource.query(
       `
-        INSERT INTO comercio_comandas (
-          id, codigo, cliente_id, status, criada_por, observacoes, created_at, updated_at
+        INSERT INTO comercial.comandas (
+          id, codigo, pessoa_id, nome_pessoa_snapshot, status, criada_por, observacoes, created_at, updated_at
         )
-        VALUES ($1, $2, $3::uuid, 'aberta', $4, $5, NOW(), NOW())
+        SELECT $1, $2, p.id, COALESCE(NULLIF(p.nome_social, ''), p.nome_registro),
+               'aberta', $4, $5, NOW(), NOW()
+        FROM identidade.pessoas p
+        WHERE p.id = $3::uuid
       `,
       [id, codigo, clienteId, body.criadaPor || body.usuario || 'Sistema local', body.observacoes || null],
     );
@@ -217,14 +220,14 @@ export class LojasComandasService {
             comanda_id,
             SUM(total_item)::numeric(12,2) AS total,
             COUNT(*)::int AS itens
-          FROM comercio_comanda_itens
+          FROM comercial.comanda_itens
           GROUP BY comanda_id
         ),
         pagamentos AS (
           SELECT
             comanda_id,
             SUM(valor)::numeric(12,2) AS pago
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           GROUP BY comanda_id
         )
         SELECT
@@ -238,7 +241,7 @@ export class LojasComandasService {
           to_char(c.updated_at, 'YYYY-MM-DD HH24:MI') AS "atualizadaEm",
           to_char(c.finalizada_em, 'YYYY-MM-DD HH24:MI') AS "finalizadaEm",
           cli.id AS "clienteId",
-          cli.nome AS cliente,
+          c.nome_pessoa_snapshot AS cliente,
           cli.telefone AS "clienteTelefone",
           cli.cpf AS "clienteCpf",
           cli.email AS "clienteEmail",
@@ -246,8 +249,8 @@ export class LojasComandasService {
           COALESCE(p.pago, 0)::float AS pago,
           GREATEST(COALESCE(i.total, 0) - COALESCE(p.pago, 0), 0)::float AS saldo,
           COALESCE(i.itens, 0)::int AS itens
-        FROM comercio_comandas c
-        JOIN comercio_clientes cli ON cli.id = c.cliente_id
+        FROM comercial.comandas c
+        JOIN comercial.clientes cli ON cli.id = c.pessoa_id
         LEFT JOIN itens i ON i.comanda_id = c.id
         LEFT JOIN pagamentos p ON p.comanda_id = c.id
         WHERE c.id::text = $1 OR c.codigo = $1
@@ -277,9 +280,9 @@ export class LojasComandasService {
           l.nome AS loja,
           p.id AS "produtoId",
           p.nome AS produto
-        FROM comercio_comanda_itens i
-        JOIN comercio_lojas l ON l.id = i.loja_id
-        LEFT JOIN comercio_produtos p ON p.id = i.produto_id
+        FROM comercial.comanda_itens i
+        JOIN comercial.lojas l ON l.id = i.loja_id
+        LEFT JOIN comercial.produtos p ON p.id = i.produto_id
         WHERE i.comanda_id = $1::uuid
           ${lojaFilterSql}
         ORDER BY i.created_at, i.descricao
@@ -296,7 +299,7 @@ export class LojasComandasService {
           recebido_por AS "recebidoPor",
           observacoes,
           to_char(created_at, 'YYYY-MM-DD HH24:MI') AS "criadoEm"
-        FROM comercio_pagamentos
+        FROM comercial.pagamentos
         WHERE comanda_id = $1::uuid
         ORDER BY created_at
       `,
@@ -310,8 +313,8 @@ export class LojasComandasService {
           l.nome,
           SUM(i.total_item)::float AS total,
           COUNT(*)::int AS itens
-        FROM comercio_comanda_itens i
-        JOIN comercio_lojas l ON l.id = i.loja_id
+        FROM comercial.comanda_itens i
+        JOIN comercial.lojas l ON l.id = i.loja_id
         WHERE i.comanda_id = $1::uuid
           ${lojaFilterSql}
         GROUP BY l.id, l.slug, l.nome
@@ -332,8 +335,8 @@ export class LojasComandasService {
           to_char(r.retirada_em, 'YYYY-MM-DD HH24:MI') AS "retiradaEm",
           r.entregue_por AS "entreguePor",
           r.observacoes
-        FROM comercio_retiradas r
-        JOIN comercio_lojas l ON l.id = r.loja_id
+        FROM comercial.retiradas r
+        JOIN comercial.lojas l ON l.id = r.loja_id
         WHERE r.comanda_id = $1::uuid
           ${lojaSlug ? 'AND l.slug = $2' : ''}
         ORDER BY l.nome
@@ -374,7 +377,7 @@ export class LojasComandasService {
       ? await this.dataSource.query(
           `
             SELECT id, nome, categoria, preco::float AS preco
-            FROM comercio_produtos
+            FROM comercial.produtos
             WHERE id = $1::uuid
           `,
           [body.produtoId],
@@ -389,7 +392,7 @@ export class LojasComandasService {
 
     await this.dataSource.query(
       `
-        INSERT INTO comercio_comanda_itens (
+        INSERT INTO comercial.comanda_itens (
           id, comanda_id, loja_id, produto_id, descricao, categoria, quantidade,
           valor_unitario, desconto, total_item, created_at
         )
@@ -411,7 +414,7 @@ export class LojasComandasService {
 
     await this.dataSource.query(
       `
-        UPDATE comercio_comandas
+        UPDATE comercial.comandas
         SET status = CASE WHEN status = 'aberta' THEN 'aguardando_pagamento' ELSE status END,
             updated_at = NOW()
         WHERE id = $1::uuid
@@ -440,10 +443,10 @@ export class LojasComandasService {
 
     const result = await this.dataSource.query(
       `
-        DELETE FROM comercio_comanda_itens
+        DELETE FROM comercial.comanda_itens
         WHERE id = $1::uuid AND comanda_id = $2::uuid
           AND ($3::varchar IS NULL OR loja_id = (
-            SELECT id FROM comercio_lojas WHERE slug = $3::varchar
+            SELECT id FROM comercial.lojas WHERE slug = $3::varchar
           ))
         RETURNING id
       `,
@@ -457,7 +460,7 @@ export class LojasComandasService {
 
     await this.dataSource.query(
       `
-        UPDATE comercio_comandas
+        UPDATE comercial.comandas
         SET updated_at = NOW()
         WHERE id = $1::uuid
       `,
@@ -519,7 +522,7 @@ export class LojasComandasService {
       for (const pagamento of pagamentos) {
         await manager.query(
           `
-            INSERT INTO comercio_pagamentos (
+            INSERT INTO comercial.pagamentos (
               id, comanda_id, caixa_id, metodo, valor, recebido_por, observacoes, created_at
             )
             VALUES ($1, $2::uuid, $3::uuid, $4, $5, $6, $7, NOW())
@@ -538,7 +541,7 @@ export class LojasComandasService {
 
       await manager.query(
         `
-          UPDATE comercio_comandas
+          UPDATE comercial.comandas
           SET status = $2::varchar,
               finalizada_em = CASE
                 WHEN $2::varchar = 'paga' THEN COALESCE(finalizada_em, NOW())
@@ -552,7 +555,7 @@ export class LojasComandasService {
 
       await manager.query(
         `
-          INSERT INTO comercio_eventos_comanda (
+          INSERT INTO comercial.eventos_comanda (
             id, comanda_id, tipo, descricao, usuario, metadata, created_at
           )
           VALUES ($1, $2::uuid, $3, $4, $5, $6::jsonb, NOW())
@@ -592,7 +595,7 @@ export class LojasComandasService {
 
     await this.dataSource.query(
       `
-        UPDATE comercio_comandas
+        UPDATE comercial.comandas
         SET status = $2,
             motivo_status = $3,
             finalizada_em = CASE WHEN $2 IN ('desistencia', 'cancelada', 'expirada') THEN NOW() ELSE finalizada_em END,
@@ -620,7 +623,7 @@ export class LojasComandasService {
     const [comanda] = await this.dataSource.query(
       `
         SELECT id, status
-        FROM comercio_comandas
+        FROM comercial.comandas
         WHERE id = $1::uuid
       `,
       [comandaId],

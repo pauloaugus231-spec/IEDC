@@ -41,13 +41,13 @@ describe('useMotion — comportamento de acessibilidade de animação', () => {
     expect(ambientLayer).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('renderiza nós de módulo (Gestão, Albergue, E.E.I., Lojas, Financeiro)', () => {
+  it('renderiza nós de módulo (Gestão, Albergue, E.E.I., Lojas, Comercial)', () => {
     renderLogin();
     expect(screen.getByText('Gestão')).toBeInTheDocument();
     expect(screen.getByText('Albergue')).toBeInTheDocument();
     expect(screen.getByText('E.E.I.')).toBeInTheDocument();
     expect(screen.getByText('Lojas')).toBeInTheDocument();
-    expect(screen.getByText('Financeiro')).toBeInTheDocument();
+    expect(screen.getByText('Comercial')).toBeInTheDocument();
   });
 
   it('marca camada de animação como decorativa (aria-hidden="true")', () => {

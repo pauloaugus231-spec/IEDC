@@ -1,16 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ESCOLA_DATABASE_CONNECTION } from '../../config/database.config';
 import { EEI_TURMAS, EEI_TURMA_ORDER_SQL, firstReturnedRow } from './creche-shared';
+import { EscolaLegacyMigrationService } from './escola-legacy-migration.service';
 
 @Injectable()
-export class CrecheSchemaService {
+export class CrecheSchemaService implements OnModuleInit {
   private estruturaEeiPronta = false;
   private estruturaEeiPromise: Promise<void> | null = null;
 
-  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    private readonly legacyMigration: EscolaLegacyMigrationService,
+  ) {}
+
+  async onModuleInit() {
+    await this.ensureEstruturaEei();
+  }
 
   async ensureEstruturaEei() {
     if (this.estruturaEeiPronta) {
@@ -33,80 +41,21 @@ export class CrecheSchemaService {
   }
 
   async ensureAcompanhamentosTable() {
-    await this.dataSource.query(
-      `
-        CREATE TABLE IF NOT EXISTS creche_acompanhamentos (
-          id uuid PRIMARY KEY,
-          crianca_id uuid NOT NULL REFERENCES creche_criancas(id) ON DELETE CASCADE,
-          tipo varchar NOT NULL,
-          status varchar NOT NULL,
-          descricao text NOT NULL,
-          responsavel varchar NOT NULL,
-          data date NOT NULL,
-          created_at timestamp NOT NULL,
-          updated_at timestamp NOT NULL
-        )
-      `,
-    );
+    await this.ensureEstruturaEei();
   }
 
   private async ensureEstruturaEeiInternal() {
-    await this.dataSource.query(
-      `
-        CREATE TABLE IF NOT EXISTS creche_professoras (
-          id uuid PRIMARY KEY,
-          nome varchar(160) NOT NULL,
-          telefone varchar(40),
-          email varchar(160),
-          funcao varchar(80) NOT NULL DEFAULT 'Regente',
-          status varchar(30) NOT NULL DEFAULT 'ativa',
-          observacoes text,
-          created_at timestamp NOT NULL DEFAULT NOW(),
-          updated_at timestamp NOT NULL DEFAULT NOW()
-        )
-      `,
-    );
+    const [schema] = await this.dataSource.query(
+      `SELECT to_regclass('public.creche_turmas')::text AS tabela`,
+    ) as Array<{ tabela: string | null }>;
 
-    await this.dataSource.query(
-      `
-        CREATE UNIQUE INDEX IF NOT EXISTS creche_professoras_nome_key
-        ON creche_professoras (nome)
-      `,
-    );
+    if (!schema?.tabela) {
+      throw new Error(
+        'O schema do iedc_escola nao foi criado. Habilite DB_MIGRATIONS_RUN antes de iniciar o backend.',
+      );
+    }
 
-    await this.dataSource.query(
-      `
-        ALTER TABLE creche_turmas
-        ADD COLUMN IF NOT EXISTS professora_responsavel_id uuid
-      `,
-    );
-
-    await this.dataSource.query(
-      `
-        ALTER TABLE creche_professoras
-        ALTER COLUMN funcao SET DEFAULT 'Regente'
-      `,
-    );
-
-    await this.dataSource.query(
-      `
-        DO $$
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1
-            FROM pg_constraint
-            WHERE conname = 'creche_turmas_professora_responsavel_id_fkey'
-          ) THEN
-            ALTER TABLE creche_turmas
-            ADD CONSTRAINT creche_turmas_professora_responsavel_id_fkey
-            FOREIGN KEY (professora_responsavel_id)
-            REFERENCES creche_professoras(id)
-            ON DELETE SET NULL;
-          END IF;
-        END
-        $$;
-      `,
-    );
+    await this.legacyMigration.migrateIfNeeded();
 
     for (const [index, turma] of EEI_TURMAS.entries()) {
       const professoraResult = await this.dataSource.query(

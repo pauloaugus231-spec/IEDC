@@ -85,13 +85,13 @@ const CrecheClassPage = () => {
           description="Visualize cada turma, professora responsável, ocupação e acesso rápido às crianças vinculadas."
           actions={(
             <>
-            <Link className="creche-head-link secondary" to="/creche">
+            <Link className="creche-head-link secondary" to="/escola">
               Painel E.E.I.
             </Link>
-            <Link className="creche-head-link secondary" to="/creche/professoras">
+            <Link className="creche-head-link secondary" to="/escola/professoras">
               Equipe
             </Link>
-            <Link className="creche-head-link" to="/creche/criancas">
+            <Link className="creche-head-link" to="/escola/criancas">
               Crianças
             </Link>
             </>
@@ -113,8 +113,8 @@ const CrecheClassPage = () => {
                 </div>
                 <progress className="creche-turma-track" value={Math.min(taxa, 100)} max={100} aria-label={`Ocupação da turma ${turma.nome}`} />
                 <div className="creche-turma-actions">
-                  <Link to={`/creche/turmas/${turma.id}`}>Abrir turma</Link>
-                  <Link to={`/creche/frequencia?turmaId=${turma.id}`}>Frequência</Link>
+                  <Link to={`/escola/turmas/${turma.id}`}>Abrir turma</Link>
+                  <Link to={`/escola/frequencia?turmaId=${turma.id}`}>Frequência</Link>
                 </div>
               </article>
             );
@@ -138,7 +138,7 @@ const CrecheClassPage = () => {
     return (
       <main className="page-band creche-page">
         <p className="institutional-note">{error || 'Turma não encontrada.'}</p>
-        <Link className="creche-head-link secondary" to="/creche/turmas">
+        <Link className="creche-head-link secondary" to="/escola/turmas">
           Voltar para turmas
         </Link>
       </main>
@@ -161,16 +161,16 @@ const CrecheClassPage = () => {
           </div>
         </div>
         <div className="creche-head-actions">
-          <Link className="creche-head-link secondary" to="/creche/turmas">
+          <Link className="creche-head-link secondary" to="/escola/turmas">
             Turmas
           </Link>
-          <Link className="creche-head-link secondary" to="/creche/professoras">
+          <Link className="creche-head-link secondary" to="/escola/professoras">
             Equipe
           </Link>
-          <Link className="creche-head-link secondary" to={`/creche/frequencia?turmaId=${detail.turma.id}`}>
+          <Link className="creche-head-link secondary" to={`/escola/frequencia?turmaId=${detail.turma.id}`}>
             Frequência
           </Link>
-          <Link className="creche-head-link" to={`/creche/criancas?turmaId=${detail.turma.id}`}>
+          <Link className="creche-head-link" to={`/escola/criancas?turmaId=${detail.turma.id}`}>
             Crianças
           </Link>
         </div>
@@ -212,7 +212,7 @@ const CrecheClassPage = () => {
           <p className="institutional-note">
             Novas profissionais devem ser cadastradas em Equipe da E.E.I.; aqui a turma apenas recebe o vínculo.
           </p>
-          <Link className="creche-head-link secondary" to="/creche/professoras">
+          <Link className="creche-head-link secondary" to="/escola/professoras">
             Abrir cadastro da equipe
           </Link>
         </article>
@@ -266,7 +266,7 @@ const CrecheClassPage = () => {
                 {detail.criancas.map((crianca) => (
                   <tr key={crianca.id}>
                     <td>
-                      <Link className="creche-table-link" to={`/creche/criancas/${crianca.id}`}>
+                      <Link className="creche-table-link" to={`/escola/criancas/${crianca.id}`}>
                         <strong>{crianca.nome}</strong>
                         <span>{crianca.cpf || 'CPF pendente'}</span>
                       </Link>

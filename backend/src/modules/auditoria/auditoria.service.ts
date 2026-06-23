@@ -30,7 +30,7 @@ export interface ListarAuditoriaOptions {
   actor?: AuthUser | null;
 }
 
-type AuditAudience = 'suporte' | 'executiva' | 'albergue' | 'creche' | 'financeiro';
+type AuditAudience = 'suporte' | 'executiva' | 'albergue' | 'creche' | 'comercial';
 
 const AUDIT_ENTITIES_BY_AUDIENCE: Record<Exclude<AuditAudience, 'suporte' | 'executiva'>, string[]> = {
   albergue: [
@@ -48,7 +48,7 @@ const AUDIT_ENTITIES_BY_AUDIENCE: Record<Exclude<AuditAudience, 'suporte' | 'exe
     'dashboard',
   ],
   creche: ['creche'],
-  financeiro: ['lojas'],
+  comercial: ['lojas'],
 };
 
 const EXECUTIVE_AUDIT_ENTITIES = [
@@ -146,7 +146,7 @@ export class AuditoriaService {
     if (actor.role === UsuarioRole.GESTORA) return 'executiva';
     if (actor.role === UsuarioRole.COORDENADOR_ALBERGUE) return 'albergue';
     if (actor.role === UsuarioRole.COORDENADOR_CRECHE) return 'creche';
-    if (actor.role === UsuarioRole.FINANCEIRO) return 'financeiro';
+    if (actor.role === UsuarioRole.COMERCIAL) return 'comercial';
     return 'executiva';
   }
 

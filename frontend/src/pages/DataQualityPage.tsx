@@ -23,14 +23,14 @@ const areaTitle: Record<QualidadeAreaId | 'geral', string> = {
   geral: 'Qualidade de dados',
   albergue: 'Qualidade de dados do Albergue',
   creche: 'Qualidade de dados da E.E.I.',
-  financeiro: 'Qualidade de dados financeiro',
+  comercial: 'Qualidade de dados comercial',
 };
 
 const areaDescription: Record<QualidadeAreaId | 'geral', string> = {
   geral: 'Leitura institucional de cadastros, rotinas e pendências que afetam operação, relatórios e decisão.',
   albergue: 'Cadastros, presenças e estadias que precisam estar coerentes antes de virar relatório ou decisão.',
   creche: 'Crianças, responsáveis, turmas e frequência com pendências que prejudicam acompanhamento pedagógico.',
-  financeiro: 'Comandas, retiradas e produtos que precisam estar consistentes para fechamento comercial.',
+  comercial: 'Comandas, retiradas e produtos que precisam estar consistentes para fechamento comercial.',
 };
 
 function getScoreTone(score?: number) {

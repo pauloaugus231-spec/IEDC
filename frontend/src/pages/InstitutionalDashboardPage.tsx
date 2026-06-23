@@ -44,7 +44,7 @@ const serviceCards = [
     title: 'E.E.I. Casa do Pequenino',
     label: 'Educação infantil',
     description: 'Crianças, responsáveis, turmas, professoras, frequência e base de aferição mensal.',
-    to: '/creche',
+    to: '/escola',
   },
   {
     title: 'Lojas',

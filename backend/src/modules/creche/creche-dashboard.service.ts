@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ESCOLA_DATABASE_CONNECTION } from '../../config/database.config';
 import {
   EEI_TURMA_ORDER_SQL,
   getPeriodoMes,
@@ -12,7 +12,7 @@ import { CrecheSchemaService } from './creche-schema.service';
 @Injectable()
 export class CrecheDashboardService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: CrecheSchemaService,
   ) {}
 

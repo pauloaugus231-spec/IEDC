@@ -14,7 +14,7 @@ export type ServiceScope =
   | 'albergue'
   | 'creche'
   | 'institucional'
-  | 'financeiro'
+  | 'comercial'
   | 'bazar'
   | 'brecho'
   | 'feirao';
@@ -27,7 +27,7 @@ export type UserRole =
   | 'equipe_tecnica'
   | 'educador_albergue'
   | 'educador_creche'
-  | 'financeiro'
+  | 'comercial'
   | 'loja_bazar'
   | 'loja_brecho'
   | 'loja_feirao';
@@ -100,7 +100,7 @@ const DEFAULT_PROFILES: DemoUser[] = [
     roleLabel: 'Coordenação',
     service: 'creche',
     serviceLabel: 'E.E.I. Casa do Pequenino',
-    homePath: '/creche',
+    homePath: '/escola',
   },
   {
     id: 'equipe-tecnica',
@@ -133,17 +133,17 @@ const DEFAULT_PROFILES: DemoUser[] = [
     roleLabel: 'Educador',
     service: 'creche',
     serviceLabel: 'E.E.I. Casa do Pequenino',
-    homePath: '/creche',
+    homePath: '/escola',
   },
   {
-    id: 'financeiro',
-    login: 'financeiro',
-    name: 'Secretaria / Financeiro',
-    displayName: 'Secretaria / Financeiro',
-    role: 'financeiro',
-    roleLabel: 'Financeiro',
-    service: 'financeiro',
-    serviceLabel: 'Secretaria e Financeiro',
+    id: 'comercial',
+    login: 'comercial',
+    name: 'Comercial',
+    displayName: 'Comercial',
+    role: 'comercial',
+    roleLabel: 'Comercial',
+    service: 'comercial',
+    serviceLabel: 'Operacao comercial das lojas',
     homePath: '/lojas/secretaria',
   },
   {

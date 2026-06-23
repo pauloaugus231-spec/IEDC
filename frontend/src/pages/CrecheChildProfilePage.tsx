@@ -108,7 +108,7 @@ const CrecheChildProfilePage = () => {
     return (
       <main className="page-band creche-page">
         <p className="institutional-note">{error || 'Cadastro não encontrado.'}</p>
-        <Link className="creche-head-link secondary" to="/creche/criancas">
+        <Link className="creche-head-link secondary" to="/escola/criancas">
           Voltar para crianças
         </Link>
       </main>
@@ -134,13 +134,13 @@ const CrecheChildProfilePage = () => {
           </div>
         </div>
         <div className="creche-head-actions">
-          <Link className="creche-head-link secondary" to="/creche/criancas">
+          <Link className="creche-head-link secondary" to="/escola/criancas">
             Voltar
           </Link>
-          <Link className="creche-head-link secondary" to={`/creche/frequencia?turmaId=${crianca.turmaId}`}>
+          <Link className="creche-head-link secondary" to={`/escola/frequencia?turmaId=${crianca.turmaId}`}>
             Frequência da turma
           </Link>
-          <Link className="creche-head-link secondary" to={`/creche/turmas/${crianca.turmaId}`}>
+          <Link className="creche-head-link secondary" to={`/escola/turmas/${crianca.turmaId}`}>
             Abrir turma
           </Link>
           <button className="creche-head-link" onClick={() => setModalOpen(true)} type="button">

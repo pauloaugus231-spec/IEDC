@@ -13,6 +13,12 @@ fi
 
 POSTGRES_DB="${POSTGRES_DB:-iedc}"
 POSTGRES_USER="${POSTGRES_USER:-iedc_app}"
+POSTGRES_ALBERGUE_DB="${POSTGRES_ALBERGUE_DB:-iedc_albergue}"
+POSTGRES_ALBERGUE_USER="${POSTGRES_ALBERGUE_USER:-iedc_albergue_app}"
+POSTGRES_MASTER_DB="${POSTGRES_MASTER_DB:-iedc_master}"
+POSTGRES_MASTER_USER="${POSTGRES_MASTER_USER:-iedc_master_app}"
+POSTGRES_ESCOLA_DB="${POSTGRES_ESCOLA_DB:-iedc_escola}"
+POSTGRES_ESCOLA_USER="${POSTGRES_ESCOLA_USER:-iedc_escola_app}"
 BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/iedc}"
 RESTORE_STATUS_PATH="${RESTORE_STATUS_PATH:-$BACKUP_ROOT/restore-status.json}"
 BACKUP_DIR="${1:-}"
@@ -72,11 +78,14 @@ fi
 
 cd "$PROJECT_DIR"
 
-db_dump="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'iedc-db-*.dump' | sort | tail -n 1)"
+core_dump="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'iedc-core-*.dump' | sort | tail -n 1)"
+albergue_dump="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'iedc-albergue-*.dump' | sort | tail -n 1)"
+master_dump="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'iedc-master-*.dump' | sort | tail -n 1)"
+escola_dump="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'iedc-escola-*.dump' | sort | tail -n 1)"
 uploads_archive="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'iedc-uploads-*.tar.gz' | sort | tail -n 1)"
 
-if [ -z "$db_dump" ] || [ -z "$uploads_archive" ]; then
-  echo "Backup incompleto. Esperado: iedc-db-*.dump e iedc-uploads-*.tar.gz." >&2
+if [ -z "$core_dump" ] || [ -z "$albergue_dump" ] || [ -z "$master_dump" ] || [ -z "$uploads_archive" ]; then
+  echo "Backup incompleto. Esperados os dumps core, albergue, master e o arquivo de uploads." >&2
   exit 1
 fi
 
@@ -91,7 +100,7 @@ fi
 echo "Parando frontend e backend para restauracao consistente..."
 docker compose stop frontend backend
 
-echo "Restaurando banco PostgreSQL..."
+echo "Restaurando bancos PostgreSQL..."
 docker compose exec -T postgres pg_restore \
   -U "$POSTGRES_USER" \
   -d "$POSTGRES_DB" \
@@ -99,7 +108,31 @@ docker compose exec -T postgres pg_restore \
   --if-exists \
   --no-owner \
   --no-privileges \
-  < "$db_dump"
+  < "$core_dump"
+docker compose exec -T postgres-albergue pg_restore \
+  -U "$POSTGRES_ALBERGUE_USER" \
+  -d "$POSTGRES_ALBERGUE_DB" \
+  --clean --if-exists --no-owner --no-privileges \
+  < "$albergue_dump"
+docker compose exec -T postgres-master pg_restore \
+  -U "$POSTGRES_MASTER_USER" \
+  -d "$POSTGRES_MASTER_DB" \
+  --clean --if-exists --no-owner --no-privileges \
+  < "$master_dump"
+if [ -n "$escola_dump" ]; then
+  docker compose exec -T postgres-escola pg_restore \
+    -U "$POSTGRES_ESCOLA_USER" \
+    -d "$POSTGRES_ESCOLA_DB" \
+    --clean --if-exists --no-owner --no-privileges \
+    < "$escola_dump"
+else
+  echo "Backup anterior ao banco da Escola; preparando migracao automatica a partir do core restaurado..."
+  docker compose exec -T postgres-escola psql \
+    -U "$POSTGRES_ESCOLA_USER" \
+    -d "$POSTGRES_ESCOLA_DB" \
+    -v ON_ERROR_STOP=1 \
+    -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+fi
 
 echo "Restaurando uploads..."
 docker run --rm -i \

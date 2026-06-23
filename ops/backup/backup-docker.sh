@@ -17,6 +17,12 @@ fi
 
 POSTGRES_DB="${POSTGRES_DB:-iedc}"
 POSTGRES_USER="${POSTGRES_USER:-iedc_app}"
+POSTGRES_ALBERGUE_DB="${POSTGRES_ALBERGUE_DB:-iedc_albergue}"
+POSTGRES_ALBERGUE_USER="${POSTGRES_ALBERGUE_USER:-iedc_albergue_app}"
+POSTGRES_MASTER_DB="${POSTGRES_MASTER_DB:-iedc_master}"
+POSTGRES_MASTER_USER="${POSTGRES_MASTER_USER:-iedc_master_app}"
+POSTGRES_ESCOLA_DB="${POSTGRES_ESCOLA_DB:-iedc_escola}"
+POSTGRES_ESCOLA_USER="${POSTGRES_ESCOLA_USER:-iedc_escola_app}"
 RCLONE_DESTINATION="${RCLONE_DESTINATION:-}"
 BACKUP_STATUS_PATH="${BACKUP_STATUS_PATH:-$BACKUP_ROOT/backup-status.json}"
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -85,11 +91,20 @@ if ! docker compose ps postgres >/dev/null 2>&1; then
   echo "Servico postgres nao encontrado neste compose." >&2
   exit 1
 fi
+docker compose ps postgres-albergue >/dev/null 2>&1 || { echo "Servico postgres-albergue nao encontrado." >&2; exit 1; }
+docker compose ps postgres-master >/dev/null 2>&1 || { echo "Servico postgres-master nao encontrado." >&2; exit 1; }
+docker compose ps postgres-escola >/dev/null 2>&1 || { echo "Servico postgres-escola nao encontrado." >&2; exit 1; }
 
 echo "Gerando backup PostgreSQL..."
-db_dump_path="$run_dir/iedc-db-$timestamp.dump"
-docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc > "$db_dump_path"
-db_bytes="$(file_size "$db_dump_path")"
+core_dump_path="$run_dir/iedc-core-$timestamp.dump"
+albergue_dump_path="$run_dir/iedc-albergue-$timestamp.dump"
+master_dump_path="$run_dir/iedc-master-$timestamp.dump"
+escola_dump_path="$run_dir/iedc-escola-$timestamp.dump"
+docker compose exec -T postgres pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc > "$core_dump_path"
+docker compose exec -T postgres-albergue pg_dump -U "$POSTGRES_ALBERGUE_USER" -d "$POSTGRES_ALBERGUE_DB" -Fc > "$albergue_dump_path"
+docker compose exec -T postgres-master pg_dump -U "$POSTGRES_MASTER_USER" -d "$POSTGRES_MASTER_DB" -Fc > "$master_dump_path"
+docker compose exec -T postgres-escola pg_dump -U "$POSTGRES_ESCOLA_USER" -d "$POSTGRES_ESCOLA_DB" -Fc > "$escola_dump_path"
+db_bytes=$(( $(file_size "$core_dump_path") + $(file_size "$albergue_dump_path") + $(file_size "$master_dump_path") + $(file_size "$escola_dump_path") ))
 
 echo "Compactando uploads..."
 uploads_archive_path="$run_dir/iedc-uploads-$timestamp.tar.gz"

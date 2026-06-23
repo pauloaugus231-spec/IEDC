@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { DiasCruzGateway } from '../websocket/websocket.gateway';
 import { LojasEventPayload } from './lojas-shared';
 
 @Injectable()
 export class LojasEventsService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly gateway: DiasCruzGateway,
   ) {}
 
@@ -42,7 +42,7 @@ export class LojasEventsService {
   ) {
     await this.dataSource.query(
       `
-        INSERT INTO comercio_eventos_comanda (
+        INSERT INTO comercial.eventos_comanda (
           id, comanda_id, tipo, descricao, usuario, metadata, created_at
         )
         VALUES ($1, $2::uuid, $3, $4, $5, $6::jsonb, NOW())

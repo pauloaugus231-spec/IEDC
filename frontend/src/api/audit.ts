@@ -25,7 +25,7 @@ export interface AuditLogsResponse {
     limit: number;
     total: number;
     totalPages: number;
-    audience?: 'suporte' | 'executiva' | 'albergue' | 'creche' | 'financeiro';
+    audience?: 'suporte' | 'executiva' | 'albergue' | 'creche' | 'comercial';
     recurringFailures?: Array<{ entidade: string; acao: string; total: number }>;
   };
 }

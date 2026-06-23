@@ -21,7 +21,7 @@ const roleOptions: Array<{ value: ManagedUserRole; label: string; detail: string
   { value: 'educador_albergue', label: 'Educador Albergue', detail: 'Rotina operacional do Albergue' },
   { value: 'coordenador_creche', label: 'Coordenação E.E.I.', detail: 'Gestão pedagógica e relatórios da E.E.I.' },
   { value: 'educador_creche', label: 'Educador E.E.I.', detail: 'Crianças, turmas e frequência' },
-  { value: 'financeiro', label: 'Secretaria / Financeiro', detail: 'Recebimentos e visão financeira das lojas' },
+  { value: 'comercial', label: 'Comercial', detail: 'Comandas, recebimentos e retiradas das lojas' },
   { value: 'loja_bazar', label: 'Loja Bazar', detail: 'Operação do Bazar' },
   { value: 'loja_brecho', label: 'Loja Brechó', detail: 'Operação do Brechó' },
   { value: 'loja_feirao', label: 'Loja Feirão', detail: 'Operação do Feirão' },

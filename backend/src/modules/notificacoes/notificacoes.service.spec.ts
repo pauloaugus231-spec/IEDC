@@ -32,6 +32,7 @@ describe('NotificacoesService', () => {
     dependencies: {
       coreDatabase: { status: 'ok', latencyMs: 1, message: 'ok' },
       albergueDatabase: { status: 'ok', latencyMs: 1, message: 'ok' },
+      masterDatabase: { status: 'ok', latencyMs: 1, message: 'ok' },
       redis: { status: 'unknown', latencyMs: null, message: 'não configurado' },
       uploads: { status: 'ok', path: '/tmp', message: 'ok' },
     },
@@ -57,16 +58,20 @@ describe('NotificacoesService', () => {
   } as Awaited<ReturnType<ObservabilityService['getSystemStatus']>>;
 
   function serviceWithQuery(query: jest.Mock) {
+    const dataSource = { query } as unknown as DataSource;
     return new NotificacoesService(
-      { query } as unknown as DataSource,
+      dataSource,
+      dataSource,
+      dataSource,
+      dataSource,
       { getSystemStatus: jest.fn().mockResolvedValue(systemStatus) } as unknown as ObservabilityService,
     );
   }
 
   it('não expõe totalizadores financeiros para perfil de loja', async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes('comercio_retiradas')) return [{ total: 2 }];
-      if (sql.includes('comercio_produtos')) return [{ total: 0 }];
+      if (sql.includes('comercial.retiradas')) return [{ total: 2 }];
+      if (sql.includes('comercial.produtos')) return [{ total: 0 }];
       return [{ total: 0 }];
     });
     const service = serviceWithQuery(query);

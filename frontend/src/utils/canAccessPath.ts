@@ -21,16 +21,16 @@ export function canAccessPath(user: DemoUser, pathname: string): boolean {
     return user.role === 'gestora' || user.role === 'equipe_tecnica' || user.role === 'coordenador_albergue';
   }
 
-  if (pathname === '/creche/relatorios') {
+  if (pathname === '/escola/relatorios') {
     return user.role === 'gestora' || user.role === 'equipe_tecnica' || user.role === 'coordenador_creche';
   }
 
   if (pathname === '/lojas/secretaria/relatorio-executivo') {
-    return user.role === 'gestora' || user.role === 'financeiro';
+    return user.role === 'gestora' || user.role === 'comercial';
   }
 
   if (pathname === '/lojas/secretaria/caixa') {
-    return user.role === 'financeiro';
+    return user.role === 'comercial';
   }
 
   if (user.role === 'suporte') {
@@ -58,10 +58,10 @@ export function canAccessPath(user: DemoUser, pathname: string): boolean {
   }
 
   if (user.role === 'coordenador_creche' || user.role === 'educador_creche') {
-    return pathname.startsWith('/creche');
+    return pathname.startsWith('/escola');
   }
 
-  if (user.role === 'financeiro') {
+  if (user.role === 'comercial') {
     return pathname === '/lojas/secretaria' || pathname.startsWith('/lojas/secretaria/');
   }
 

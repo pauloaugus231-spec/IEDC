@@ -11,7 +11,7 @@ const moduleNodes = [
   { label: 'Albergue', className: 'node-albergue' },
   { label: 'E.E.I.', className: 'node-creche' },
   { label: 'Lojas', className: 'node-lojas' },
-  { label: 'Financeiro', className: 'node-financeiro' },
+  { label: 'Comercial', className: 'node-financeiro' },
 ];
 
 const motionEase = [0.22, 1, 0.36, 1] as const;

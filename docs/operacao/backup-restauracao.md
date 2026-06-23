@@ -4,7 +4,7 @@
 
 O backup oficial da V1 e composto por:
 
-- dump PostgreSQL em formato customizado;
+- dumps PostgreSQL separados de core, albergue, master e escola em formato customizado;
 - arquivo compactado dos uploads;
 - manifesto SHA-256 para verificar integridade.
 
@@ -18,6 +18,12 @@ No servidor, mantenha o `.env` fora do Git e revise:
 POSTGRES_DB=iedc
 POSTGRES_USER=iedc_app
 POSTGRES_PASSWORD=senha_forte
+POSTGRES_ALBERGUE_DB=iedc_albergue
+POSTGRES_ALBERGUE_USER=iedc_albergue_app
+POSTGRES_MASTER_DB=iedc_master
+POSTGRES_MASTER_USER=iedc_master_app
+POSTGRES_ESCOLA_DB=iedc_escola
+POSTGRES_ESCOLA_USER=iedc_escola_app
 BACKUP_ROOT=/var/backups/iedc
 BACKUP_STATUS_PATH=/var/backups/iedc/backup-status.json
 RESTORE_STATUS_PATH=/var/backups/iedc/restore-status.json
@@ -45,7 +51,10 @@ Saida esperada:
 
 Arquivos esperados:
 
-- `iedc-db-AAAA-MM-DD_HH-MM-SS.dump`
+- `iedc-core-AAAA-MM-DD_HH-MM-SS.dump`
+- `iedc-albergue-AAAA-MM-DD_HH-MM-SS.dump`
+- `iedc-master-AAAA-MM-DD_HH-MM-SS.dump`
+- `iedc-escola-AAAA-MM-DD_HH-MM-SS.dump`
 - `iedc-uploads-AAAA-MM-DD_HH-MM-SS.tar.gz`
 - `manifest.sha256`
 - `/var/backups/iedc/backup-status.json`, com status, duracao, tamanho e envio remoto.
@@ -63,10 +72,14 @@ O script:
 
 - verifica manifesto, quando existir;
 - para frontend e backend;
-- restaura o PostgreSQL;
+- restaura os quatro bancos PostgreSQL;
 - limpa e restaura uploads;
 - sobe backend e frontend novamente.
 - grava `/var/backups/iedc/restore-status.json` com o resultado da restauracao.
+
+Backups anteriores ao banco `iedc_escola` continuam aceitos. Quando o dump da Escola
+nao existir, o restore limpa o schema escolar e o backend repovoa esse banco a partir
+das tabelas legadas restauradas no core.
 
 Depois da restauracao:
 

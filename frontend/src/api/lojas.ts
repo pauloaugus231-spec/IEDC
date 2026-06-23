@@ -445,7 +445,7 @@ export function useRelatorioFinanceiro(periodo: LojasPeriodo = 'dia', reload = 0
     const load = (showLoading = false) => {
       if (showLoading) setLoading(true);
       setError(null);
-      apiFetch<RelatorioFinanceiroData>(`/api/lojas/relatorio-financeiro?periodo=${periodo}`)
+      apiFetch<RelatorioFinanceiroData>(`/api/lojas/relatorio-comercial?periodo=${periodo}`)
         .then((response) => {
           if (mounted) setData(response);
         })
@@ -532,7 +532,7 @@ export function getRelatorioFinanceiroDrilldown(
   key: string,
 ) {
   const params = new URLSearchParams({ periodo, dimension, key });
-  return apiFetch<RelatorioFinanceiroDrilldown>(`/api/lojas/relatorio-financeiro/drilldown?${params.toString()}`);
+  return apiFetch<RelatorioFinanceiroDrilldown>(`/api/lojas/relatorio-comercial/drilldown?${params.toString()}`);
 }
 
 export async function createClienteComercial(data: {

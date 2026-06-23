@@ -103,8 +103,8 @@ describe('ProtectedRoute — redirecionamentos de autenticação', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/login');
   });
 
-  it('redireciona para /login ao acessar /creche sem autenticação', () => {
-    renderProtected('/creche');
+  it('redireciona para /login ao acessar /escola sem autenticação', () => {
+    renderProtected('/escola');
     expect(screen.getByTestId('location')).toHaveTextContent('/login');
   });
 
@@ -119,8 +119,8 @@ describe('ProtectedRoute — redirecionamentos de autenticação', () => {
     expect(screen.getByTestId('protected-content')).toHaveTextContent('Conteúdo protegido');
   });
 
-  it('renderiza conteúdo quando coordenador_creche acessa /creche', () => {
-    renderProtected('/creche', stubUser({ role: 'coordenador_creche', homePath: '/creche' }));
+  it('renderiza conteúdo quando coordenador_creche acessa /escola', () => {
+    renderProtected('/escola', stubUser({ role: 'coordenador_creche', homePath: '/escola' }));
     expect(screen.getByTestId('protected-content')).toHaveTextContent('Conteúdo protegido');
   });
 
@@ -138,10 +138,10 @@ describe('ProtectedRoute — redirecionamentos de autenticação', () => {
   });
 
   // ── Acesso negado por role ──
-  it('redireciona educador_creche para /creche ao acessar /albergue', () => {
-    renderProtected('/albergue', stubUser({ role: 'educador_creche', homePath: '/creche' }));
+  it('redireciona educador_creche para /escola ao acessar /albergue', () => {
+    renderProtected('/albergue', stubUser({ role: 'educador_creche', homePath: '/escola' }));
     // Redirect acontece → location mostra o homePath
-    expect(screen.getByTestId('location')).toHaveTextContent('/creche');
+    expect(screen.getByTestId('location')).toHaveTextContent('/escola');
   });
 
   it('redireciona suporte para /suporte/usuarios ao acessar /gestao', () => {

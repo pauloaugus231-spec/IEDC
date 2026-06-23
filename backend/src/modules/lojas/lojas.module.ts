@@ -10,12 +10,14 @@ import { LojasExportService } from './lojas-export.service';
 import { LojasRetiradasService } from './lojas-retiradas.service';
 import { LojasSchemaService } from './lojas-schema.service';
 import { LojasService } from './lojas.service';
+import { LojasLegacyMigrationService } from './lojas-legacy-migration.service';
 
 @Module({
   imports: [WebSocketModule],
   controllers: [LojasController],
   providers: [
     LojasSchemaService,
+    LojasLegacyMigrationService,
     LojasEventsService,
     LojasCatalogoService,
     LojasCaixaService,

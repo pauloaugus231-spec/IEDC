@@ -21,7 +21,7 @@ describe('canAccessPath — RoleGuard', () => {
   // ── /minha-conta é universal ──
   it('permite /minha-conta para qualquer role', () => {
     const roles: DemoUser['role'][] = [
-      'gestora', 'suporte', 'coordenador_albergue', 'educador_creche', 'financeiro', 'loja_bazar',
+      'gestora', 'suporte', 'coordenador_albergue', 'educador_creche', 'comercial', 'loja_bazar',
     ];
 
     for (const role of roles) {
@@ -43,7 +43,7 @@ describe('canAccessPath — RoleGuard', () => {
     const user = stubUser('gestora');
     expect(canAccessPath(user, '/gestao')).toBe(true);
     expect(canAccessPath(user, '/albergue')).toBe(true);
-    expect(canAccessPath(user, '/creche')).toBe(true);
+    expect(canAccessPath(user, '/escola')).toBe(true);
     expect(canAccessPath(user, '/lojas/secretaria')).toBe(true);
     expect(canAccessPath(user, '/lojas/bazar')).toBe(false);
     expect(canAccessPath(user, '/lojas/brecho')).toBe(false);
@@ -56,13 +56,13 @@ describe('canAccessPath — RoleGuard', () => {
     expect(canAccessPath(user, '/albergue/buscar')).toBe(true);
     expect(canAccessPath(user, '/albergue/relatorios')).toBe(true);
     expect(canAccessPath(user, '/dashboard')).toBe(true);
-    expect(canAccessPath(user, '/creche')).toBe(false);
+    expect(canAccessPath(user, '/escola')).toBe(false);
     expect(canAccessPath(user, '/gestao')).toBe(false);
   });
 
   // ── Financeiro ──
-  it('financeiro acessa apenas /lojas/secretaria e subrotas', () => {
-    const user = stubUser('financeiro');
+  it('comercial acessa apenas /lojas/secretaria e subrotas', () => {
+    const user = stubUser('comercial');
     expect(canAccessPath(user, '/lojas/secretaria')).toBe(true);
     expect(canAccessPath(user, '/lojas/secretaria/caixa')).toBe(true);
     expect(canAccessPath(user, '/lojas/secretaria/historico')).toBe(true);
@@ -100,9 +100,9 @@ describe('canAccessPath — RoleGuard', () => {
     const user = stubUser('equipe_tecnica');
     expect(canAccessPath(user, '/gestao')).toBe(true);
     expect(canAccessPath(user, '/albergue')).toBe(true);
-    expect(canAccessPath(user, '/creche')).toBe(true);
+    expect(canAccessPath(user, '/escola')).toBe(true);
     expect(canAccessPath(user, '/albergue/relatorios')).toBe(true);
-    expect(canAccessPath(user, '/creche/relatorios')).toBe(true);
+    expect(canAccessPath(user, '/escola/relatorios')).toBe(true);
     expect(canAccessPath(user, '/lojas/secretaria')).toBe(true);
     expect(canAccessPath(user, '/lojas/secretaria/historico')).toBe(true);
     expect(canAccessPath(user, '/lojas/bazar')).toBe(false);
@@ -115,14 +115,14 @@ describe('canAccessPath — RoleGuard', () => {
     expect(canAccessPath(user, '/albergue')).toBe(true);
     expect(canAccessPath(user, '/albergue/buscar')).toBe(true);
     expect(canAccessPath(user, '/dashboard')).toBe(true);
-    expect(canAccessPath(user, '/creche')).toBe(false);
+    expect(canAccessPath(user, '/escola')).toBe(false);
     expect(canAccessPath(user, '/gestao')).toBe(false);
   });
 
-  it('educador_creche acessa /creche/* apenas', () => {
+  it('educador_creche acessa /escola/* apenas', () => {
     const user = stubUser('educador_creche');
-    expect(canAccessPath(user, '/creche')).toBe(true);
-    expect(canAccessPath(user, '/creche/turmas')).toBe(true);
+    expect(canAccessPath(user, '/escola')).toBe(true);
+    expect(canAccessPath(user, '/escola/turmas')).toBe(true);
     expect(canAccessPath(user, '/albergue')).toBe(false);
     expect(canAccessPath(user, '/gestao')).toBe(false);
   });
@@ -130,7 +130,7 @@ describe('canAccessPath — RoleGuard', () => {
   // ── Regra de auditoria: ninguém acessa ──
   it('nenhum role acessa /auditoria', () => {
     const roles: DemoUser['role'][] = [
-      'gestora', 'suporte', 'coordenador_albergue', 'equipe_tecnica', 'financeiro',
+      'gestora', 'suporte', 'coordenador_albergue', 'equipe_tecnica', 'comercial',
     ];
     for (const role of roles) {
       expect(canAccessPath(stubUser(role), '/albergue/auditoria')).toBe(false);
@@ -138,9 +138,9 @@ describe('canAccessPath — RoleGuard', () => {
   });
 
   // ── Relatórios com restrição ──
-  it('coordenador_creche acessa /creche/relatorios mas não /albergue/relatorios', () => {
+  it('coordenador_creche acessa /escola/relatorios mas não /albergue/relatorios', () => {
     const user = stubUser('coordenador_creche');
-    expect(canAccessPath(user, '/creche/relatorios')).toBe(true);
+    expect(canAccessPath(user, '/escola/relatorios')).toBe(true);
     expect(canAccessPath(user, '/albergue/relatorios')).toBe(false);
   });
 
@@ -149,8 +149,8 @@ describe('canAccessPath — RoleGuard', () => {
     expect(canAccessPath(user, '/lojas/secretaria/relatorio-executivo')).toBe(true);
   });
 
-  it('financeiro acessa /lojas/secretaria/caixa', () => {
-    const user = stubUser('financeiro');
+  it('comercial acessa /lojas/secretaria/caixa', () => {
+    const user = stubUser('comercial');
     expect(canAccessPath(user, '/lojas/secretaria/caixa')).toBe(true);
   });
 

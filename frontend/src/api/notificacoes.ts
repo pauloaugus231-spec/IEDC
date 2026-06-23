@@ -3,7 +3,7 @@ import { apiFetch } from './http';
 
 export type NotificacaoNivel = 'critico' | 'atencao' | 'info' | 'sucesso';
 export type NotificacaoTipo = 'tecnica' | 'executiva' | 'area' | 'financeira' | 'operacional' | 'recibo';
-export type NotificacaoArea = 'suporte' | 'gestao' | 'albergue' | 'creche' | 'financeiro' | 'loja';
+export type NotificacaoArea = 'suporte' | 'gestao' | 'albergue' | 'creche' | 'comercial' | 'loja';
 
 export interface NotificacaoItem {
   id: string;

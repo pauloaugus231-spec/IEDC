@@ -383,7 +383,7 @@ const LojasSecretariaPage = ({
     : isHistoryPage
       ? 'Histórico de pagamento'
       : isGestoraView
-        ? 'Painel financeiro das Lojas'
+        ? 'Painel comercial das Lojas'
         : 'Comandas das Lojas';
   const pageSubtitle = isQueuePage
     ? 'Abra a comanda, confira os itens por loja e registre o pagamento no modal de cobrança.'
@@ -401,7 +401,7 @@ const LojasSecretariaPage = ({
         <>
           <PageHeader
             className="commerce-head"
-            eyebrow="Secretaria e Financeiro"
+            eyebrow="Comercial"
             title={pageTitle}
             description={pageSubtitle}
             actions={!isQueuePage ? (
@@ -505,7 +505,7 @@ const LojasSecretariaPage = ({
             <div className="commerce-panel-title">
               <div>
                 <h2>Previsto x realizado</h2>
-                <span>{loading ? 'Carregando dados financeiros...' : 'Leitura financeira por período selecionado.'}</span>
+                <span>{loading ? 'Carregando dados comerciais...' : 'Leitura comercial por periodo selecionado.'}</span>
               </div>
             </div>
             <div className="commerce-chart-box">
@@ -585,7 +585,7 @@ const LojasSecretariaPage = ({
         <section className="commerce-panel commerce-dedicated-panel">
           <div className="commerce-panel-title">
             <div>
-              <h2>Histórico financeiro</h2>
+              <h2>Historico comercial</h2>
               <span>Comandas quitadas, parciais ou encerradas no período selecionado.</span>
             </div>
             <strong>{financeHistory.length}</strong>

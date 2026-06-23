@@ -134,16 +134,16 @@ const CrecheDashboardPage = () => {
         description="Acompanhe crianças, responsáveis, turmas, frequência, pendências e sinais de evasão sem misturar a rotina da E.E.I. com a operação do albergue."
         actions={(
           <>
-          <Link className="creche-head-link secondary" to="/creche/criancas">
+          <Link className="creche-head-link secondary" to="/escola/criancas">
             Crianças
           </Link>
-          <Link className="creche-head-link secondary" to="/creche/frequencia">
+          <Link className="creche-head-link secondary" to="/escola/frequencia">
             Registrar frequência
           </Link>
-          <Link className="creche-head-link secondary" to="/creche/professoras">
+          <Link className="creche-head-link secondary" to="/escola/professoras">
             Equipe
           </Link>
-          <Link className="creche-head-link" to="/creche/relatorios">
+          <Link className="creche-head-link" to="/escola/relatorios">
             Relatórios da E.E.I.
           </Link>
           </>
@@ -202,7 +202,7 @@ const CrecheDashboardPage = () => {
                 <article className="creche-risk-row" key={sinal.id}>
                   <div className="creche-risk-title">
                     <div>
-                      <Link to={`/creche/criancas/${sinal.id}`}>
+                      <Link to={`/escola/criancas/${sinal.id}`}>
                         <strong>{sinal.nome}</strong>
                       </Link>
                       <span>{sinal.turma}</span>
@@ -252,8 +252,8 @@ const CrecheDashboardPage = () => {
               <progress className="creche-turma-track" value={Math.min(Math.max(turma.frequencia, 0), 100)} max={100} aria-label={`Frequência da turma ${turma.nome}`} />
 
               <div className="creche-turma-actions">
-                <Link to={`/creche/frequencia?turmaId=${turma.id}`}>Registrar</Link>
-                <Link to={`/creche/turmas/${turma.id}`}>Ver turma</Link>
+                <Link to={`/escola/frequencia?turmaId=${turma.id}`}>Registrar</Link>
+                <Link to={`/escola/turmas/${turma.id}`}>Ver turma</Link>
               </div>
             </article>
           );
@@ -294,21 +294,21 @@ const CrecheDashboardPage = () => {
                 <strong>Instrumento de aferição</strong>
                 <span>Nome, CPF, nascimento, NIS e ingresso</span>
               </p>
-              <Link to="/creche/relatorios">Abrir</Link>
+              <Link to="/escola/relatorios">Abrir</Link>
             </div>
             <div>
               <p>
                 <strong>Frequência mensal</strong>
                 <span>Consolidado por turma e período</span>
               </p>
-              <Link to="/creche/relatorios">Abrir</Link>
+              <Link to="/escola/relatorios">Abrir</Link>
             </div>
             <div>
               <p>
                 <strong>Pendências cadastrais</strong>
                 <span>Lista de revisão para coordenação</span>
               </p>
-              <Link to="/creche/relatorios">Abrir</Link>
+              <Link to="/escola/relatorios">Abrir</Link>
             </div>
           </div>
         </article>

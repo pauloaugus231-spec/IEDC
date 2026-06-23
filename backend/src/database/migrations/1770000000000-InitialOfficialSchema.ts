@@ -356,7 +356,6 @@ export class InitialOfficialSchema1770000000000 implements MigrationInterface {
     `);
 
     await this.createLojasSchema(queryRunner);
-    await this.createEeiSchema(queryRunner);
     await this.createImpactoSchema(queryRunner);
   }
 

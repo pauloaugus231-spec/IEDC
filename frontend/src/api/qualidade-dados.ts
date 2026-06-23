@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from './http';
 
-export type QualidadeAreaId = 'albergue' | 'creche' | 'financeiro';
+export type QualidadeAreaId = 'albergue' | 'creche' | 'comercial';
 export type QualidadeSeveridade = 'critico' | 'atencao' | 'informativo';
 
 export interface QualidadeDadosSample {

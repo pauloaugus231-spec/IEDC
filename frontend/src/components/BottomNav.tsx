@@ -27,20 +27,20 @@ const BottomNav = ({ onNovoCadastro }: BottomNavProps) => {
   const [isPinned, setIsPinned] = useState(false);
   const location = useLocation();
   const isAlbergueArea = location.pathname.startsWith('/albergue') || location.pathname === '/dashboard';
-  const isCrecheArea = location.pathname.startsWith('/creche');
+  const isCrecheArea = location.pathname.startsWith('/escola');
   const navItems: NavItem[] = [
     { to: '/gestao', label: 'Gestao', icon: Home },
     { to: '/albergue', label: 'Albergue', icon: Users },
-    { to: '/creche', label: 'E.E.I.', icon: CheckCircle },
+    { to: '/escola', label: 'Escola', icon: CheckCircle },
   ];
 
   if (isCrecheArea) {
     navItems.push(
-      { to: '/creche/criancas', label: 'Crianças', icon: Users },
-      { to: '/creche/turmas', label: 'Turmas', icon: Calendar },
-      { to: '/creche/professoras', label: 'Equipe', icon: Users },
-      { to: '/creche/frequencia', label: 'Frequência', icon: CheckCircle },
-      { to: '/creche/relatorios', label: 'Relatórios', icon: BarChart2 },
+      { to: '/escola/criancas', label: 'Crianças', icon: Users },
+      { to: '/escola/turmas', label: 'Turmas', icon: Calendar },
+      { to: '/escola/professoras', label: 'Equipe', icon: Users },
+      { to: '/escola/frequencia', label: 'Frequência', icon: CheckCircle },
+      { to: '/escola/relatorios', label: 'Relatórios', icon: BarChart2 },
     );
   }
 

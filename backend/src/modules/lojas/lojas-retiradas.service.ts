@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { ConfirmarRetiradaDto } from './dto/lojas-operacao.dto';
 import { LojasEventsService } from './lojas-events.service';
 import { LojasSchemaService } from './lojas-schema.service';
@@ -11,7 +11,7 @@ import { LojaVendaRow, periodoRange, QueryRunnerLike, RetiradaComercial } from '
 @Injectable()
 export class LojasRetiradasService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly events: LojasEventsService,
   ) {}
@@ -52,7 +52,7 @@ export class LojasRetiradasService {
             i.loja_id,
             SUM(i.total_item)::numeric(12,2) AS total,
             COUNT(*)::int AS itens
-          FROM comercio_comanda_itens i
+          FROM comercial.comanda_itens i
           GROUP BY i.comanda_id, i.loja_id
         )
         SELECT
@@ -61,7 +61,7 @@ export class LojasRetiradasService {
           c.codigo,
           c.status AS "comandaStatus",
           cli.id AS "clienteId",
-          cli.nome AS cliente,
+          c.nome_pessoa_snapshot AS cliente,
           cli.telefone AS "clienteTelefone",
           l.slug AS "lojaSlug",
           l.nome AS loja,
@@ -72,10 +72,10 @@ export class LojasRetiradasService {
           r.observacoes,
           COALESCE(i.total, 0)::float AS total,
           COALESCE(i.itens, 0)::int AS itens
-        FROM comercio_retiradas r
-        JOIN comercio_comandas c ON c.id = r.comanda_id
-        JOIN comercio_clientes cli ON cli.id = c.cliente_id
-        JOIN comercio_lojas l ON l.id = r.loja_id
+        FROM comercial.retiradas r
+        JOIN comercial.comandas c ON c.id = r.comanda_id
+        JOIN comercial.clientes cli ON cli.id = c.pessoa_id
+        JOIN comercial.lojas l ON l.id = r.loja_id
         LEFT JOIN itens i ON i.comanda_id = r.comanda_id AND i.loja_id = r.loja_id
         ${whereSql}
         ORDER BY
@@ -104,7 +104,7 @@ export class LojasRetiradasService {
     if (retirada.status !== 'retirado') {
       await this.dataSource.query(
         `
-          UPDATE comercio_retiradas
+          UPDATE comercial.retiradas
           SET status = 'retirado',
               retirada_em = NOW(),
               entregue_por = $2,
@@ -153,7 +153,7 @@ export class LojasRetiradasService {
             i.loja_id,
             SUM(i.total_item)::numeric(12,2) AS total,
             COUNT(*)::int AS itens
-          FROM comercio_comanda_itens i
+          FROM comercial.comanda_itens i
           GROUP BY i.comanda_id, i.loja_id
         )
         SELECT
@@ -162,7 +162,7 @@ export class LojasRetiradasService {
           c.codigo,
           c.status AS "comandaStatus",
           cli.id AS "clienteId",
-          cli.nome AS cliente,
+          c.nome_pessoa_snapshot AS cliente,
           cli.telefone AS "clienteTelefone",
           l.slug AS "lojaSlug",
           l.nome AS loja,
@@ -173,10 +173,10 @@ export class LojasRetiradasService {
           r.observacoes,
           COALESCE(i.total, 0)::float AS total,
           COALESCE(i.itens, 0)::int AS itens
-        FROM comercio_retiradas r
-        JOIN comercio_comandas c ON c.id = r.comanda_id
-        JOIN comercio_clientes cli ON cli.id = c.cliente_id
-        JOIN comercio_lojas l ON l.id = r.loja_id
+        FROM comercial.retiradas r
+        JOIN comercial.comandas c ON c.id = r.comanda_id
+        JOIN comercial.clientes cli ON cli.id = c.pessoa_id
+        JOIN comercial.lojas l ON l.id = r.loja_id
         LEFT JOIN itens i ON i.comanda_id = r.comanda_id AND i.loja_id = r.loja_id
         WHERE r.id = $1::uuid
       `,
@@ -196,20 +196,20 @@ export class LojasRetiradasService {
         SELECT
           c.id AS "comandaId",
           c.codigo,
-          cli.nome AS cliente,
+          c.nome_pessoa_snapshot AS cliente,
           cli.telefone AS "clienteTelefone",
           l.id AS "lojaId",
           l.slug AS "lojaSlug",
           l.nome AS loja,
           SUM(i.total_item)::numeric(12,2) AS total,
           COUNT(*)::int AS itens
-        FROM comercio_comandas c
-        JOIN comercio_clientes cli ON cli.id = c.cliente_id
-        JOIN comercio_comanda_itens i ON i.comanda_id = c.id
-        JOIN comercio_lojas l ON l.id = i.loja_id
+        FROM comercial.comandas c
+        JOIN comercial.clientes cli ON cli.id = c.pessoa_id
+        JOIN comercial.comanda_itens i ON i.comanda_id = c.id
+        JOIN comercial.lojas l ON l.id = i.loja_id
         WHERE c.id = $1::uuid
           AND c.status = 'paga'
-        GROUP BY c.id, c.codigo, cli.nome, cli.telefone, l.id, l.slug, l.nome
+        GROUP BY c.id, c.codigo, c.nome_pessoa_snapshot, cli.telefone, l.id, l.slug, l.nome
       `,
       [comandaId],
     ) as LojaVendaRow[];
@@ -220,7 +220,7 @@ export class LojasRetiradasService {
       const retiradaId = randomUUID();
       const inserted = await runner.query(
         `
-          INSERT INTO comercio_retiradas (
+          INSERT INTO comercial.retiradas (
             id, comanda_id, loja_id, status, notificada_em, created_at, updated_at
           )
           VALUES ($1, $2::uuid, $3::uuid, 'aguardando_retirada', NOW(), NOW(), NOW())
@@ -248,7 +248,7 @@ export class LojasRetiradasService {
             r.observacoes,
             $7::float AS total,
             $8::int AS itens
-          FROM comercio_retiradas r
+          FROM comercial.retiradas r
           WHERE r.comanda_id = $1::uuid AND r.loja_id = $9::uuid
         `,
         [
@@ -267,7 +267,7 @@ export class LojasRetiradasService {
       if (inserted.length && retirada) {
         await runner.query(
           `
-            INSERT INTO comercio_eventos_comanda (
+            INSERT INTO comercial.eventos_comanda (
               id, comanda_id, tipo, descricao, usuario, metadata, created_at
             )
             VALUES ($1, $2::uuid, 'retirada_liberada', $3, $4, $5::jsonb, NOW())

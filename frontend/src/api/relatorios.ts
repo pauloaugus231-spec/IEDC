@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from './http';
 
-export type RelatorioExecutivoEscopo = 'institucional' | 'albergue' | 'creche' | 'financeiro';
+export type RelatorioExecutivoEscopo = 'institucional' | 'albergue' | 'creche' | 'comercial';
 export type RelatorioExecutivoPeriodo = 'dia' | 'semana' | 'mes' | 'ano';
 export type RelatorioExecutivoTone = 'default' | 'success' | 'warning' | 'danger' | 'muted';
 export type Relatorio360MetricId =
@@ -25,7 +25,7 @@ export interface RelatorioExecutivoKpi {
 }
 
 export interface RelatorioExecutivoServico {
-  id: 'albergue' | 'creche' | 'financeiro';
+  id: 'albergue' | 'creche' | 'comercial';
   title: string;
   subtitle: string;
   score: number;
@@ -37,7 +37,7 @@ export interface RelatorioExecutivoServico {
 
 export interface RelatorioExecutivoAlerta {
   id: string;
-  area: 'albergue' | 'creche' | 'financeiro';
+  area: 'albergue' | 'creche' | 'comercial';
   title: string;
   description: string;
   tone: RelatorioExecutivoTone;
@@ -77,7 +77,7 @@ export interface Relatorio360Metric {
   label: string;
   description: string;
   format: 'number' | 'currency' | 'percent';
-  area: 'institucional' | 'albergue' | 'creche' | 'financeiro';
+  area: 'institucional' | 'albergue' | 'creche' | 'comercial';
 }
 
 export interface Relatorio360Dimension {

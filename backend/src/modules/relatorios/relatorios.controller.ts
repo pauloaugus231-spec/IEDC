@@ -16,7 +16,7 @@ export class RelatoriosController {
     UsuarioRole.EQUIPE_TECNICA,
     UsuarioRole.COORDENADOR_ALBERGUE,
     UsuarioRole.COORDENADOR_CRECHE,
-    UsuarioRole.FINANCEIRO,
+    UsuarioRole.COMERCIAL,
   )
   async getRelatorioExecutivo(
     @Req() req: AuthRequest,

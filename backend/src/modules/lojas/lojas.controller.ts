@@ -18,7 +18,7 @@ import {
 } from './dto/lojas-operacao.dto';
 
 @Controller('lojas')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO, UsuarioRole.LOJA_BAZAR, UsuarioRole.LOJA_BRECHO, UsuarioRole.LOJA_FEIRAO)
+@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL, UsuarioRole.LOJA_BAZAR, UsuarioRole.LOJA_BRECHO, UsuarioRole.LOJA_FEIRAO)
 export class LojasController {
   constructor(
     private readonly lojasService: LojasService,
@@ -26,19 +26,19 @@ export class LojasController {
   ) {}
 
   @Get('dashboard')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
   getDashboard(@Query('periodo') periodo?: string) {
     return this.lojasService.getDashboard(periodo);
   }
 
-  @Get('relatorio-financeiro')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.FINANCEIRO)
+  @Get(['relatorio-comercial', 'relatorio-financeiro'])
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL)
   getRelatorioFinanceiro(@Query('periodo') periodo?: string) {
     return this.lojasService.getRelatorioFinanceiro(periodo);
   }
 
-  @Get('relatorio-financeiro/drilldown')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.FINANCEIRO)
+  @Get(['relatorio-comercial/drilldown', 'relatorio-financeiro/drilldown'])
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL)
   getRelatorioFinanceiroDrilldown(
     @Query('periodo') periodo?: string,
     @Query('dimension') dimension?: string,
@@ -48,19 +48,19 @@ export class LojasController {
   }
 
   @Get('caixa')
-  @Roles(UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.COMERCIAL)
   getCaixaAtual() {
     return this.caixaService.getCaixaAtual();
   }
 
   @Post('caixa/abrir')
-  @Roles(UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.COMERCIAL)
   abrirCaixa(@Body() body: AbrirCaixaDto) {
     return this.caixaService.abrirCaixa(body);
   }
 
   @Post('caixa/fechar')
-  @Roles(UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.COMERCIAL)
   fecharCaixa(@Body() body: FecharCaixaDto) {
     return this.caixaService.fecharCaixa(body);
   }
@@ -105,7 +105,7 @@ export class LojasController {
   }
 
   @Get('fechamento/excel')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
   async exportFechamentoExcel(@Query('periodo') periodo: string | undefined, @Res() res: Response) {
     const buffer = await this.lojasService.exportFechamentoExcel(periodo);
     const dataAtual = new Date().toISOString().split('T')[0];
@@ -117,7 +117,7 @@ export class LojasController {
   }
 
   @Get('fechamento/pdf')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
   async exportFechamentoPdf(@Query('periodo') periodo: string | undefined, @Res() res: Response) {
     const buffer = await this.lojasService.exportFechamentoPdf(periodo);
     const dataAtual = new Date().toISOString().split('T')[0];
@@ -168,13 +168,13 @@ export class LojasController {
   }
 
   @Post('comandas/:id/pagamentos')
-  @Roles(UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.COMERCIAL)
   registrarPagamento(@Param('id') id: string, @Body() body: RegistrarPagamentoDto) {
     return this.lojasService.registrarPagamento(id, body);
   }
 
   @Patch('comandas/:id/status')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.FINANCEIRO)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
   updateStatus(@Param('id') id: string, @Body() body: AtualizarStatusComandaDto) {
     return this.lojasService.updateStatus(id, body);
   }

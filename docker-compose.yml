@@ -33,6 +33,40 @@ services:
       timeout: 5s
       retries: 10
 
+  postgres-master:
+    image: postgres:16-alpine
+    container_name: iedc-postgres-master
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_MASTER_DB:-iedc_master}
+      POSTGRES_USER: ${POSTGRES_MASTER_USER:-iedc_master_app}
+      POSTGRES_PASSWORD: ${POSTGRES_MASTER_PASSWORD:-${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}}
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - iedc_master_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_MASTER_USER:-iedc_master_app} -d ${POSTGRES_MASTER_DB:-iedc_master}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres-escola:
+    image: postgres:16-alpine
+    container_name: iedc-postgres-escola
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_ESCOLA_DB:-iedc_escola}
+      POSTGRES_USER: ${POSTGRES_ESCOLA_USER:-iedc_escola_app}
+      POSTGRES_PASSWORD: ${POSTGRES_ESCOLA_PASSWORD:-${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}}
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - iedc_escola_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ESCOLA_USER:-iedc_escola_app} -d ${POSTGRES_ESCOLA_DB:-iedc_escola}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7-alpine
     container_name: iedc-redis
@@ -54,6 +88,10 @@ services:
         condition: service_healthy
       postgres-albergue:
         condition: service_healthy
+      postgres-master:
+        condition: service_healthy
+      postgres-escola:
+        condition: service_healthy
       redis:
         condition: service_healthy
     environment:
@@ -70,6 +108,16 @@ services:
       DB_ALBERGUE_NAME: ${POSTGRES_ALBERGUE_DB:-iedc_albergue}
       DB_ALBERGUE_USER: ${POSTGRES_ALBERGUE_USER:-iedc_albergue_app}
       DB_ALBERGUE_PASSWORD: ${POSTGRES_ALBERGUE_PASSWORD:?Defina POSTGRES_ALBERGUE_PASSWORD no .env}
+      DB_MASTER_HOST: postgres-master
+      DB_MASTER_PORT: 5432
+      DB_MASTER_NAME: ${POSTGRES_MASTER_DB:-iedc_master}
+      DB_MASTER_USER: ${POSTGRES_MASTER_USER:-iedc_master_app}
+      DB_MASTER_PASSWORD: ${POSTGRES_MASTER_PASSWORD:-${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}}
+      DB_ESCOLA_HOST: postgres-escola
+      DB_ESCOLA_PORT: 5432
+      DB_ESCOLA_NAME: ${POSTGRES_ESCOLA_DB:-iedc_escola}
+      DB_ESCOLA_USER: ${POSTGRES_ESCOLA_USER:-iedc_escola_app}
+      DB_ESCOLA_PASSWORD: ${POSTGRES_ESCOLA_PASSWORD:-${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}}
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-false}
       DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-true}
       DB_LOGGING: ${DB_LOGGING:-false}
@@ -130,5 +178,9 @@ volumes:
     name: iedc_postgres_data
   iedc_albergue_postgres_data:
     name: iedc_albergue_postgres_data
+  iedc_master_postgres_data:
+    name: iedc_master_postgres_data
+  iedc_escola_postgres_data:
+    name: iedc_escola_postgres_data
   iedc_uploads:
     name: iedc_uploads

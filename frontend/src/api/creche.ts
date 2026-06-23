@@ -78,7 +78,7 @@ export function useCrecheDashboard(periodo: CrechePeriodoDashboard = 'mes') {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    apiFetch<CrecheDashboardData>(`/api/creche/dashboard?periodo=${periodo}`)
+    apiFetch<CrecheDashboardData>(`/api/escola/dashboard?periodo=${periodo}`)
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -95,7 +95,7 @@ export function useCrecheAfericao() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    apiFetch<CrecheAfericaoRow[]>('/api/creche/afericao')
+    apiFetch<CrecheAfericaoRow[]>('/api/escola/afericao')
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -283,7 +283,7 @@ export function useCrecheTurmas(reload = 0) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    apiFetch<CrecheTurma[]>('/api/creche/turmas')
+    apiFetch<CrecheTurma[]>('/api/escola/turmas')
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -300,7 +300,7 @@ export function useCrecheProfessoras(reload = 0) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    apiFetch<CrecheProfessora[]>('/api/creche/professoras')
+    apiFetch<CrecheProfessora[]>('/api/escola/professoras')
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -317,7 +317,7 @@ export async function createCrecheProfessora(data: {
   status?: string;
   observacoes?: string;
 }) {
-  return apiFetch<CrecheProfessora>('/api/creche/professoras', {
+  return apiFetch<CrecheProfessora>('/api/escola/professoras', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -331,18 +331,18 @@ export async function updateCrecheProfessora(id: string, data: {
   status?: string;
   observacoes?: string | null;
 }) {
-  return apiFetch<CrecheProfessora>(`/api/creche/professoras/${id}`, {
+  return apiFetch<CrecheProfessora>(`/api/escola/professoras/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 }
 
 export async function getCrecheTurmaDetalhe(id: string) {
-  return apiFetch<CrecheTurmaDetalhe>(`/api/creche/turmas/${id}`);
+  return apiFetch<CrecheTurmaDetalhe>(`/api/escola/turmas/${id}`);
 }
 
 export async function updateCrecheTurmaProfessora(id: string, professoraId: string | null) {
-  return apiFetch<CrecheTurmaDetalhe>(`/api/creche/turmas/${id}/professora`, {
+  return apiFetch<CrecheTurmaDetalhe>(`/api/escola/turmas/${id}/professora`, {
     method: 'PATCH',
     body: JSON.stringify({ professoraId }),
   });
@@ -361,7 +361,7 @@ export function useCrecheCriancas(filters: { search?: string; turmaId?: string; 
 
     setLoading(true);
     setError(null);
-    apiFetch<CrecheCriancaListItem[]>(`/api/creche/criancas?${params.toString()}`)
+    apiFetch<CrecheCriancaListItem[]>(`/api/escola/criancas?${params.toString()}`)
       .then(setData)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -371,18 +371,18 @@ export function useCrecheCriancas(filters: { search?: string; turmaId?: string; 
 }
 
 export async function createCrecheCrianca(data: CreateCrecheCriancaPayload) {
-  return apiFetch<CrecheCriancaDetalhe>('/api/creche/criancas', {
+  return apiFetch<CrecheCriancaDetalhe>('/api/escola/criancas', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function getCrecheCrianca(codigo: string) {
-  return apiFetch<CrecheCriancaDetalhe>(`/api/creche/criancas/${codigo}`);
+  return apiFetch<CrecheCriancaDetalhe>(`/api/escola/criancas/${codigo}`);
 }
 
 export async function updateCrecheCriancaTurma(codigo: string, turmaId: string) {
-  return apiFetch<CrecheCriancaDetalhe>(`/api/creche/criancas/${codigo}/turma`, {
+  return apiFetch<CrecheCriancaDetalhe>(`/api/escola/criancas/${codigo}/turma`, {
     method: 'PATCH',
     body: JSON.stringify({ turmaId }),
   });
@@ -395,7 +395,7 @@ export async function createCrecheAcompanhamento(codigo: string, data: {
   responsavel?: string;
   data?: string;
 }) {
-  return apiFetch(`/api/creche/criancas/${codigo}/acompanhamentos`, {
+  return apiFetch(`/api/escola/criancas/${codigo}/acompanhamentos`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -403,7 +403,7 @@ export async function createCrecheAcompanhamento(codigo: string, data: {
 
 export async function getCrecheFrequenciaTurma(turmaId: string, data: string) {
   const params = new URLSearchParams({ turmaId, data });
-  return apiFetch<CrecheFrequenciaTurma>(`/api/creche/frequencias?${params.toString()}`);
+  return apiFetch<CrecheFrequenciaTurma>(`/api/escola/frequencias?${params.toString()}`);
 }
 
 export async function saveCrecheFrequenciaTurma(data: {
@@ -412,7 +412,7 @@ export async function saveCrecheFrequenciaTurma(data: {
   registradoPor?: string;
   registros: { criancaId: string; presente: boolean; justificativa?: string | null }[];
 }) {
-  return apiFetch<CrecheFrequenciaTurma>('/api/creche/frequencias', {
+  return apiFetch<CrecheFrequenciaTurma>('/api/escola/frequencias', {
     method: 'POST',
     body: JSON.stringify(data),
   });

@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ESCOLA_DATABASE_CONNECTION, MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import {
   type PeriodoExecutivo,
@@ -22,7 +22,11 @@ import {
 
 @Injectable()
 export class RelatoriosImpactoService {
-  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly albergueDataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly escolaDataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly masterDataSource: DataSource,
+  ) {}
 
   async getRelatorioExecutivo(
     actor: AuthUser | undefined,
@@ -33,7 +37,7 @@ export class RelatoriosImpactoService {
     const period = getExecutivePeriod(periodo);
     const needsAlbergue = scope === 'institucional' || scope === 'albergue';
     const needsCreche = scope === 'institucional' || scope === 'creche';
-    const needsFinanceiro = scope === 'institucional' || scope === 'financeiro';
+    const needsFinanceiro = scope === 'institucional' || scope === 'comercial';
 
     const [albergue, creche, financeiro] = await Promise.all([
       needsAlbergue ? this.getAlbergueSnapshot(period) : Promise.resolve(null),
@@ -88,12 +92,12 @@ export class RelatoriosImpactoService {
 
   private normalizeExecutiveScope(value?: string): RelatorioExecutivoEscopo | null {
     const scope = String(value || '').trim();
-    const valid: RelatorioExecutivoEscopo[] = ['institucional', 'albergue', 'creche', 'financeiro'];
+    const valid: RelatorioExecutivoEscopo[] = ['institucional', 'albergue', 'creche', 'comercial'];
     return valid.includes(scope as RelatorioExecutivoEscopo) ? (scope as RelatorioExecutivoEscopo) : null;
   }
 
   private async getAlbergueSnapshot(period: PeriodoExecutivo): Promise<AlbergueSnapshot> {
-    const [row] = await this.dataSource.query(
+    const [row] = await this.albergueDataSource.query(
       `
         WITH estadias_ativas AS (
           SELECT e.id, e.pessoa_id, e.data_limite
@@ -135,7 +139,7 @@ export class RelatoriosImpactoService {
   }
 
   private async getCrecheSnapshot(period: PeriodoExecutivo): Promise<CrecheSnapshot> {
-    const [row] = await this.dataSource.query(
+    const [row] = await this.escolaDataSource.query(
       `
         WITH frequencias AS (
           SELECT
@@ -191,7 +195,7 @@ export class RelatoriosImpactoService {
   }
 
   private async getFinanceiroSnapshot(period: PeriodoExecutivo): Promise<FinanceiroSnapshot> {
-    const [row] = await this.dataSource.query(
+    const [row] = await this.masterDataSource.query(
       `
         WITH totais AS (
           SELECT
@@ -199,22 +203,22 @@ export class RelatoriosImpactoService {
             c.status,
             c.updated_at,
             COALESCE(SUM(i.total_item), 0)::numeric(12,2) AS total_itens
-          FROM comercio_comandas c
-          LEFT JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+          FROM comercial.comandas c
+          LEFT JOIN comercial.comanda_itens i ON i.comanda_id = c.id
           GROUP BY c.id
         ),
         pagos AS (
           SELECT
             comanda_id,
             SUM(valor)::numeric(12,2) AS total_pago
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           GROUP BY comanda_id
         ),
         pagamentos_periodo AS (
           SELECT
             COALESCE(SUM(valor), 0)::numeric(12,2) AS realizado,
             COUNT(DISTINCT comanda_id)::int AS comandas_pagas
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           WHERE created_at >= $1::date AND created_at < $2::date
         ),
         abertas AS (
@@ -242,7 +246,7 @@ export class RelatoriosImpactoService {
                 AND retirada_em >= $1::date
                 AND retirada_em < $2::date
             )::int AS retiradas_concluidas
-          FROM comercio_retiradas
+          FROM comercial.retiradas
         )
         SELECT
           COALESCE(a.previsto, 0)::float AS previsto,
@@ -304,7 +308,7 @@ export class RelatoriosImpactoService {
       score,
       status: data.riscoEvasao ? 'Acompanhar frequência' : data.semNis ? 'Completar aferição' : 'Base consistente',
       summary: `${data.totalCriancas} crianças ativas, ${data.turmasAtivas} turmas e ${data.frequenciaMedia}% de frequência média no período.`,
-      href: '/creche/relatorios',
+      href: '/escola/relatorios',
       kpis: [
         { id: 'criancas', label: 'Crianças ativas', value: data.totalCriancas, detail: `${data.turmasAtivas} turmas ativas` },
         { id: 'frequencia', label: 'Frequência média', value: data.frequenciaMedia, detail: 'Registros do período', format: 'percent', tone: data.frequenciaMedia >= 85 ? 'success' : 'warning' },
@@ -318,8 +322,8 @@ export class RelatoriosImpactoService {
     const score = clampScore(100 - data.retiradasPendentes * 5 - data.desistencias * 4 - Math.min(35, Math.round(data.pendente / 100)));
 
     return {
-      id: 'financeiro',
-      title: 'Financeiro comercial',
+      id: 'comercial',
+      title: 'Comercial',
       subtitle: 'Lojas e comandas',
       score,
       status: data.pendente > 0 ? 'Cobrança pendente' : data.retiradasPendentes ? 'Retirada pendente' : 'Fechamento estável',
@@ -374,7 +378,7 @@ export class RelatoriosImpactoService {
         title: 'Aferição com NIS pendente',
         description: `${data.semNis} criança(s) ativa(s) precisam de NIS para qualificar relatório e prestação de contas.`,
         tone: 'warning',
-        href: '/creche/qualidade-dados',
+        href: '/escola/qualidade-dados',
         actionLabel: 'Revisar base',
       });
     }
@@ -386,7 +390,7 @@ export class RelatoriosImpactoService {
         title: 'Sinal de evasão escolar',
         description: `${data.riscoEvasao} criança(s) acumulam faltas relevantes no período.`,
         tone: 'danger',
-        href: '/creche',
+        href: '/escola',
         actionLabel: 'Abrir painel',
       });
     }
@@ -399,8 +403,8 @@ export class RelatoriosImpactoService {
 
     if (data.pendente > 0) {
       alerts.push({
-        id: 'financeiro-pendente',
-        area: 'financeiro',
+        id: 'comercial-pendente',
+        area: 'comercial',
         title: 'Comandas com valor pendente',
         description: `Há R$ ${data.pendente.toFixed(2)} em saldo aberto para cobrança ou fechamento.`,
         tone: 'warning',
@@ -411,8 +415,8 @@ export class RelatoriosImpactoService {
 
     if (data.retiradasPendentes > 0) {
       alerts.push({
-        id: 'financeiro-retiradas',
-        area: 'financeiro',
+        id: 'comercial-retiradas',
+        area: 'comercial',
         title: 'Retiradas aguardando baixa',
         description: `${data.retiradasPendentes} retirada(s) precisam de confirmação operacional.`,
         tone: 'warning',
@@ -438,7 +442,7 @@ export class RelatoriosImpactoService {
       return this.buildCrecheService(creche).kpis;
     }
 
-    if (scope === 'financeiro' && financeiro) {
+    if (scope === 'comercial' && financeiro) {
       return [
         { id: 'previsto', label: 'Previsto', value: financeiro.previsto, detail: 'Comandas abertas ou aguardando pagamento', format: 'currency' },
         { id: 'realizado', label: 'Realizado', value: financeiro.realizado, detail: `${financeiro.comandasPagas} comandas pagas`, format: 'currency', tone: 'success' },
@@ -471,11 +475,11 @@ export class RelatoriosImpactoService {
         title: 'Relatório da E.E.I.',
         description: 'Aferição, frequência, NIS, turmas e prestação de contas da educação infantil.',
         status: 'Operacional',
-        href: '/creche/relatorios',
+        href: '/escola/relatorios',
       },
       {
-        id: 'financeiro',
-        title: 'Relatório financeiro comercial',
+        id: 'comercial',
+        title: 'Relatório comercial',
         description: 'Previsto, realizado, pendente, desistências, retiradas e fechamento das lojas.',
         status: 'Operacional',
         href: '/lojas/secretaria',
@@ -491,7 +495,7 @@ export class RelatoriosImpactoService {
       institucional: 'Relatório executivo institucional',
       albergue: 'Relatório executivo do Albergue',
       creche: 'Relatório executivo da E.E.I.',
-      financeiro: 'Relatório comercial e financeiro',
+      comercial: 'Relatório comercial',
     };
 
     return titles[scope];
@@ -502,7 +506,7 @@ export class RelatoriosImpactoService {
       institucional: 'Leitura consolidada para gestão: operação social, educação infantil, financeiro comercial e alertas que exigem decisão.',
       albergue: 'Leitura gerencial do acolhimento: ocupação, fluxo do período, presença e permanências que exigem providência.',
       creche: 'Leitura da E.E.I.: crianças ativas, frequência, aferição, documentação e sinais de acompanhamento.',
-      financeiro: 'Leitura comercial das lojas: previsto, realizado, pendente, desistências e retiradas.',
+      comercial: 'Leitura comercial das lojas: previsto, realizado, pendente, desistências e retiradas.',
     };
 
     return summaries[scope];

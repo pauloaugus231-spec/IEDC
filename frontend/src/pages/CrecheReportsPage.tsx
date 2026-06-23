@@ -474,7 +474,7 @@ const CrecheReportsPage = () => {
             </p>
           </div>
           <div className="report-actions">
-            <Link to="/creche">Dashboard da E.E.I.</Link>
+            <Link to="/escola">Dashboard da Escola</Link>
             <Link to="/gestao">Painel da gestão</Link>
           </div>
         </div>

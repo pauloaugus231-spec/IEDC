@@ -150,6 +150,16 @@ export class AdicionarItemDto extends LojaScopedDto {
   @IsNumber()
   @Min(0)
   desconto?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  usuario?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  lancadoPor?: string;
 }
 
 export class PagamentoItemDto {

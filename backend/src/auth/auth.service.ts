@@ -92,7 +92,7 @@ const ROLE_PROFILES: Record<UsuarioRole, RoleProfile> = {
     roleLabel: 'Coordenação',
     service: UsuarioServiceScope.CRECHE,
     serviceLabel: 'E.E.I. Casa do Pequenino',
-    homePath: '/creche',
+    homePath: '/escola',
   },
   [UsuarioRole.EQUIPE_TECNICA]: {
     roleLabel: 'Equipe técnica',
@@ -110,12 +110,12 @@ const ROLE_PROFILES: Record<UsuarioRole, RoleProfile> = {
     roleLabel: 'Educador',
     service: UsuarioServiceScope.CRECHE,
     serviceLabel: 'E.E.I. Casa do Pequenino',
-    homePath: '/creche',
+    homePath: '/escola',
   },
-  [UsuarioRole.FINANCEIRO]: {
-    roleLabel: 'Financeiro',
-    service: UsuarioServiceScope.FINANCEIRO,
-    serviceLabel: 'Secretaria e Financeiro',
+  [UsuarioRole.COMERCIAL]: {
+    roleLabel: 'Comercial',
+    service: UsuarioServiceScope.COMERCIAL,
+    serviceLabel: 'Operacao comercial das lojas',
     homePath: '/lojas/secretaria',
   },
   [UsuarioRole.LOJA_BAZAR]: {

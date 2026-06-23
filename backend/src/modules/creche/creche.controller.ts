@@ -11,7 +11,7 @@ import {
   SalvarFrequenciaTurmaDto,
 } from './dto/creche-operacao.dto';
 
-@Controller('creche')
+@Controller(['escola', 'creche'])
 @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_CRECHE, UsuarioRole.EDUCADOR_CRECHE)
 export class CrecheController {
   constructor(private readonly crecheService: CrecheService) {}

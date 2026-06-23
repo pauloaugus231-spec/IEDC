@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import {
+  CORE_DATABASE_CONNECTION,
+  ESCOLA_DATABASE_CONNECTION,
+  MASTER_DATABASE_CONNECTION,
+} from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { ObservabilityService } from '../observability/observability.service';
@@ -27,7 +31,10 @@ export class NotificacoesService {
   private readonly logger = new Logger(NotificacoesService.name);
 
   constructor(
+    @InjectDataSource() private readonly albergueDataSource: DataSource,
     @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly escolaDataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly masterDataSource: DataSource,
     private readonly observabilityService: ObservabilityService,
   ) {}
 
@@ -123,7 +130,7 @@ export class NotificacoesService {
       return this.buildCrecheItems(createdAt, 'operacional');
     }
 
-    if (role === UsuarioRole.FINANCEIRO) {
+    if (role === UsuarioRole.COMERCIAL) {
       return this.buildFinanceiroItems(createdAt);
     }
 
@@ -224,14 +231,14 @@ export class NotificacoesService {
         FROM estadias
         WHERE status = 'ativa'
           AND data_limite::date < CURRENT_DATE
-      `),
+      `, [], this.albergueDataSource),
       this.count(`
         SELECT COUNT(*)::int AS total
         FROM estadias e
         JOIN pessoas p ON p.id = e.pessoa_id
         WHERE e.status = 'ativa'
           AND p.presente = false
-      `),
+      `, [], this.albergueDataSource),
       this.count(`
         SELECT COUNT(*)::int AS total
         FROM pessoas
@@ -243,7 +250,7 @@ export class NotificacoesService {
             OR telefone IS NULL
             OR btrim(telefone) = ''
           )
-      `),
+      `, [], this.albergueDataSource),
     ]);
     const items: NotificacaoItem[] = [];
 
@@ -302,14 +309,14 @@ export class NotificacoesService {
         FROM creche_criancas
         WHERE status = 'ativa'
           AND (nis IS NULL OR btrim(nis) = '')
-      `),
+      `, [], this.escolaDataSource),
       this.count(`
         SELECT COUNT(*)::int AS total
         FROM creche_criancas c
         LEFT JOIN creche_frequencias f ON f.crianca_id = c.id AND f.data = CURRENT_DATE
         WHERE c.status = 'ativa'
           AND f.id IS NULL
-      `),
+      `, [], this.escolaDataSource),
       this.count(`
         SELECT COUNT(*)::int AS total
         FROM (
@@ -322,7 +329,7 @@ export class NotificacoesService {
           GROUP BY c.id
           HAVING COUNT(*) >= 3
         ) base
-      `),
+      `, [], this.escolaDataSource),
     ]);
     const items: NotificacaoItem[] = [];
 
@@ -334,7 +341,7 @@ export class NotificacoesService {
         tipo: audience === 'operacional' ? 'operacional' : 'area',
         title: 'NIS pendente na E.E.I.',
         description: `${semNis} criança(s) ativa(s) precisam de NIS para aferição e prestação de contas.`,
-        href: '/creche/qualidade-dados',
+        href: '/escola/qualidade-dados',
         actionLabel: 'Completar dados',
         createdAt,
       }));
@@ -348,7 +355,7 @@ export class NotificacoesService {
         tipo: audience === 'operacional' ? 'recibo' : 'area',
         title: 'Frequência do dia em aberto',
         description: `${frequenciaPendente} criança(s) ativa(s) ainda não têm registro de frequência hoje.`,
-        href: '/creche/frequencia',
+        href: '/escola/frequencia',
         actionLabel: 'Registrar frequência',
         createdAt,
       }));
@@ -362,7 +369,7 @@ export class NotificacoesService {
         tipo: audience === 'operacional' ? 'operacional' : 'area',
         title: 'Risco de evasão escolar',
         description: `${riscoEvasao} criança(s) acumulam faltas relevantes nos últimos 30 dias.`,
-        href: '/creche',
+        href: '/escola',
         actionLabel: 'Abrir painel',
         createdAt,
       }));
@@ -380,9 +387,9 @@ export class NotificacoesService {
 
     if (resumo.pendente > 0) {
       items.push(this.item({
-        id: 'financeiro-saldo-pendente',
+        id: 'comercial-saldo-pendente',
         nivel: 'atencao',
-        area: 'financeiro',
+        area: 'comercial',
         tipo: 'financeira',
         title: 'Comandas com saldo pendente',
         description: options.hideValues
@@ -396,9 +403,9 @@ export class NotificacoesService {
 
     if (resumo.retiradasPendentes > 0) {
       items.push(this.item({
-        id: 'financeiro-retiradas-pendentes',
+        id: 'comercial-retiradas-pendentes',
         nivel: 'atencao',
-        area: 'financeiro',
+        area: 'comercial',
         tipo: 'financeira',
         title: 'Retiradas aguardando baixa',
         description: `${resumo.retiradasPendentes} retirada(s) precisam de confirmação operacional.`,
@@ -410,9 +417,9 @@ export class NotificacoesService {
 
     if (resumo.desistencias > 0) {
       items.push(this.item({
-        id: 'financeiro-desistencias',
+        id: 'comercial-desistencias',
         nivel: 'info',
-        area: 'financeiro',
+        area: 'comercial',
         tipo: 'financeira',
         title: 'Desistências no mês',
         description: `${resumo.desistencias} comanda(s) foram marcadas como desistência no mês atual.`,
@@ -430,22 +437,24 @@ export class NotificacoesService {
       this.count(
         `
           SELECT COUNT(*)::int AS total
-          FROM comercio_retiradas r
-          JOIN comercio_lojas l ON l.id = r.loja_id
+          FROM comercial.retiradas r
+          JOIN comercial.lojas l ON l.id = r.loja_id
           WHERE l.slug = $1
             AND r.status = 'aguardando_retirada'
         `,
         [lojaSlug],
+        this.masterDataSource,
       ),
       this.count(
         `
           SELECT COUNT(*)::int AS total
-          FROM comercio_produtos p
-          JOIN comercio_lojas l ON l.id = p.loja_id
+          FROM comercial.produtos p
+          JOIN comercial.lojas l ON l.id = p.loja_id
           WHERE l.slug = $1
             AND p.ativo = true
         `,
         [lojaSlug],
+        this.masterDataSource,
       ),
     ]);
     const lojaNome = this.lojaNome(lojaSlug);
@@ -490,13 +499,13 @@ export class NotificacoesService {
           c.status,
           c.updated_at,
           COALESCE(SUM(i.total_item), 0)::numeric(12,2) AS total_itens
-        FROM comercio_comandas c
-        LEFT JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+        FROM comercial.comandas c
+        LEFT JOIN comercial.comanda_itens i ON i.comanda_id = c.id
         GROUP BY c.id
       ),
       pagos AS (
         SELECT comanda_id, SUM(valor)::numeric(12,2) AS total_pago
-        FROM comercio_pagamentos
+        FROM comercial.pagamentos
         GROUP BY comanda_id
       ),
       abertas AS (
@@ -514,7 +523,7 @@ export class NotificacoesService {
       ),
       retiradas AS (
         SELECT COUNT(*) FILTER (WHERE status = 'aguardando_retirada')::int AS retiradas_pendentes
-        FROM comercio_retiradas
+        FROM comercial.retiradas
       )
       SELECT
         COALESCE(a.pendente, 0)::float AS pendente,
@@ -523,7 +532,7 @@ export class NotificacoesService {
       FROM abertas a
       CROSS JOIN retiradas r
       CROSS JOIN desistencias d
-    `);
+    `, [], this.masterDataSource);
 
     return {
       pendente: this.number(row?.pendente),
@@ -564,14 +573,14 @@ export class NotificacoesService {
     }
   }
 
-  private async count(sql: string, params: unknown[] = []): Promise<number> {
-    const [row] = await this.rows(sql, params);
+  private async count(sql: string, params: unknown[] = [], dataSource = this.dataSource): Promise<number> {
+    const [row] = await this.rows(sql, params, dataSource);
     return this.number(row?.total);
   }
 
-  private async rows(sql: string, params: unknown[] = []): Promise<QueryRow[]> {
+  private async rows(sql: string, params: unknown[] = [], dataSource = this.dataSource): Promise<QueryRow[]> {
     try {
-      const result = await this.dataSource.query(sql, params);
+      const result = await dataSource.query(sql, params);
       return Array.isArray(result) ? (result as QueryRow[]) : [];
     } catch (error) {
       this.logger.debug(`Consulta de notificação ignorada: ${this.errorMessage(error)}`);
@@ -637,7 +646,7 @@ export class NotificacoesService {
     if (role === UsuarioRole.EQUIPE_TECNICA) return 'Operação institucional';
     if (role === UsuarioRole.EDUCADOR_ALBERGUE) return 'Rotina do Albergue';
     if (role === UsuarioRole.EDUCADOR_CRECHE) return 'Rotina da E.E.I.';
-    if (role === UsuarioRole.FINANCEIRO) return 'Financeiro comercial';
+    if (role === UsuarioRole.COMERCIAL) return 'Comercial';
     if (role && ROLE_TO_STORE[role]) return `Operação do ${this.lojaNome(ROLE_TO_STORE[role])}`;
     return 'Avisos institucionais';
   }
@@ -657,7 +666,7 @@ export class NotificacoesService {
       };
     }
 
-    if (role === UsuarioRole.FINANCEIRO) {
+    if (role === UsuarioRole.COMERCIAL) {
       return {
         title: 'Camada financeira',
         description: 'Financeiro acompanha previsto, realizado, pendente, desistências e retiradas.',

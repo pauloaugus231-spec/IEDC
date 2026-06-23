@@ -8,7 +8,11 @@ import { DataSource, MoreThan, Repository } from 'typeorm';
 import { AuthUser } from '../../auth/auth.types';
 import { ObservabilityEvent, ObservabilityEventLevel } from '../../entities/observability-event.entity';
 import { RegisterFrontendErrorDto } from './dto/register-frontend-error.dto';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import {
+  CORE_DATABASE_CONNECTION,
+  ESCOLA_DATABASE_CONNECTION,
+  MASTER_DATABASE_CONNECTION,
+} from '../../config/database.config';
 
 type ComponentStatus = 'ok' | 'warning' | 'down' | 'unknown';
 
@@ -46,6 +50,10 @@ export class ObservabilityService {
     private readonly coreDataSource: DataSource,
     @InjectDataSource()
     private readonly albergueDataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION)
+    private readonly masterDataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION)
+    private readonly escolaDataSource: DataSource,
   ) {}
 
   async registrarEvento(input: RegistrarEventoInput): Promise<void> {
@@ -135,9 +143,11 @@ export class ObservabilityService {
   }
 
   async getSystemStatus() {
-    const [coreDatabase, albergueDatabase, redis, uploads, backup, recentCounts] = await Promise.all([
+    const [coreDatabase, albergueDatabase, masterDatabase, escolaDatabase, redis, uploads, backup, recentCounts] = await Promise.all([
       this.checkDatabase(this.coreDataSource),
       this.checkDatabase(this.albergueDataSource),
+      this.checkDatabase(this.masterDataSource),
+      this.checkDatabase(this.escolaDataSource),
       this.checkRedis(),
       this.checkUploads(),
       this.getBackupStatus(),
@@ -148,6 +158,8 @@ export class ObservabilityService {
       status: this.resolveOverallStatus([
         coreDatabase.status,
         albergueDatabase.status,
+        masterDatabase.status,
+        escolaDatabase.status,
         redis.status,
         uploads.status,
         backup.status,
@@ -161,6 +173,8 @@ export class ObservabilityService {
       dependencies: {
         coreDatabase,
         albergueDatabase,
+        masterDatabase,
+        escolaDatabase,
         redis,
         uploads,
       },
@@ -170,13 +184,19 @@ export class ObservabilityService {
   }
 
   async getReadinessStatus() {
-    const [coreDatabase, albergueDatabase, uploads] = await Promise.all([
+    const [coreDatabase, albergueDatabase, masterDatabase, escolaDatabase, uploads] = await Promise.all([
       this.checkDatabase(this.coreDataSource),
       this.checkDatabase(this.albergueDataSource),
+      this.checkDatabase(this.masterDataSource),
+      this.checkDatabase(this.escolaDataSource),
       this.checkUploads(),
     ]);
     const status =
-      coreDatabase.status === 'ok' && albergueDatabase.status === 'ok' && uploads.status === 'ok'
+      coreDatabase.status === 'ok' &&
+      albergueDatabase.status === 'ok' &&
+      masterDatabase.status === 'ok' &&
+      escolaDatabase.status === 'ok' &&
+      uploads.status === 'ok'
         ? 'ok'
         : 'down';
 
@@ -186,6 +206,8 @@ export class ObservabilityService {
       dependencies: {
         coreDatabase,
         albergueDatabase,
+        masterDatabase,
+        escolaDatabase,
         uploads,
       },
     };

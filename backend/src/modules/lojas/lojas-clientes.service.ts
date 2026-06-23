@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { ClienteDto, CriarComandaDto } from './dto/lojas-operacao.dto';
 import { LojasEventsService } from './lojas-events.service';
 import { LojasSchemaService } from './lojas-schema.service';
@@ -25,7 +25,7 @@ export interface ClienteComercial {
 @Injectable()
 export class LojasClientesService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly events: LojasEventsService,
   ) {}
@@ -60,13 +60,13 @@ export class LojasClientesService {
       `
         WITH pagamentos AS (
           SELECT
-            co.cliente_id,
+            co.pessoa_id AS cliente_id,
             SUM(p.valor)::numeric(12,2) AS total_gasto,
             COUNT(DISTINCT p.comanda_id)::int AS compras,
             MAX(p.created_at) AS ultima_compra
-          FROM comercio_comandas co
-          JOIN comercio_pagamentos p ON p.comanda_id = co.id
-          GROUP BY co.cliente_id
+          FROM comercial.comandas co
+          JOIN comercial.pagamentos p ON p.comanda_id = co.id
+          GROUP BY co.pessoa_id
         )
         SELECT
           c.id,
@@ -80,7 +80,7 @@ export class LojasClientesService {
           COALESCE(p.total_gasto, 0)::float AS "totalGasto",
           COALESCE(p.compras, 0)::int AS compras,
           CASE WHEN p.ultima_compra IS NULL THEN NULL ELSE to_char(p.ultima_compra, 'YYYY-MM-DD') END AS "ultimaCompra"
-        FROM comercio_clientes c
+        FROM comercial.clientes c
         LEFT JOIN pagamentos p ON p.cliente_id = c.id
         WHERE ${where.join(' AND ')}
         ORDER BY c.nome
@@ -100,24 +100,32 @@ export class LojasClientesService {
     const cpf = await this.prepareCpf(body.cpf);
     const id = randomUUID();
 
-    await this.dataSource.query(
-      `
-        INSERT INTO comercio_clientes (
-          id, nome, telefone, cpf, email, endereco, data_nascimento, observacoes, created_at, updated_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::date, $8, NOW(), NOW())
-      `,
-      [
-        id,
-        body.nome.trim(),
-        body.telefone?.trim() || '',
-        cpf,
-        body.email?.trim() || '',
-        body.endereco?.trim() || '',
-        body.dataNascimento || '',
-        body.observacoes?.trim() || null,
-      ],
-    );
+    await this.dataSource.transaction(async (manager) => {
+      await manager.query(
+        `
+          INSERT INTO identidade.pessoas (
+            id, nome_registro, cpf, telefone, email, endereco, data_nascimento, created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::date, NOW(), NOW())
+        `,
+        [
+          id,
+          body.nome.trim(),
+          cpf,
+          body.telefone?.trim() || '',
+          body.email?.trim() || '',
+          body.endereco?.trim() || '',
+          body.dataNascimento || '',
+        ],
+      );
+      await manager.query(
+        `
+          INSERT INTO comercial.perfis_pessoa (pessoa_id, observacoes, created_at, updated_at)
+          VALUES ($1, $2, NOW(), NOW())
+        `,
+        [id, body.observacoes?.trim() || null],
+      );
+    });
 
     const [cliente] = await this.dataSource.query(
       `
@@ -133,7 +141,7 @@ export class LojasClientesService {
           0::float AS "totalGasto",
           0::int AS compras,
           NULL AS "ultimaCompra"
-        FROM comercio_clientes
+        FROM comercial.clientes
         WHERE id = $1::uuid
       `,
       [id],
@@ -153,41 +161,55 @@ export class LojasClientesService {
 
     const cpf = await this.prepareCpf(body.cpf, id);
 
-    const result = await this.dataSource.query(
-      `
-        UPDATE comercio_clientes
-        SET nome = $2,
-            telefone = $3,
-            cpf = $4,
-            email = $5,
-            endereco = $6,
-            data_nascimento = NULLIF($7, '')::date,
-            observacoes = $8,
-            updated_at = NOW()
-        WHERE id = $1::uuid
-        RETURNING
+    await this.dataSource.transaction(async (manager) => {
+      const updated = await manager.query(
+        `
+          UPDATE identidade.pessoas
+          SET nome_registro = $2,
+              telefone = $3,
+              cpf = $4,
+              email = $5,
+              endereco = $6,
+              data_nascimento = NULLIF($7, '')::date,
+              updated_at = NOW()
+          WHERE id = $1::uuid
+          RETURNING id
+        `,
+        [
           id,
-          nome,
-          telefone,
+          body.nome.trim(),
+          body.telefone?.trim() || '',
           cpf,
-          email,
-          endereco,
-          to_char(data_nascimento, 'YYYY-MM-DD') AS "dataNascimento",
-          observacoes
-      `,
-      [
-        id,
-        body.nome.trim(),
-        body.telefone?.trim() || '',
-        cpf,
-        body.email?.trim() || '',
-        body.endereco?.trim() || '',
-        body.dataNascimento || '',
-        body.observacoes?.trim() || null,
-      ],
-    );
+          body.email?.trim() || '',
+          body.endereco?.trim() || '',
+          body.dataNascimento || '',
+        ],
+      );
 
-    const cliente = Array.isArray(result?.[0]) ? result[0][0] : result?.[0] as ClienteComercial | undefined;
+      if (!updated.length) {
+        throw new NotFoundException('Cliente nao encontrado.');
+      }
+
+      await manager.query(
+        `
+          INSERT INTO comercial.perfis_pessoa (pessoa_id, observacoes, created_at, updated_at)
+          VALUES ($1::uuid, $2, NOW(), NOW())
+          ON CONFLICT (pessoa_id) DO UPDATE
+          SET observacoes = EXCLUDED.observacoes, updated_at = NOW()
+        `,
+        [id, body.observacoes?.trim() || null],
+      );
+    });
+
+    const [cliente] = await this.dataSource.query(
+      `
+        SELECT id, nome, telefone, cpf, email, endereco,
+               to_char(data_nascimento, 'YYYY-MM-DD') AS "dataNascimento", observacoes
+        FROM comercial.clientes
+        WHERE id = $1::uuid
+      `,
+      [id],
+    ) as ClienteComercial[];
 
     if (!cliente) {
       throw new NotFoundException('Cliente não encontrado.');
@@ -208,6 +230,7 @@ export class LojasClientesService {
 
   async resolveClienteId(body: CriarComandaDto) {
     if (body?.clienteId) {
+      await this.ensurePerfilComercial(body.clienteId);
       return body.clienteId;
     }
 
@@ -217,6 +240,30 @@ export class LojasClientesService {
     }
 
     throw new BadRequestException('Cliente é obrigatório para abrir a comanda.');
+  }
+
+  private async ensurePerfilComercial(pessoaId: string) {
+    const result = await this.dataSource.query(
+      `
+        INSERT INTO comercial.perfis_pessoa (pessoa_id, created_at, updated_at)
+        SELECT id, NOW(), NOW()
+        FROM identidade.pessoas
+        WHERE id = $1::uuid AND ativo = true
+        ON CONFLICT (pessoa_id) DO NOTHING
+        RETURNING pessoa_id
+      `,
+      [pessoaId],
+    );
+
+    if (!result.length) {
+      const [pessoa] = await this.dataSource.query(
+        `SELECT id FROM identidade.pessoas WHERE id = $1::uuid AND ativo = true`,
+        [pessoaId],
+      );
+      if (!pessoa) {
+        throw new NotFoundException('Pessoa do cadastro mestre não encontrada.');
+      }
+    }
   }
 
   private async prepareCpf(cpf?: string, ignoreId?: string) {
@@ -233,7 +280,7 @@ export class LojasClientesService {
     const [duplicado] = await this.dataSource.query(
       `
         SELECT id, nome
-        FROM comercio_clientes
+        FROM comercial.clientes
         WHERE regexp_replace(cpf, '\\D', '', 'g') = $1
           AND ($2::uuid IS NULL OR id <> $2::uuid)
         LIMIT 1

@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ESCOLA_DATABASE_CONNECTION, MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { type PeriodoExecutivo, type RelatorioExecutivoKpi, type SqlParam, getExecutivePeriod } from './relatorios-core-types';
@@ -26,7 +26,11 @@ import {
 
 @Injectable()
 export class RelatoriosGestao360Service {
-  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly albergueDataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly escolaDataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly masterDataSource: DataSource,
+  ) {}
 
   async getRelatorioGestao360(
     actor: AuthUser | undefined,
@@ -214,25 +218,25 @@ export class RelatoriosGestao360Service {
       vendasRealizadas,
       pendencias,
     ] = await Promise.all([
-      countSingle(this.dataSource, `
+      countSingle(this.albergueDataSource, `
         SELECT COUNT(DISTINCT e.pessoa_id)::int AS total
         FROM estadias e
         WHERE e.data_checkin::date < $2::date
           AND COALESCE(e.data_checkout::date, $2::date) >= $1::date
       `, [period.inicio, period.fim]),
-      countSingle(this.dataSource, `
+      countSingle(this.albergueDataSource, `
         SELECT COUNT(*)::int AS total
         FROM estadias
         WHERE data_checkin >= $1::date AND data_checkin < $2::date
       `, [period.inicio, period.fim]),
-      countSingle(this.dataSource, `
+      countSingle(this.escolaDataSource, `
         SELECT COALESCE(ROUND(100.0 * COUNT(*) FILTER (WHERE presente) / NULLIF(COUNT(*), 0)), 0)::int AS total
         FROM creche_frequencias
         WHERE data >= $1::date AND data < $2::date
       `, [period.inicio, period.fim]),
-      countSingle(this.dataSource, `
+      countSingle(this.masterDataSource, `
         SELECT COALESCE(SUM(valor), 0)::float AS total
-        FROM comercio_pagamentos
+        FROM comercial.pagamentos
         WHERE created_at >= $1::date AND created_at < $2::date
       `, [period.inicio, period.fim]),
       this.get360QualityTotal(),
@@ -313,7 +317,7 @@ export class RelatoriosGestao360Service {
   }
 
   private async get360PessoasPorRacaCor(period: PeriodoExecutivo): Promise<Relatorio360ChartRow[]> {
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.albergueDataSource.query(
       `
         SELECT
           ${racaCorSql('COALESCE(p.cor, p.raca)')} AS label,
@@ -334,7 +338,7 @@ export class RelatoriosGestao360Service {
   private async get360CadastrosAlberguePorPeriodo(period: PeriodoExecutivo): Promise<Relatorio360ChartRow[]> {
     const bucket = this.get360DateBucket(period);
 
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.albergueDataSource.query(
       `
         SELECT
           to_char(date_trunc('${bucket.unit}', e.data_checkin)::date, '${bucket.labelFormat}') AS label,
@@ -352,7 +356,7 @@ export class RelatoriosGestao360Service {
   private async get360AcessosAlberguePorPeriodo(period: PeriodoExecutivo): Promise<Relatorio360ChartRow[]> {
     const bucket = this.get360DateBucket(period);
 
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.albergueDataSource.query(
       `
         WITH pontos AS (
           SELECT date_trunc('${bucket.unit}', data_checkin)::date AS bucket, COUNT(*)::int AS total
@@ -369,7 +373,7 @@ export class RelatoriosGestao360Service {
   }
 
   private async get360AcessosAlberguePorRacaCor(period: PeriodoExecutivo): Promise<Relatorio360ChartRow[]> {
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.albergueDataSource.query(
       `
         SELECT
           ${racaCorSql('COALESCE(p.cor, p.raca)')} AS label,
@@ -387,7 +391,7 @@ export class RelatoriosGestao360Service {
   }
 
   private async get360CriancasPorRacaCor(): Promise<Relatorio360ChartRow[]> {
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.escolaDataSource.query(
       `
         SELECT
           ${racaCorSql('raca_cor')} AS label,
@@ -405,7 +409,7 @@ export class RelatoriosGestao360Service {
   private async get360FrequenciaPorPeriodo(period: PeriodoExecutivo): Promise<Relatorio360ChartRow[]> {
     const bucket = this.get360DateBucket(period);
 
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.escolaDataSource.query(
       `
         SELECT
           to_char(date_trunc('${bucket.unit}', data)::date, '${bucket.labelFormat}') AS label,
@@ -424,14 +428,14 @@ export class RelatoriosGestao360Service {
   private async get360VendasPorPeriodo(period: PeriodoExecutivo): Promise<Relatorio360ChartRow[]> {
     const bucket = this.get360DateBucket(period);
 
-    return this.map360Rows(await this.dataSource.query(
+    return this.map360Rows(await this.masterDataSource.query(
       `
         SELECT
           to_char(date_trunc('${bucket.unit}', created_at)::date, '${bucket.labelFormat}') AS label,
           COALESCE(SUM(valor), 0)::float AS value,
           'Lojas' AS area,
           COUNT(*)::int || ' pagamento(s)' AS detail
-        FROM comercio_pagamentos
+        FROM comercial.pagamentos
         WHERE created_at >= $1::date AND created_at < $2::date
         GROUP BY date_trunc('${bucket.unit}', created_at)::date
         ORDER BY date_trunc('${bucket.unit}', created_at)::date
@@ -446,7 +450,7 @@ export class RelatoriosGestao360Service {
     return [
       { key: 'albergue', label: 'Albergue', value: counts.albergue, area: 'Albergue', source: 'Qualidade de dados', confidence: 'parcial', tone: counts.albergue ? 'warning' : 'success' },
       { key: 'eei', label: 'E.E.I.', value: counts.creche, area: 'E.E.I.', source: 'Qualidade de dados', confidence: 'parcial', tone: counts.creche ? 'warning' : 'success' },
-      { key: 'lojas', label: 'Lojas', value: counts.financeiro, area: 'Lojas', source: 'Qualidade de dados', confidence: 'parcial', tone: counts.financeiro ? 'warning' : 'success' },
+      { key: 'lojas', label: 'Lojas', value: counts.comercial, area: 'Lojas', source: 'Qualidade de dados', confidence: 'parcial', tone: counts.comercial ? 'warning' : 'success' },
     ];
   }
 
@@ -467,10 +471,10 @@ export class RelatoriosGestao360Service {
 
   private async get360QualityTotal(): Promise<number> {
     const counts = await this.get360QualityCounts();
-    return counts.albergue + counts.creche + counts.financeiro;
+    return counts.albergue + counts.creche + counts.comercial;
   }
 
-  private async get360QualityCounts(): Promise<Record<'albergue' | 'creche' | 'financeiro', number>> {
+  private async get360QualityCounts(): Promise<Record<'albergue' | 'creche' | 'comercial', number>> {
     const rows = await this.get360QualityBreakdown();
 
     return rows.reduce(
@@ -478,12 +482,12 @@ export class RelatoriosGestao360Service {
         acc[row.areaId] += row.value;
         return acc;
       },
-      { albergue: 0, creche: 0, financeiro: 0 },
+      { albergue: 0, creche: 0, comercial: 0 },
     );
   }
 
   private async get360QualityBreakdown(): Promise<Array<{
-    areaId: 'albergue' | 'creche' | 'financeiro';
+    areaId: 'albergue' | 'creche' | 'comercial';
     area: string;
     category: string;
     label: string;
@@ -497,7 +501,7 @@ export class RelatoriosGestao360Service {
       financeiroProdutos,
       financeiroComandas,
     ] = await Promise.all([
-      countSingle(this.dataSource, `
+      countSingle(this.albergueDataSource, `
         SELECT COUNT(DISTINCT p.id)::int AS total
         FROM pessoas p
         JOIN estadias e ON e.pessoa_id = p.id AND e.status = 'ativa'
@@ -509,12 +513,12 @@ export class RelatoriosGestao360Service {
             OR COALESCE(NULLIF(btrim(p.endereco), ''), NULLIF(btrim(p.cidade), '')) IS NULL
           )
       `),
-      countSingle(this.dataSource, `
+      countSingle(this.albergueDataSource, `
         SELECT COUNT(*)::int AS total
         FROM estadias
         WHERE status = 'ativa' AND data_limite < CURRENT_DATE
       `),
-      countSingle(this.dataSource, `
+      countSingle(this.escolaDataSource, `
         SELECT COUNT(*)::int AS total
         FROM creche_criancas c
         LEFT JOIN creche_responsaveis r ON r.crianca_id = c.id AND r.responsavel_principal = true
@@ -526,22 +530,22 @@ export class RelatoriosGestao360Service {
             OR r.id IS NULL
           )
       `),
-      countSingle(this.dataSource, `
+      countSingle(this.escolaDataSource, `
         SELECT COUNT(*)::int AS total
         FROM creche_turmas
         WHERE ativa = true AND professora_responsavel_id IS NULL
       `),
-      countSingle(this.dataSource, `
+      countSingle(this.masterDataSource, `
         SELECT COUNT(*)::int AS total
-        FROM comercio_produtos
+        FROM comercial.produtos
         WHERE ativo = true
           AND (preco IS NULL OR preco <= 0 OR categoria IS NULL OR btrim(categoria) = '')
       `),
-      countSingle(this.dataSource, `
+      countSingle(this.masterDataSource, `
         WITH totais AS (
           SELECT c.id, c.created_at, COALESCE(SUM(i.total_item), 0) AS total
-          FROM comercio_comandas c
-          LEFT JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+          FROM comercial.comandas c
+          LEFT JOIN comercial.comanda_itens i ON i.comanda_id = c.id
           WHERE c.status IN ('aberta', 'aguardando_pagamento')
             AND c.created_at < NOW() - INTERVAL '1 day'
           GROUP BY c.id, c.created_at
@@ -556,8 +560,8 @@ export class RelatoriosGestao360Service {
       { areaId: 'albergue', area: 'Albergue', category: 'Estadias vencidas', label: 'Albergue · Estadias vencidas', value: albergueEstadias },
       { areaId: 'creche', area: 'E.E.I.', category: 'Cadastro infantil', label: 'E.E.I. · Cadastro infantil', value: crecheCadastros },
       { areaId: 'creche', area: 'E.E.I.', category: 'Turmas', label: 'E.E.I. · Turmas', value: crecheTurmas },
-      { areaId: 'financeiro', area: 'Lojas', category: 'Produtos', label: 'Lojas · Produtos', value: financeiroProdutos },
-      { areaId: 'financeiro', area: 'Lojas', category: 'Comandas', label: 'Lojas · Comandas', value: financeiroComandas },
+      { areaId: 'comercial', area: 'Lojas', category: 'Produtos', label: 'Lojas · Produtos', value: financeiroProdutos },
+      { areaId: 'comercial', area: 'Lojas', category: 'Comandas', label: 'Lojas · Comandas', value: financeiroComandas },
     ];
   }
 

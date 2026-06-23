@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import {
   AdicionarItemDto,
   AtualizarStatusComandaDto,
@@ -29,7 +29,7 @@ import {
 @Injectable()
 export class LojasService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly catalogo: LojasCatalogoService,
     private readonly clientes: LojasClientesService,
@@ -53,22 +53,22 @@ export class LojasService {
             c.updated_at,
             c.finalizada_em,
             COALESCE(SUM(i.total_item), 0)::numeric(12,2) AS total_itens
-          FROM comercio_comandas c
-          LEFT JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+          FROM comercial.comandas c
+          LEFT JOIN comercial.comanda_itens i ON i.comanda_id = c.id
           GROUP BY c.id
         ),
         pagos AS (
           SELECT
             p.comanda_id,
             SUM(p.valor)::numeric(12,2) AS total_pago
-          FROM comercio_pagamentos p
+          FROM comercial.pagamentos p
           GROUP BY p.comanda_id
         ),
         pagos_periodo AS (
           SELECT
             SUM(valor)::numeric(12,2) AS vendas_pagas,
             COUNT(DISTINCT comanda_id)::int AS comandas_pagas
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           WHERE created_at >= $1::date AND created_at < $2::date
         ),
         previstas AS (
@@ -97,7 +97,7 @@ export class LojasService {
                 AND retirada_em >= $1::date
                 AND retirada_em < $2::date
             )::int AS retiradas_concluidas
-          FROM comercio_retiradas
+          FROM comercial.retiradas
         )
         SELECT
           COALESCE(pp.vendas_pagas, 0)::float AS "vendasPagas",
@@ -126,9 +126,9 @@ export class LojasService {
           COALESCE(SUM(i.total_item) FILTER (WHERE c.status = 'paga' AND c.finalizada_em >= $1::date AND c.finalizada_em < $2::date), 0)::float AS realizado,
           COALESCE(SUM(i.total_item) FILTER (WHERE c.status IN ('aberta', 'aguardando_pagamento')), 0)::float AS previsto,
           COALESCE(COUNT(DISTINCT c.id) FILTER (WHERE c.status = 'paga' AND c.finalizada_em >= $1::date AND c.finalizada_em < $2::date), 0)::int AS comandas
-        FROM comercio_lojas l
-        LEFT JOIN comercio_comanda_itens i ON i.loja_id = l.id
-        LEFT JOIN comercio_comandas c ON c.id = i.comanda_id
+        FROM comercial.lojas l
+        LEFT JOIN comercial.comanda_itens i ON i.loja_id = l.id
+        LEFT JOIN comercial.comandas c ON c.id = i.comanda_id
         GROUP BY l.id, l.slug, l.nome
         ORDER BY l.nome
       `,
@@ -141,7 +141,7 @@ export class LojasService {
           metodo,
           SUM(valor)::float AS total,
           COUNT(*)::int AS quantidade
-        FROM comercio_pagamentos
+        FROM comercial.pagamentos
         WHERE created_at >= $1::date AND created_at < $2::date
         GROUP BY metodo
         ORDER BY total DESC
@@ -162,7 +162,7 @@ export class LojasService {
           SELECT
             date_trunc('${serieBucket}', created_at)::date AS dia,
             SUM(valor)::numeric(12,2) AS total
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           WHERE created_at >= $1::date AND created_at < $2::date
           GROUP BY date_trunc('${serieBucket}', created_at)::date
         ),
@@ -170,8 +170,8 @@ export class LojasService {
           SELECT
             date_trunc('${serieBucket}', c.created_at)::date AS dia,
             SUM(i.total_item)::numeric(12,2) AS total
-          FROM comercio_comandas c
-          JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+          FROM comercial.comandas c
+          JOIN comercial.comanda_itens i ON i.comanda_id = c.id
           WHERE c.created_at >= $1::date AND c.created_at < $2::date
           GROUP BY date_trunc('${serieBucket}', c.created_at)::date
         ),
@@ -179,8 +179,8 @@ export class LojasService {
           SELECT
             date_trunc('${serieBucket}', c.updated_at)::date AS dia,
             SUM(i.total_item)::numeric(12,2) AS total
-          FROM comercio_comandas c
-          JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+          FROM comercial.comandas c
+          JOIN comercial.comanda_itens i ON i.comanda_id = c.id
           WHERE c.status = 'desistencia'
             AND c.updated_at >= $1::date
             AND c.updated_at < $2::date

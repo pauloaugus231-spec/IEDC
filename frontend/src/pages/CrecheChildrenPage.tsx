@@ -136,7 +136,7 @@ const CrecheChildrenPage = () => {
       const saved = await createCrecheCrianca(form);
       setModalOpen(false);
       setReload((value) => value + 1);
-      navigate(`/creche/criancas/${saved.crianca.id}`);
+      navigate(`/escola/criancas/${saved.crianca.id}`);
     } catch (err: any) {
       setFormError(err.message || 'Não foi possível cadastrar a criança.');
     } finally {
@@ -152,10 +152,10 @@ const CrecheChildrenPage = () => {
         description="Consulta operacional da E.E.I. com dados de aferição, responsáveis, turma e pendências cadastrais."
         actions={(
           <>
-          <Link className="creche-head-link secondary" to="/creche/turmas">
+          <Link className="creche-head-link secondary" to="/escola/turmas">
             Turmas
           </Link>
-          <Link className="creche-head-link secondary" to="/creche/frequencia">
+          <Link className="creche-head-link secondary" to="/escola/frequencia">
             Registrar frequência
           </Link>
           <button className="creche-head-link" onClick={openModal} type="button">
@@ -224,13 +224,13 @@ const CrecheChildrenPage = () => {
                 return (
                   <tr key={item.id}>
                     <td>
-                      <Link className="creche-table-link" to={`/creche/criancas/${item.id}`}>
+                      <Link className="creche-table-link" to={`/escola/criancas/${item.id}`}>
                         <strong>{item.nome}</strong>
                         <span>{item.cpf || 'CPF pendente'}</span>
                       </Link>
                     </td>
                     <td>
-                      <Link className="creche-table-link" to={`/creche/turmas/${item.turmaId}`}>
+                      <Link className="creche-table-link" to={`/escola/turmas/${item.turmaId}`}>
                         <strong>{item.turma}</strong>
                         <span>abrir turma</span>
                       </Link>

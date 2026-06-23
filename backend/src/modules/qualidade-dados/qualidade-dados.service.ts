@@ -1,11 +1,11 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ESCOLA_DATABASE_CONNECTION, MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { AuthUser } from '../../auth/auth.types';
 import { UsuarioRole } from '../../entities/usuario.entity';
 
-export type QualidadeAreaId = 'albergue' | 'creche' | 'financeiro';
+export type QualidadeAreaId = 'albergue' | 'creche' | 'comercial';
 export type QualidadeSeveridade = 'critico' | 'atencao' | 'informativo';
 
 interface QueryRow {
@@ -56,8 +56,8 @@ const AREA_LABELS: Record<QualidadeAreaId, { label: string; description: string 
     label: 'E.E.I.',
     description: 'Cadastros de crianças, responsáveis, turmas e frequência pedagógica.',
   },
-  financeiro: {
-    label: 'Financeiro comercial',
+  comercial: {
+    label: 'Comercial',
     description: 'Comandas, retiradas e produtos que sustentam a rotina comercial.',
   },
 };
@@ -115,7 +115,11 @@ export interface QualidadeDadosResponse {
 
 @Injectable()
 export class QualidadeDadosService {
-  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly albergueDataSource: DataSource,
+    @InjectDataSource(ESCOLA_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly masterDataSource: DataSource,
+  ) {}
 
   async listar(actor: AuthUser | null, area?: string): Promise<QualidadeDadosResponse> {
     const allowedAreas = this.getAllowedAreas(actor);
@@ -155,7 +159,7 @@ export class QualidadeDadosService {
 
   private getAllowedAreas(actor: AuthUser | null): QualidadeAreaId[] {
     if (!actor || actor.role === UsuarioRole.GESTORA || actor.role === UsuarioRole.EQUIPE_TECNICA) {
-      return ['albergue', 'creche', 'financeiro'];
+      return ['albergue', 'creche', 'comercial'];
     }
 
     if (
@@ -172,15 +176,15 @@ export class QualidadeDadosService {
       return ['creche'];
     }
 
-    if (actor.role === UsuarioRole.FINANCEIRO) {
-      return ['financeiro'];
+    if (actor.role === UsuarioRole.COMERCIAL) {
+      return ['comercial'];
     }
 
     return [];
   }
 
   private normalizeArea(area?: string): QualidadeAreaId | null {
-    if (area === 'albergue' || area === 'creche' || area === 'financeiro') {
+    if (area === 'albergue' || area === 'creche' || area === 'comercial') {
       return area;
     }
 
@@ -236,7 +240,7 @@ export class QualidadeDadosService {
             '[]'::json
           ) AS samples
         FROM (SELECT * FROM pendencias ORDER BY nome LIMIT 5) s
-      `),
+      `, [], this.albergueDataSource),
       this.countWithSamples(`
         WITH pendencias AS (
           SELECT e.id, p.nome, to_char(e.data_limite, 'DD/MM/YYYY') AS detalhes
@@ -255,7 +259,7 @@ export class QualidadeDadosService {
             '[]'::json
           ) AS samples
         FROM (SELECT * FROM pendencias ORDER BY detalhes LIMIT 5) s
-      `),
+      `, [], this.albergueDataSource),
       this.countWithSamples(`
         WITH pendencias AS (
           SELECT DISTINCT p.id, p.nome
@@ -274,7 +278,7 @@ export class QualidadeDadosService {
             '[]'::json
           ) AS samples
         FROM (SELECT * FROM pendencias ORDER BY nome LIMIT 5) s
-      `),
+      `, [], this.albergueDataSource),
     ]);
 
     return [
@@ -312,7 +316,7 @@ export class QualidadeDadosService {
           (SELECT COUNT(*)::int FROM pendencias) AS total,
           COALESCE(
             json_agg(
-              json_build_object('id', id, 'label', nome, 'detail', detalhes, 'path', '/creche/criancas/' || codigo)
+              json_build_object('id', id, 'label', nome, 'detail', detalhes, 'path', '/escola/criancas/' || codigo)
               ORDER BY nome
             ) FILTER (WHERE id IS NOT NULL),
             '[]'::json
@@ -330,7 +334,7 @@ export class QualidadeDadosService {
           (SELECT COUNT(*)::int FROM pendencias) AS total,
           COALESCE(
             json_agg(
-              json_build_object('id', id, 'label', nome, 'detail', 'Sem profissional responsável', 'path', '/creche/turmas')
+              json_build_object('id', id, 'label', nome, 'detail', 'Sem profissional responsável', 'path', '/escola/turmas')
               ORDER BY nome
             ) FILTER (WHERE id IS NOT NULL),
             '[]'::json
@@ -349,7 +353,7 @@ export class QualidadeDadosService {
           (SELECT COUNT(*)::int FROM pendencias) AS total,
           COALESCE(
             json_agg(
-              json_build_object('id', id, 'label', nome, 'detail', 'Sem frequência lançada hoje', 'path', '/creche/frequencia')
+              json_build_object('id', id, 'label', nome, 'detail', 'Sem frequência lançada hoje', 'path', '/escola/frequencia')
               ORDER BY nome
             ) FILTER (WHERE id IS NOT NULL),
             '[]'::json
@@ -359,9 +363,9 @@ export class QualidadeDadosService {
     ]);
 
     return [
-      this.makeItem('creche-cadastros-incompletos', 'creche', 'Cadastros infantis incompletos', 'Crianças ativas com NIS, nascimento, turma ou responsável principal pendente.', 'critico', cadastro.total, '/creche/criancas', 'Revisar crianças', cadastro.samples),
-      this.makeItem('creche-turmas-sem-profissional', 'creche', 'Turmas sem responsável', 'Turmas ativas sem profissional responsável definido.', 'atencao', turmas.total, '/creche/turmas', 'Ajustar turmas', turmas.samples),
-      this.makeItem('creche-frequencia-pendente', 'creche', 'Frequência do dia pendente', 'Crianças ativas ainda sem frequência registrada hoje.', 'atencao', frequencia.total, '/creche/frequencia', 'Abrir frequência', frequencia.samples),
+      this.makeItem('creche-cadastros-incompletos', 'creche', 'Cadastros infantis incompletos', 'Crianças ativas com NIS, nascimento, turma ou responsável principal pendente.', 'critico', cadastro.total, '/escola/criancas', 'Revisar crianças', cadastro.samples),
+      this.makeItem('creche-turmas-sem-profissional', 'creche', 'Turmas sem responsável', 'Turmas ativas sem profissional responsável definido.', 'atencao', turmas.total, '/escola/turmas', 'Ajustar turmas', turmas.samples),
+      this.makeItem('creche-frequencia-pendente', 'creche', 'Frequência do dia pendente', 'Crianças ativas ainda sem frequência registrada hoje.', 'atencao', frequencia.total, '/escola/frequencia', 'Abrir frequência', frequencia.samples),
     ];
   }
 
@@ -370,9 +374,9 @@ export class QualidadeDadosService {
       this.countWithSamples(`
         WITH totais AS (
           SELECT c.id, c.codigo, cli.nome AS cliente, c.created_at, COALESCE(SUM(i.total_item), 0) AS total
-          FROM comercio_comandas c
-          JOIN comercio_clientes cli ON cli.id = c.cliente_id
-          LEFT JOIN comercio_comanda_itens i ON i.comanda_id = c.id
+          FROM comercial.comandas c
+          JOIN comercial.clientes cli ON cli.id = c.pessoa_id
+          LEFT JOIN comercial.comanda_itens i ON i.comanda_id = c.id
           WHERE c.status IN ('aberta', 'aguardando_pagamento')
             AND c.created_at < NOW() - INTERVAL '1 day'
           GROUP BY c.id, c.codigo, cli.nome, c.created_at
@@ -388,13 +392,13 @@ export class QualidadeDadosService {
             '[]'::json
           ) AS samples
         FROM (SELECT * FROM totais ORDER BY created_at LIMIT 5) s
-      `),
+      `, [], this.masterDataSource),
       this.countWithSamples(`
         WITH pendencias AS (
           SELECT r.id, c.codigo, cli.nome AS cliente, r.notificada_em
-          FROM comercio_retiradas r
-          JOIN comercio_comandas c ON c.id = r.comanda_id
-          JOIN comercio_clientes cli ON cli.id = c.cliente_id
+          FROM comercial.retiradas r
+          JOIN comercial.comandas c ON c.id = r.comanda_id
+          JOIN comercial.clientes cli ON cli.id = c.pessoa_id
           WHERE r.status = 'aguardando_retirada'
         )
         SELECT
@@ -407,12 +411,12 @@ export class QualidadeDadosService {
             '[]'::json
           ) AS samples
         FROM (SELECT * FROM pendencias ORDER BY notificada_em LIMIT 5) s
-      `),
+      `, [], this.masterDataSource),
       this.countWithSamples(`
         WITH pendencias AS (
           SELECT p.id, p.nome, l.nome AS loja
-          FROM comercio_produtos p
-          JOIN comercio_lojas l ON l.id = p.loja_id
+          FROM comercial.produtos p
+          JOIN comercial.lojas l ON l.id = p.loja_id
           WHERE p.ativo = true
             AND (p.preco IS NULL OR p.preco <= 0 OR p.categoria IS NULL OR btrim(p.categoria) = '')
         )
@@ -426,19 +430,23 @@ export class QualidadeDadosService {
             '[]'::json
           ) AS samples
         FROM (SELECT * FROM pendencias ORDER BY loja, nome LIMIT 5) s
-      `),
+      `, [], this.masterDataSource),
     ]);
 
     return [
-      this.makeItem('financeiro-comandas-antigas', 'financeiro', 'Comandas antigas em aberto', 'Comandas com valor e mais de 24 horas sem fechamento financeiro.', 'critico', comandas.total, '/lojas/secretaria/fila', 'Abrir fila', comandas.samples),
-      this.makeItem('financeiro-retiradas-pendentes', 'financeiro', 'Retiradas pendentes', 'Pagamentos liberados que ainda aguardam retirada nas lojas.', 'atencao', retiradas.total, '/lojas/secretaria/historico', 'Ver retiradas', retiradas.samples),
-      this.makeItem('financeiro-produtos-sem-preco', 'financeiro', 'Produtos sem preço válido', 'Produtos ativos precisam de categoria e preço maior que zero antes de virar comanda.', 'atencao', produtos.total, '/lojas/secretaria', 'Conferir produtos', produtos.samples),
+      this.makeItem('comercial-comandas-antigas', 'comercial', 'Comandas antigas em aberto', 'Comandas com valor e mais de 24 horas sem fechamento comercial.', 'critico', comandas.total, '/lojas/secretaria/fila', 'Abrir fila', comandas.samples),
+      this.makeItem('comercial-retiradas-pendentes', 'comercial', 'Retiradas pendentes', 'Pagamentos liberados que ainda aguardam retirada nas lojas.', 'atencao', retiradas.total, '/lojas/secretaria/historico', 'Ver retiradas', retiradas.samples),
+      this.makeItem('comercial-produtos-sem-preco', 'comercial', 'Produtos sem preço válido', 'Produtos ativos precisam de categoria e preço maior que zero antes de virar comanda.', 'atencao', produtos.total, '/lojas/secretaria', 'Conferir produtos', produtos.samples),
     ];
   }
 
-  private async countWithSamples(query: string, parameters: unknown[] = []) {
+  private async countWithSamples(
+    query: string,
+    parameters: unknown[] = [],
+    dataSource = this.dataSource,
+  ) {
     try {
-      const rows = await this.dataSource.query(query, parameters) as QueryRow[];
+      const rows = await dataSource.query(query, parameters) as QueryRow[];
       const row = rows[0] ?? {};
       return {
         total: asNumber(row.total),

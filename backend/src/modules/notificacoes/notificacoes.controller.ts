@@ -13,7 +13,7 @@ import { NotificacoesService } from './notificacoes.service';
   UsuarioRole.EQUIPE_TECNICA,
   UsuarioRole.EDUCADOR_ALBERGUE,
   UsuarioRole.EDUCADOR_CRECHE,
-  UsuarioRole.FINANCEIRO,
+  UsuarioRole.COMERCIAL,
   UsuarioRole.LOJA_BAZAR,
   UsuarioRole.LOJA_BRECHO,
   UsuarioRole.LOJA_FEIRAO,

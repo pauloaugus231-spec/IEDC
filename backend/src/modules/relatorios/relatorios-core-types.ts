@@ -6,7 +6,7 @@ export type RelatorioFiltros = Record<string, RelatorioFiltroValor> & {
   cor?: string;
 };
 export type SqlParam = string | number | boolean | Date | null;
-export type RelatorioExecutivoEscopo = 'institucional' | 'albergue' | 'creche' | 'financeiro';
+export type RelatorioExecutivoEscopo = 'institucional' | 'albergue' | 'creche' | 'comercial';
 export type RelatorioExecutivoPeriodo = 'dia' | 'semana' | 'mes' | 'ano';
 export type RelatorioExecutivoTone = 'default' | 'success' | 'warning' | 'danger' | 'muted';
 

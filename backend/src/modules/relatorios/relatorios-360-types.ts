@@ -21,7 +21,7 @@ export interface Relatorio360Metric {
   label: string;
   description: string;
   format: 'number' | 'currency' | 'percent';
-  area: 'institucional' | 'albergue' | 'creche' | 'financeiro';
+  area: 'institucional' | 'albergue' | 'creche' | 'comercial';
 }
 
 export interface Relatorio360Dimension {
@@ -148,7 +148,7 @@ export const RELATORIO_360_METRICS: Relatorio360Metric[] = [
     label: 'Vendas realizadas',
     description: 'Pagamentos efetivados nas lojas no período selecionado.',
     format: 'currency',
-    area: 'financeiro',
+    area: 'comercial',
   },
   {
     id: 'pendencias_documentais',

@@ -4,7 +4,10 @@ Este modelo foi pensado para o servidor local do IEDC: uma unica maquina na rede
 
 ## Componentes
 
-- `postgres`: banco de dados oficial.
+- `postgres`: autenticacao, auditoria e modulos ainda no core.
+- `postgres-albergue`: dados exclusivos do Albergue.
+- `postgres-master`: cadastro mestre e operacao comercial.
+- `postgres-escola`: dados exclusivos da Escola e da E.E.I.
 - `redis`: cache leve usado pelo backend.
 - `backend`: API NestJS em Node 20.
 - `frontend`: React compilado e servido por Nginx.
@@ -39,9 +42,20 @@ Variaveis obrigatorias antes de subir:
 
 ```env
 POSTGRES_PASSWORD=senha_forte_do_banco
+POSTGRES_MASTER_PASSWORD=senha_forte_exclusiva_do_master
+POSTGRES_ESCOLA_PASSWORD=senha_forte_exclusiva_da_escola
 JWT_SECRET=segredo_longo_unico_para_assinatura_jwt
 IEDC_DEFAULT_PASSWORD=senha_temporaria_para_primeiro_acesso
 ```
+
+Se `POSTGRES_MASTER_PASSWORD` ainda nao estiver definido, o Compose usa `POSTGRES_PASSWORD`
+como compatibilidade de primeiro deploy. Defina uma senha exclusiva assim que possivel.
+
+Se `POSTGRES_ESCOLA_PASSWORD` ainda nao estiver definido, o Compose tambem usa
+`POSTGRES_PASSWORD` no primeiro deploy para nao interromper a atualizacao automatica.
+Defina uma senha exclusiva da Escola assim que o corte estiver validado. Em volume ja
+existente, alterar apenas o `.env` nao troca a senha gravada no PostgreSQL; a role
+`iedc_escola_app` e o `.env` devem ser atualizados juntos em uma janela de manutencao.
 
 Em banco novo, `POSTGRES_PASSWORD` cria a senha inicial do usuario `POSTGRES_USER`.
 Em volume ja existente, trocar essa variavel nao altera a senha gravada no PostgreSQL.
@@ -99,11 +113,13 @@ Documentacao completa:
 docker compose logs -f backend
 docker compose logs -f frontend
 docker compose logs -f postgres
+docker compose logs -f postgres-master
+docker compose logs -f postgres-escola
 ```
 
 ## Backup local e Google Drive
 
-O backup oficial deve ser feito por dump do PostgreSQL e copia compactada dos uploads. Nao sincronize a pasta viva do banco.
+O backup oficial gera dumps separados de core, albergue, master e escola, alem da copia compactada dos uploads. Nao sincronize a pasta viva dos bancos.
 
 Exemplo:
 

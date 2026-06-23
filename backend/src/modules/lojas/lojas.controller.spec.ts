@@ -111,9 +111,9 @@ describe('LojasController — controle de acesso e mascaramento', () => {
     expect(retiradas[0].total).toBe(0);
   });
 
-  it('financeiro vê retiradas com valores reais', async () => {
+  it('comercial vê retiradas com valores reais', async () => {
     const { controller } = createController();
-    const req = stubRequest(UsuarioRole.FINANCEIRO);
+    const req = stubRequest(UsuarioRole.COMERCIAL);
 
     const retiradas = await controller.getRetiradas(req);
 

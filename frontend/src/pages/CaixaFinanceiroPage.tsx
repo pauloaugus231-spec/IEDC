@@ -84,7 +84,7 @@ const CaixaFinanceiroPage = () => {
 
     try {
       await abrirCaixaFinanceiro({
-        abertoPor: currentUser?.displayName || currentUser?.login || 'Financeiro',
+        abertoPor: currentUser?.displayName || currentUser?.login || 'Comercial',
         observacoes: observacoesAbertura.trim() || undefined,
         saldoInicial: Number(saldoInicial || 0),
       });
@@ -105,7 +105,7 @@ const CaixaFinanceiroPage = () => {
 
     try {
       await fecharCaixaFinanceiro({
-        fechadoPor: currentUser?.displayName || currentUser?.login || 'Financeiro',
+        fechadoPor: currentUser?.displayName || currentUser?.login || 'Comercial',
         observacoes: observacoesFechamento.trim() || undefined,
         metodos: rows.map((row) => ({
           metodo: row.metodo,
@@ -127,7 +127,7 @@ const CaixaFinanceiroPage = () => {
     <main className="page-band caixa-page">
       <section className="caixa-head">
         <div>
-          <span className="caixa-eyebrow">Financeiro</span>
+          <span className="caixa-eyebrow">Comercial</span>
           <h1>Caixa</h1>
           <p>Abertura, conferência e fechamento das comandas comerciais com desistência automática das compras não pagas.</p>
         </div>
@@ -177,7 +177,7 @@ const CaixaFinanceiroPage = () => {
           <div className="caixa-panel-head">
             <div>
               <span className="caixa-eyebrow">Abertura</span>
-              <h2>Abrir caixa financeiro</h2>
+              <h2>Abrir caixa comercial</h2>
             </div>
           </div>
           <div className="caixa-form-grid">

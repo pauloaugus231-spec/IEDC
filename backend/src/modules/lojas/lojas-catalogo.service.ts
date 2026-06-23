@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { ProdutoDto } from './dto/lojas-operacao.dto';
 import { LojasEventsService } from './lojas-events.service';
 import { LojasSchemaService } from './lojas-schema.service';
@@ -22,7 +22,7 @@ interface ProdutoRow {
 @Injectable()
 export class LojasCatalogoService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly events: LojasEventsService,
   ) {}
@@ -33,7 +33,7 @@ export class LojasCatalogoService {
     return this.dataSource.query(
       `
         SELECT id, slug, nome, ativa
-        FROM comercio_lojas
+        FROM comercial.lojas
         WHERE ativa = true
         ORDER BY CASE slug WHEN 'bazar' THEN 1 WHEN 'brecho' THEN 2 WHEN 'feirao' THEN 3 ELSE 99 END
       `,
@@ -62,8 +62,8 @@ export class LojasCatalogoService {
           l.id AS "lojaId",
           l.slug AS "lojaSlug",
           l.nome AS loja
-        FROM comercio_produtos p
-        JOIN comercio_lojas l ON l.id = p.loja_id
+        FROM comercial.produtos p
+        JOIN comercial.lojas l ON l.id = p.loja_id
         WHERE ${where.join(' AND ')}
         ORDER BY l.nome, p.categoria, p.nome
       `,
@@ -87,7 +87,7 @@ export class LojasCatalogoService {
 
     const result = await this.dataSource.query(
       `
-        INSERT INTO comercio_produtos (
+        INSERT INTO comercial.produtos (
           id, loja_id, nome, categoria, preco, ativo, created_at, updated_at
         )
         VALUES ($1, $2::uuid, $3, $4, $5, true, NOW(), NOW())
@@ -130,13 +130,13 @@ export class LojasCatalogoService {
 
     const result = await this.dataSource.query(
       `
-        UPDATE comercio_produtos p
+        UPDATE comercial.produtos p
         SET nome = $2,
             categoria = $3,
             preco = $4,
             ativo = COALESCE($5::boolean, p.ativo),
             updated_at = NOW()
-        FROM comercio_lojas l
+        FROM comercial.lojas l
         WHERE p.id = $1::uuid
           AND l.id = p.loja_id
           AND ($6::varchar IS NULL OR l.slug = $6::varchar)
@@ -187,7 +187,7 @@ export class LojasCatalogoService {
     const [loja] = await this.dataSource.query(
       `
         SELECT id, slug, nome
-        FROM comercio_lojas
+        FROM comercial.lojas
         WHERE ${where} AND ativa = true
       `,
       params,

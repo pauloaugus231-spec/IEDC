@@ -15,6 +15,8 @@ import { Turno } from '../entities/turno.entity';
 import { Usuario } from '../entities/usuario.entity';
 
 export const CORE_DATABASE_CONNECTION = 'core';
+export const MASTER_DATABASE_CONNECTION = 'master';
+export const ESCOLA_DATABASE_CONNECTION = 'escola';
 
 function resolveDatabaseEnv(name: string, fallback?: string) {
   const value = process.env[name];
@@ -69,4 +71,31 @@ export const coreDatabaseConfig: TypeOrmModuleOptions = {
   database: resolveDatabaseEnv('DB_NAME', 'iedc'),
   entities: [Usuario, Auditoria, ObservabilityEvent],
   migrations: ['dist/database/migrations/*.js'],
+};
+
+// Master concentra somente identidades institucionais e dados dos departamentos autorizados.
+// Albergue e Escola permanecem fora desta conexao por desenho de dominio.
+export const masterDatabaseConfig: TypeOrmModuleOptions = {
+  ...commonOptions,
+  name: MASTER_DATABASE_CONNECTION,
+  host: resolveDatabaseEnv('DB_MASTER_HOST', 'localhost'),
+  port: parseInt(resolveDatabaseEnv('DB_MASTER_PORT', '5434') || '5434'),
+  username: resolveDatabaseEnv('DB_MASTER_USER', 'iedc_master_app'),
+  password: resolveDatabaseEnv('DB_MASTER_PASSWORD'),
+  database: resolveDatabaseEnv('DB_MASTER_NAME', 'iedc_master'),
+  entities: [],
+  migrations: ['dist/database/migrations/master/*.js'],
+};
+
+// Escola guarda exclusivamente o publico e a operacao pedagogica da E.E.I.
+export const escolaDatabaseConfig: TypeOrmModuleOptions = {
+  ...commonOptions,
+  name: ESCOLA_DATABASE_CONNECTION,
+  host: resolveDatabaseEnv('DB_ESCOLA_HOST', 'localhost'),
+  port: parseInt(resolveDatabaseEnv('DB_ESCOLA_PORT', '5435') || '5435'),
+  username: resolveDatabaseEnv('DB_ESCOLA_USER', 'iedc_escola_app'),
+  password: resolveDatabaseEnv('DB_ESCOLA_PASSWORD'),
+  database: resolveDatabaseEnv('DB_ESCOLA_NAME', 'iedc_escola'),
+  entities: [],
+  migrations: ['dist/database/migrations/escola/*.js'],
 };

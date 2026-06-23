@@ -43,6 +43,8 @@ import { HealthController } from './health.controller';
 import {
   albergueDatabaseConfig,
   coreDatabaseConfig,
+  escolaDatabaseConfig,
+  masterDatabaseConfig,
 } from './config/database.config';
 
 function parsePositiveIntegerEnv(name: string, fallback: number): number {
@@ -78,6 +80,14 @@ function parsePositiveIntegerEnv(name: string, fallback: number): number {
     TypeOrmModule.forRootAsync({
       name: 'core',
       useFactory: () => coreDatabaseConfig,
+    }),
+    TypeOrmModule.forRootAsync({
+      name: 'master',
+      useFactory: () => masterDatabaseConfig,
+    }),
+    TypeOrmModule.forRootAsync({
+      name: 'escola',
+      useFactory: () => escolaDatabaseConfig,
     }),
 
     // Cache de aplicação. Redis segue disponível no compose para evolução operacional futura.

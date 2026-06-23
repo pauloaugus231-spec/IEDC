@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { MASTER_DATABASE_CONNECTION } from '../../config/database.config';
 import { AbrirCaixaDto, FecharCaixaDto } from './dto/lojas-operacao.dto';
 import { LojasEventsService } from './lojas-events.service';
 import { LojasSchemaService } from './lojas-schema.service';
@@ -31,7 +31,7 @@ export interface CaixaRow {
 @Injectable()
 export class LojasCaixaService {
   constructor(
-    @InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource,
+    @InjectDataSource(MASTER_DATABASE_CONNECTION) private readonly dataSource: DataSource,
     private readonly schema: LojasSchemaService,
     private readonly events: LojasEventsService,
   ) {}
@@ -70,7 +70,7 @@ export class LojasCaixaService {
 
     await this.dataSource.query(
       `
-        INSERT INTO comercio_caixas (
+        INSERT INTO comercial.caixas (
           id, codigo, status, aberto_por, saldo_inicial, observacoes_abertura,
           aberto_em, created_at, updated_at
         )
@@ -79,7 +79,7 @@ export class LojasCaixaService {
       [
         id,
         codigo,
-        body.abertoPor || 'Financeiro',
+        body.abertoPor || 'Comercial',
         asMoney(body.saldoInicial),
         body.observacoes || null,
       ],
@@ -97,7 +97,7 @@ export class LojasCaixaService {
     }
 
     const metodosInformados = this.normalizeMetodosInformados(body);
-    const fechadoPor = body.fechadoPor || 'Financeiro';
+    const fechadoPor = body.fechadoPor || 'Comercial';
 
     await this.dataSource.transaction(async (manager) => {
       const metodosSistema = await this.getMetodosCaixa(caixa.id, manager);
@@ -106,12 +106,12 @@ export class LojasCaixaService {
       const totalConferido = asMoney(metodos.reduce((sum, metodo) => sum + metodo.valorInformado, 0));
       const diferenca = asMoney(totalConferido - totalSistema);
 
-      await manager.query(`DELETE FROM comercio_caixa_metodos WHERE caixa_id = $1::uuid`, [caixa.id]);
+      await manager.query(`DELETE FROM comercial.caixa_metodos WHERE caixa_id = $1::uuid`, [caixa.id]);
 
       for (const metodo of metodos) {
         await manager.query(
           `
-            INSERT INTO comercio_caixa_metodos (
+            INSERT INTO comercial.caixa_metodos (
               id, caixa_id, metodo, valor_sistema, valor_informado,
               diferenca, quantidade_pagamentos, created_at
             )
@@ -133,7 +133,7 @@ export class LojasCaixaService {
 
       await manager.query(
         `
-          UPDATE comercio_caixas
+          UPDATE comercial.caixas
           SET status = 'fechado',
               fechado_por = $2,
               total_sistema = $3,
@@ -141,7 +141,7 @@ export class LojasCaixaService {
               diferenca = $5,
               comandas_pagas = (
                 SELECT COUNT(DISTINCT comanda_id)::int
-                FROM comercio_pagamentos
+                FROM comercial.pagamentos
                 WHERE caixa_id = $1::uuid
               ),
               comandas_desistidas = $6,
@@ -156,7 +156,7 @@ export class LojasCaixaService {
       for (const comanda of pendentes) {
         await manager.query(
           `
-            UPDATE comercio_comandas
+            UPDATE comercial.comandas
             SET status = 'desistencia',
                 motivo_status = $2,
                 finalizada_em = NOW(),
@@ -171,7 +171,7 @@ export class LojasCaixaService {
 
         await manager.query(
           `
-            INSERT INTO comercio_eventos_comanda (
+            INSERT INTO comercial.eventos_comanda (
               id, comanda_id, tipo, descricao, usuario, metadata, created_at
             )
             VALUES ($1, $2::uuid, 'desistencia_fechamento_caixa', $3, $4, $5::jsonb, NOW())
@@ -266,7 +266,7 @@ export class LojasCaixaService {
           observacoes_fechamento AS "observacoesFechamento",
           to_char(aberto_em, 'YYYY-MM-DD HH24:MI') AS "abertoEm",
           to_char(fechado_em, 'YYYY-MM-DD HH24:MI') AS "fechadoEm"
-        FROM comercio_caixas
+        FROM comercial.caixas
         WHERE status = 'aberto'
         ORDER BY aberto_em DESC
         LIMIT 1
@@ -295,7 +295,7 @@ export class LojasCaixaService {
           observacoes_fechamento AS "observacoesFechamento",
           to_char(aberto_em, 'YYYY-MM-DD HH24:MI') AS "abertoEm",
           to_char(fechado_em, 'YYYY-MM-DD HH24:MI') AS "fechadoEm"
-        FROM comercio_caixas
+        FROM comercial.caixas
         ORDER BY aberto_em DESC
         LIMIT 12
       `,
@@ -309,7 +309,7 @@ export class LojasCaixaService {
           metodo,
           SUM(valor)::float AS "valorSistema",
           COUNT(*)::int AS "quantidadePagamentos"
-        FROM comercio_pagamentos
+        FROM comercial.pagamentos
         WHERE caixa_id = $1::uuid
         GROUP BY metodo
         ORDER BY metodo
@@ -331,25 +331,24 @@ export class LojasCaixaService {
       `
         WITH itens AS (
           SELECT comanda_id, SUM(total_item)::numeric(12,2) AS total
-          FROM comercio_comanda_itens
+          FROM comercial.comanda_itens
           GROUP BY comanda_id
         ),
         pagamentos AS (
           SELECT comanda_id, SUM(valor)::numeric(12,2) AS pago
-          FROM comercio_pagamentos
+          FROM comercial.pagamentos
           GROUP BY comanda_id
         )
         SELECT
           c.id,
           c.codigo,
-          cli.nome AS cliente,
+          c.nome_pessoa_snapshot AS cliente,
           c.status,
           COALESCE(i.total, 0)::float AS total,
           COALESCE(p.pago, 0)::float AS pago,
           GREATEST(COALESCE(i.total, 0) - COALESCE(p.pago, 0), 0)::float AS saldo,
           to_char(c.created_at, 'YYYY-MM-DD HH24:MI') AS "criadaEm"
-        FROM comercio_comandas c
-        JOIN comercio_clientes cli ON cli.id = c.cliente_id
+        FROM comercial.comandas c
         LEFT JOIN itens i ON i.comanda_id = c.id
         LEFT JOIN pagamentos p ON p.comanda_id = c.id
         WHERE c.status IN ('aberta', 'aguardando_pagamento')
@@ -373,7 +372,7 @@ export class LojasCaixaService {
     const [row] = await this.dataSource.query(
       `
         SELECT COUNT(*)::int + 1 AS numero
-        FROM comercio_caixas
+        FROM comercial.caixas
         WHERE aberto_em::date = CURRENT_DATE
       `,
     ) as Array<{ numero: number }>;
