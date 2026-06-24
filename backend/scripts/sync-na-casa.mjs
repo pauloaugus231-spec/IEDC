@@ -432,17 +432,24 @@ async function main() {
     }
 
     const alvo = [];
+    const checkoutRows = [];
     const unresolved = [];
     const camasAusentes = [];
     const pessoasUsadas = new Set();
 
     for (const row of frontRows) {
       const pessoa = resolvePerson(row, dbIndex, personProfiles, tokenFrequency);
-      const cama = resolveCama(row, camaMap);
 
       if (!pessoa) {
         unresolved.push(row);
       }
+
+      if (row.chave === 0) {
+        checkoutRows.push({ ...row, pessoa });
+        continue;
+      }
+
+      const cama = resolveCama(row, camaMap);
 
       if (!cama) {
         camasAusentes.push(row);
@@ -476,12 +483,21 @@ async function main() {
     );
 
     const activeIdsBefore = new Set(activeBefore.rows.map((row) => row.pessoa_id));
+    const checkoutIds = new Set(checkoutRows.filter((row) => row.pessoa).map((row) => row.pessoa.id));
     const targetIds = new Set(alvo.map((row) => row.pessoa.id));
 
-    const extras = activeBefore.rows.filter((row) => !targetIds.has(row.pessoa_id));
+    const extras = activeBefore.rows.filter((row) => !targetIds.has(row.pessoa_id) && !checkoutIds.has(row.pessoa_id));
     if (extras.length > 0) {
       const detalhes = extras.map((row) => row.nome).join(', ');
-      fail(`Existem estadias ativas fora da fonte na_casa: ${detalhes}`);
+      if (DRY_RUN) {
+        console.log(`Estadias ativas fora da fonte na_casa (serao finalizadas no apply): ${detalhes}`);
+      }
+    }
+
+    if (checkoutRows.length > 0 && DRY_RUN) {
+      console.log(
+        `Pessoas marcadas como chave 0 (serao tratadas como checkout): ${checkoutRows.map((row) => row.nome).join(', ')}`,
+      );
     }
 
     const today = getTodayString(TIME_ZONE);
@@ -492,9 +508,9 @@ async function main() {
       return {
         pessoaId: row.pessoa.id,
         pessoaNome: row.pessoa.nome,
-        camaId: row.cama.id,
+        camaId: row.cama ? row.cama.id : null,
         camaNumero: row.chave,
-        camaCasa: row.cama.casa,
+        camaCasa: row.cama ? row.cama.casa : null,
         dataCheckin: `${dataCheckin}T00:00:00`,
         dataLimite,
         numeroVaga: row.chave,
@@ -508,7 +524,7 @@ async function main() {
       console.log('Amostra da sincronizacao:');
       for (const item of payloads.slice(0, 10)) {
         console.log(
-          `- ${item.pessoaNome} | cama ${item.camaNumero} (${item.camaCasa}) | check-in ${item.dataCheckin.slice(0, 10)} | limite ${item.dataLimite} | dias ${item.diasRestantes}`,
+          `- ${item.pessoaNome} | cama ${item.camaNumero}${item.camaCasa ? ` (${item.camaCasa})` : ' (sem cama)' } | check-in ${item.dataCheckin.slice(0, 10)} | limite ${item.dataLimite} | dias ${item.diasRestantes}`,
         );
       }
       console.log('Dry-run concluido. Nenhuma alteracao foi aplicada.');
@@ -518,6 +534,91 @@ async function main() {
     await client.query('BEGIN');
 
     try {
+      for (const row of checkoutRows) {
+        if (!row.pessoa) {
+          continue;
+        }
+
+        const activeRow = activeBefore.rows.find((item) => item.pessoa_id === row.pessoa.id);
+        if (!activeRow) {
+          continue;
+        }
+
+        await client.query(
+          `
+            UPDATE estadias
+            SET status = 'checkout_automatico',
+                data_checkout = NOW(),
+                funcionario_checkout = $1,
+                observacoes_checkout = $2,
+                motivo_saida = 'automatico',
+                updated_at = NOW()
+            WHERE id = $3
+          `,
+          [
+            'sync-na-casa',
+            `Checkout aplicado pela sincronizacao da fonte na_casa em ${today} (chave 0).`,
+            activeRow.id,
+          ],
+        );
+
+        await client.query(
+          `UPDATE pessoas
+           SET status_cadastro = 'inativo',
+               presente = false,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [row.pessoa.id],
+        );
+
+        if (activeRow.cama_id) {
+          await client.query(
+            `UPDATE camas
+             SET status = 'DISPONIVEL'
+             WHERE id = $1`,
+            [activeRow.cama_id],
+          );
+        }
+      }
+
+      for (const row of extras) {
+        await client.query(
+          `
+            UPDATE estadias
+            SET status = 'checkout_automatico',
+                data_checkout = NOW(),
+                funcionario_checkout = $1,
+                observacoes_checkout = $2,
+                motivo_saida = 'automatico',
+                updated_at = NOW()
+            WHERE id = $3
+          `,
+          [
+            'sync-na-casa',
+            `Finalizado pela sincronizacao da fonte na_casa em ${today}.`,
+            row.id,
+          ],
+        );
+
+        await client.query(
+          `UPDATE pessoas
+           SET status_cadastro = 'inativo',
+               presente = false,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [row.pessoa_id],
+        );
+
+        if (row.cama_id) {
+          await client.query(
+            `UPDATE camas
+             SET status = 'DISPONIVEL'
+             WHERE id = $1`,
+            [row.cama_id],
+          );
+        }
+      }
+
       for (const item of payloads) {
         const existente = activeBefore.rows.find((row) => row.pessoa_id === item.pessoaId);
 
@@ -599,7 +700,7 @@ async function main() {
         );
       }
 
-      const camasOcupadas = new Set(payloads.map((item) => item.camaId));
+      const camasOcupadas = new Set(payloads.map((item) => item.camaId).filter(Boolean));
       for (const cama of camas) {
         if (!camasOcupadas.has(cama.id)) {
           await client.query(

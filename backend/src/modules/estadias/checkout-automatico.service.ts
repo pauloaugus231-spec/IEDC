@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +15,23 @@ interface EstadiaVencidaRow {
   dias_vencidos: number | string;
 }
 
+function toDateKey(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.split('T')[0];
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const parsed = new Date(String(value));
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  throw new Error(`Data invalida: ${String(value)}`);
+}
+
 export interface CheckoutAutomaticoItem {
   id: string;
   pessoa: string;
@@ -24,38 +41,46 @@ export interface CheckoutAutomaticoItem {
 }
 
 @Injectable()
-export class CheckoutAutomaticoService {
+export class CheckoutAutomaticoService implements OnApplicationBootstrap {
+  private processing = false;
+
   constructor(
     @InjectRepository(Estadia)
     private estadiaRepository: Repository<Estadia>,
     private estadiasService: EstadiasService,
   ) {
-    console.log('✅ CheckoutAutomaticoService inicializado - Cron configurado para meia-noite');
+    console.log('CheckoutAutomaticoService inicializado - cron configurado para meia-noite');
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) // Executa diariamente à meia-noite
-  async handleCheckoutAutomatico() {
+  async onApplicationBootstrap() {
+    await this.handleCheckoutAutomatico('startup');
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {
+    timeZone: process.env.TZ || 'America/Sao_Paulo',
+  })
+  async handleCheckoutAutomatico(origem: 'cron' | 'startup' = 'cron') {
+    if (this.processing) {
+      console.log(`Checkout automatico ja em execucao, ignorando disparo de ${origem}.`);
+      return;
+    }
+
+    this.processing = true;
     const dataHoraExecucao = new Date();
-    console.log('\n🔄 ========================================');
-    console.log('🔄 INICIANDO CHECKOUT AUTOMÁTICO');
-    console.log('🔄 ========================================');
-    console.log('⏰ Data/Hora:', dataHoraExecucao.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
-    console.log('\n📖 LÓGICA DE ESTADIA (30 NOITES):');
-    console.log('   • Check-in dia 20/12 → Dia 20 já conta como 1ª noite');
-    console.log('   • Período: 30 noites (20/12 a 18/01)');
-    console.log('   • Data limite: 18/01 (última noite permitida)');
-    console.log('   • Checkout automático: Meia-noite de 18/01 para 19/01');
-    console.log('   • Resultado: Cama livre para nova triagem às 18h30 do dia 19/01');
+    console.log('\n========================================');
+    console.log('INICIANDO CHECKOUT AUTOMATICO');
+    console.log(`Origem: ${origem}`);
+    console.log('========================================');
+    console.log('Data/Hora:', dataHoraExecucao.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
+    console.log('\nLOGICA DE ESTADIA (30 NOITES):');
+    console.log('  - Check-in conta como primeira noite');
+    console.log('  - O ultimo dia permitido e o data_limite');
+    console.log('  - O checkout automatico deve ocorrer na virada para esse dia');
     console.log('');
 
     try {
-      // BUSCAR ESTADIAS VENCIDAS
-      // Condição: data_limite <= CURRENT_DATE (corrigido de < para <=)
-      // Lógica: Se data_limite = 19/01 (hoje), significa que a última noite foi 18/01
-      //         Portanto, o checkout deve acontecer à meia-noite de 19/01 (hoje)
-      // Exemplo: Check-in 21/12 → 30 noites → data_limite 19/01 → checkout 19/01 00:00
       const estadiasVencidas = await this.estadiaRepository.query<EstadiaVencidaRow[]>(`
-        SELECT 
+        SELECT
           e.id as estadia_id,
           e.pessoa_id,
           e.status,
@@ -70,88 +95,91 @@ export class CheckoutAutomaticoService {
         ORDER BY e.data_limite
       `);
 
-      console.log(`📋 Encontradas ${estadiasVencidas.length} estadias vencidas`);
-      
+      console.log(`Encontradas ${estadiasVencidas.length} estadias vencidas`);
+
       if (estadiasVencidas.length === 0) {
-        console.log('✅ Nenhuma estadia vencida para processar');
-        console.log('🔄 ========================================\n');
+        console.log('Nenhuma estadia vencida para processar');
+        console.log('========================================\n');
         return {
           success: true,
           totalProcessadas: 0,
-          estadias: []
+          estadias: [],
         };
       }
 
-      console.log('\n📝 Estadias que serão processadas:');
+      console.log('\nEstadias que serao processadas:');
       estadiasVencidas.forEach((e) => {
-        console.log(`  • ${e.pessoa_nome} - Vencida há ${e.dias_vencidos} dia(s)`);
+        console.log(`  - ${e.pessoa_nome} - Vencida ha ${e.dias_vencidos} dia(s)`);
       });
 
       const results: CheckoutAutomaticoItem[] = [];
       let sucessos = 0;
       let falhas = 0;
 
-      // Processar cada estadia usando o método checkout() existente
       for (const estadia of estadiasVencidas) {
         try {
-          console.log(`\n🔄 Processando: ${estadia.pessoa_nome}...`);
-          
-          // USAR O MÉTODO CHECKOUT EXISTENTE QUE JÁ FUNCIONA
+          console.log(`\nProcessando: ${estadia.pessoa_nome}...`);
+
+          const dataLimite = toDateKey(estadia.data_limite);
+          const checkoutEfetivo = new Date(`${dataLimite}T00:00:00`);
+
           await this.estadiasService.checkout(
             estadia.pessoa_id,
             'sistema_automatico',
-            `Checkout automático - Estadia vencida em ${estadia.data_limite}`,
-            MotivoSaida.AUTOMATICO
+            `Checkout automatico - Estadia vencida em ${dataLimite}`,
+            MotivoSaida.AUTOMATICO,
+            checkoutEfetivo,
           );
 
-          console.log(`✅ Checkout concluído: ${estadia.pessoa_nome}`);
+          console.log(`Checkout concluido: ${estadia.pessoa_nome}`);
           sucessos++;
-          
+
           results.push({
             id: estadia.estadia_id,
             pessoa: estadia.pessoa_nome,
             data_limite: estadia.data_limite,
-            status: 'sucesso'
+            status: 'sucesso',
           });
         } catch (error) {
-          console.error(`❌ ERRO ao processar ${estadia.pessoa_nome}:`, error instanceof Error ? error.message : error);
+          console.error(`ERRO ao processar ${estadia.pessoa_nome}:`, error instanceof Error ? error.message : error);
           falhas++;
-          
+
           results.push({
             id: estadia.estadia_id,
             pessoa: estadia.pessoa_nome,
             data_limite: estadia.data_limite,
             status: 'erro',
-            erro: error instanceof Error ? error.message : 'Erro desconhecido'
+            erro: error instanceof Error ? error.message : 'Erro desconhecido',
           });
         }
       }
 
-      console.log('\n🏁 ========================================');
-      console.log('🏁 CHECKOUT AUTOMÁTICO FINALIZADO');
-      console.log(`📊 Sucessos: ${sucessos} | Falhas: ${falhas}`);
-      console.log('🏁 ========================================\n');
+      console.log('\n========================================');
+      console.log('CHECKOUT AUTOMATICO FINALIZADO');
+      console.log(`Sucessos: ${sucessos} | Falhas: ${falhas}`);
+      console.log('========================================\n');
 
       return {
         success: true,
         totalProcessadas: estadiasVencidas.length,
         sucessos,
         falhas,
-        estadias: results
+        estadias: results,
       };
-
     } catch (error) {
-      console.error('\n❌ ========================================');
-      console.error('❌ ERRO CRÍTICO NO CHECKOUT AUTOMÁTICO');
-      console.error('❌ ========================================');
+      console.error('\n========================================');
+      console.error('ERRO CRITICO NO CHECKOUT AUTOMATICO');
+      console.error('========================================');
       console.error(error);
-      console.error('❌ ========================================\n');
-      
+      console.error('========================================\n');
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro desconhecido',
-        totalProcessadas: 0
+        totalProcessadas: 0,
       };
+    } finally {
+      this.processing = false;
     }
   }
 }

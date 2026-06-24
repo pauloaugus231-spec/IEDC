@@ -193,7 +193,13 @@ export class EstadiasService {
     return estadia;
   }
 
-  async checkout(pessoa_id: string, funcionario?: string, observacoes_checkout?: string, motivo_saida?: MotivoSaida): Promise<Estadia> {
+  async checkout(
+    pessoa_id: string,
+    funcionario?: string,
+    observacoes_checkout?: string,
+    motivo_saida?: MotivoSaida,
+    data_checkout_override?: Date,
+  ): Promise<Estadia> {
     const estadia = await this.estadiaRepository.manager.transaction(async transactionalEntityManager => {
       // 1. Encontrar a estadia ativa para a pessoa
       const estadiaAtiva = await transactionalEntityManager.findOne(Estadia, {
@@ -205,8 +211,10 @@ export class EstadiasService {
       }
 
       // 2. Atualizar a estadia
-      estadiaAtiva.data_checkout = new Date();
-      estadiaAtiva.status = StatusEstadia.FINALIZADA;
+      estadiaAtiva.data_checkout = data_checkout_override ?? new Date();
+      estadiaAtiva.status = motivo_saida === MotivoSaida.AUTOMATICO
+        ? StatusEstadia.CHECKOUT_AUTOMATICO
+        : StatusEstadia.FINALIZADA;
       estadiaAtiva.funcionario_checkout = funcionario || 'sistema';
       estadiaAtiva.motivo_saida = motivo_saida || MotivoSaida.VOLUNTARIO;
       if (observacoes_checkout) {

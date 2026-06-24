@@ -40,7 +40,8 @@ export class PessoasService {
     const queryBuilder = this.pessoaRepository
       .createQueryBuilder('pessoa')
       .leftJoinAndSelect('pessoa.estadias', 'estadia', 'estadia.status = :estadiaStatus', { estadiaStatus: StatusEstadia.ATIVA })
-      .leftJoinAndSelect('estadia.cama', 'cama');
+      .leftJoinAndSelect('estadia.cama', 'cama')
+      .addSelect("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'nome_exibicao');
 
     // Usar índice idx_pessoas_ativo_status
     queryBuilder.where('pessoa.ativo = true');
@@ -66,7 +67,7 @@ export class PessoasService {
 
     // ✅ OTIMIZADO: Buscar apenas a página atual
     const data = await queryBuilder
-      .orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC')
+      .orderBy('nome_exibicao', 'ASC')
       .addOrderBy('pessoa.created_at', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
@@ -145,6 +146,7 @@ export class PessoasService {
       .createQueryBuilder('pessoa')
       .leftJoinAndSelect('pessoa.estadias', 'estadia', 'estadia.status = :status', { status: StatusEstadia.ATIVA })
       .leftJoinAndSelect('estadia.cama', 'cama')
+      .addSelect("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'nome_exibicao')
       .where('pessoa.ativo = true');
 
     if (query && query.trim()) {
@@ -154,7 +156,7 @@ export class PessoasService {
       );
     }
 
-    qb.take(20).orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC');
+    qb.take(20).orderBy('nome_exibicao', 'ASC');
     return qb.getMany();
   }
 

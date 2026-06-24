@@ -85,7 +85,7 @@ export class RelatoriosAlbergueService {
     });
 
     if (camposValidos.includes('nome')) {
-      query.orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC');
+      query.orderBy('nome', 'ASC');
     }
 
     const data = await query.getRawMany<RelatorioRow>();
@@ -285,7 +285,7 @@ export class RelatoriosAlbergueService {
         'estadia.data_checkout AS estadia_data_checkout',
         'estadia.dias_permanencia AS estadia_dias_permanencia',
       ])
-      .orderBy("COALESCE(NULLIF(BTRIM(pessoa.nome_social), ''), pessoa.nome)", 'ASC');
+      .orderBy('pessoa_nome', 'ASC');
 
     if (inicio && fim) {
       query.andWhere('estadia.data_checkin BETWEEN :inicio AND :fim', { inicio, fim });

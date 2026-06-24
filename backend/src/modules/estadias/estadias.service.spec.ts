@@ -1,5 +1,6 @@
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { EstadiasService } from './estadias.service';
+import { MotivoSaida } from '../../entities/estadia.entity';
 
 // ── Helpers ─────────────────────────────────────────
 
@@ -108,6 +109,37 @@ describe('EstadiasService — regras de negócio', () => {
     await expect(
       service.checkout('p-inexistente'),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('checkout automático usa a data efetiva da virada do dia', async () => {
+    const { service, txManager } = createService();
+    const dataCheckout = new Date('2026-06-24T00:00:00');
+
+    txManager.findOne
+      .mockResolvedValueOnce({
+        id: 'e1',
+        pessoa_id: 'p1',
+        cama_id: 'c1',
+        status: 'ativa',
+      })
+      .mockResolvedValueOnce({
+        id: 'c1',
+      })
+      .mockResolvedValueOnce({
+        id: 'p1',
+      });
+
+    const result = await service.checkout(
+      'p1',
+      'sistema_automatico',
+      'checkout automatico',
+      MotivoSaida.AUTOMATICO,
+      dataCheckout,
+    );
+
+    expect(result.status).toBe('checkout_automatico');
+    expect(result.data_checkout?.toISOString()).toBe('2026-06-24T03:00:00.000Z');
+    expect(txManager.save).toHaveBeenCalled();
   });
 
   it('prorrogação rejeita estadia não ativa', async () => {
