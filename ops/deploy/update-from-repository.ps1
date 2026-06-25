@@ -56,19 +56,19 @@ try {
     Fail "falha ao buscar $Remote/$Branch."
   }
 
-  git show-ref --verify --quiet "refs/heads/$Branch"
-  if ($LASTEXITCODE -eq 0) {
-    git checkout $Branch
-  } else {
-    git checkout -b $Branch "$Remote/$Branch"
-  }
+  git checkout -B $Branch "$Remote/$Branch"
   if ($LASTEXITCODE -ne 0) {
     Fail "falha ao alinhar branch $Branch."
   }
 
-  git pull --ff-only $Remote $Branch
+  git reset --hard "$Remote/$Branch"
   if ($LASTEXITCODE -ne 0) {
-    Fail "falha no pull --ff-only de $Remote/$Branch."
+    Fail "falha ao sincronizar o worktree com $Remote/$Branch."
+  }
+
+  git clean -fd
+  if ($LASTEXITCODE -ne 0) {
+    Fail "falha ao remover arquivos nao rastreados."
   }
 
   Write-Host "Validando compose atualizado..."

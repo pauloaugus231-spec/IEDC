@@ -46,6 +46,7 @@ coverage/
 backend/database/*.db
 backend/database/*.sqlite*
 .runtime/
+.iedc-last-update
 
 # Uploads (optional - remove if you want to track uploads)
 uploads/

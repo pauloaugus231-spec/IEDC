@@ -25,7 +25,9 @@ fi
 echo "$LOG_PREFIX Nova versao detectada: $LOCAL -> $REMOTE"
 echo "$LOG_PREFIX Aplicando atualizacao..."
 
-git pull origin "$BRANCH" --ff-only
+git checkout -B "$BRANCH" "origin/$BRANCH"
+git reset --hard "origin/$BRANCH"
+git clean -fd
 
 echo "$LOG_PREFIX Reconstruindo e reiniciando containers..."
 docker compose up -d --build --force-recreate --remove-orphans

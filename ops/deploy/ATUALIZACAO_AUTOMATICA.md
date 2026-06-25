@@ -25,10 +25,10 @@ O script faz:
 - bloqueio se houver alteracao local no servidor;
 - validacao do `docker compose`;
 - backup antes da atualizacao;
-- `git pull --ff-only`;
+- alinhamento forcado com `origin/main` (`fetch`, `checkout -B`, `reset --hard` e `clean -fd`);
 - rebuild dos containers e recriacao forcada dos servicos;
 - healthcheck em `/api/health`;
-- registro do commit aplicado em `.iedc-last-update`.
+- registro do commit aplicado em `.iedc-last-update` (arquivo ignorado pelo git).
 
 Como o frontend e o backend sao empacotados dentro de imagens Docker, uma alteracao no repositorio nao aparece no ambiente ate o servidor reconstruir e recriar os containers. O `--force-recreate` evita que o Docker mantenha um container antigo rodando com cache de processo antigo.
 

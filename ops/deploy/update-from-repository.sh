@@ -45,12 +45,9 @@ fi
 
 echo "Buscando versao aprovada em $REMOTE/$BRANCH..."
 git fetch --prune "$REMOTE" "$BRANCH"
-if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
-  git checkout "$BRANCH"
-else
-  git checkout -b "$BRANCH" "$REMOTE/$BRANCH"
-fi
-git pull --ff-only "$REMOTE" "$BRANCH"
+git checkout -B "$BRANCH" "$REMOTE/$BRANCH"
+git reset --hard "$REMOTE/$BRANCH"
+git clean -fd
 
 echo "Validando compose atualizado..."
 docker compose config >/dev/null
