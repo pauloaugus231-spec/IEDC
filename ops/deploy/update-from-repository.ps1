@@ -104,7 +104,7 @@ try {
   }
 
   git rev-parse HEAD | Set-Content -NoNewline "$ProjectDir\.iedc-last-update"
-  Write-Host "Atualizacao concluida em $(Get-Date -AsUTC -Format o): $(Get-Content "$ProjectDir\.iedc-last-update")"
+  Write-Host "Atualizacao concluida em $((Get-Date).ToUniversalTime().ToString("o")): $(Get-Content "$ProjectDir\.iedc-last-update")"
 }
 finally {
   Pop-Location
