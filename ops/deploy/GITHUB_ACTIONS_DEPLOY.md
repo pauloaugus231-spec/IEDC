@@ -6,45 +6,35 @@ Este fluxo transforma o repositorio Git em fonte de verdade da aplicacao.
 
 1. Voce faz `git push` para `main`.
 2. O GitHub Actions dispara o workflow de deploy.
-3. O workflow abre SSH no servidor.
-4. O servidor executa `ops/deploy/update-from-repository.sh`.
+3. O workflow roda em um runner self-hosted Windows desta maquina.
+4. O runner executa `ops/deploy/update-from-repository.ps1`.
 5. O script faz `git pull`, rebuild e recriacao dos containers Docker.
 6. O healthcheck valida a API antes de finalizar.
 
-## Segredos necessarios no GitHub
+## Requisitos do runner local
 
-Configure estes secrets no repositorio:
-
-```text
-DEPLOY_SSH_HOST
-DEPLOY_SSH_PORT
-DEPLOY_SSH_USER
-DEPLOY_SSH_PRIVATE_KEY
-DEPLOY_SSH_KNOWN_HOSTS
-DEPLOY_PROJECT_DIR
-DEPLOY_REMOTE
-DEPLOY_HEALTH_URL
-```
-
-Sugestoes de valor:
+Configure um runner self-hosted com as labels:
 
 ```text
-DEPLOY_SSH_PORT=22
-DEPLOY_PROJECT_DIR=/opt/iedc
-DEPLOY_REMOTE=origin
-DEPLOY_HEALTH_URL=http://127.0.0.1/api/health
+self-hosted
+windows
+x64
+iedc-local
 ```
 
-`DEPLOY_SSH_KNOWN_HOSTS` e opcional, mas recomendado para evitar `ssh-keyscan` dinamico no runner.
+O runner deve estar instalado fora do repositorio, mas atuar sobre o clone oficial em:
 
-## Requisitos no servidor
+```text
+C:\dev\IEDC
+```
 
-- O repositorio precisa existir em `/opt/iedc` ou no caminho definido em `DEPLOY_PROJECT_DIR`.
-- O usuario SSH precisa conseguir executar o script com `sudo -n`.
-- O usuario do deploy precisa ter acesso ao Docker.
-- O remote `origin` precisa apontar para o repositorio GitHub correto.
+O processo deve ter acesso ao Docker Desktop e permissao para executar Git e PowerShell.
+
+## Quando o servidor Ubuntu 24 entrar
+
+O mesmo padrao pode ser reaproveitado mudando o runner e o script de atualizacao para o host Linux.
+Para a fase atual, este workflow fica focado em validar o ciclo completo na maquina Windows.
 
 ## Observacao importante
 
-O `git push` nao sobe a aplicacao sozinho. Ele apenas inicia o fluxo. Quem atualiza o sistema de fato e o servidor, porque e la que o Docker recompila as imagens e recria os containers.
-
+O `git push` nao sobe a aplicacao sozinho. Ele apenas inicia o fluxo. Quem atualiza o sistema de fato e o runner self-hosted, porque e la que o Docker recompila as imagens e recria os containers.
