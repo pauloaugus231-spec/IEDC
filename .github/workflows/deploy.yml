@@ -19,7 +19,7 @@ jobs:
       DEPLOY_PROJECT_DIR: C:\dev\IEDC
       DEPLOY_BRANCH: main
       DEPLOY_REMOTE: origin
-      DEPLOY_HEALTH_URL: http://127.0.0.1/api/health/ready
+      DEPLOY_HEALTH_URL: http://127.0.0.1:8080/api/health/ready
 
     steps:
       - name: Checkout do repositorio

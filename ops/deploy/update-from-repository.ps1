@@ -3,7 +3,7 @@ param(
   [string]$ProjectDir = "C:\dev\IEDC",
   [string]$Branch = "main",
   [string]$Remote = "origin",
-  [string]$HealthUrl = "http://127.0.0.1/api/health/ready"
+  [string]$HealthUrl = "http://127.0.0.1:8080/api/health/ready"
 )
 
 $ErrorActionPreference = "Stop"

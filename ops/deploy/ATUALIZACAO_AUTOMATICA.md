@@ -38,7 +38,7 @@ Como o frontend e o backend sao empacotados dentro de imagens Docker, uma altera
 PROJECT_DIR=/opt/iedc
 IEDC_UPDATE_BRANCH=main
 IEDC_UPDATE_REMOTE=origin
-IEDC_HEALTH_URL=http://127.0.0.1/api/health
+IEDC_HEALTH_URL=http://127.0.0.1:8080/api/health/ready
 IEDC_UPDATE_SKIP_BACKUP=false
 ```
 

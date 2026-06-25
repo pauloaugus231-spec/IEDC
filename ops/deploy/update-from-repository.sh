@@ -6,7 +6,7 @@ umask 077
 PROJECT_DIR="${PROJECT_DIR:-/opt/iedc}"
 BRANCH="${IEDC_UPDATE_BRANCH:-main}"
 REMOTE="${IEDC_UPDATE_REMOTE:-origin}"
-HEALTH_URL="${IEDC_HEALTH_URL:-http://127.0.0.1/api/health}"
+HEALTH_URL="${IEDC_HEALTH_URL:-http://127.0.0.1:8080/api/health/ready}"
 SKIP_BACKUP="${IEDC_UPDATE_SKIP_BACKUP:-false}"
 LOCK_DIR="$PROJECT_DIR/.iedc-update.lock"
 
