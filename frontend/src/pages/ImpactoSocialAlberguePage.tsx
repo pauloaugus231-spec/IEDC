@@ -2,9 +2,13 @@ import { useImpactoSocialAlbergue } from '../api';
 import ImpactoDashboard from './impacto/ImpactoDashboard';
 import ImpactoFormModal from './impacto/ImpactoFormModal';
 import { useImpactoForm } from './impacto/useImpactoForm';
+import { useAuth } from '../context/AuthContext';
+import { ALBERGUE_OPERATION_ROLES } from '../utils/alberguePermissions';
 import '../styles/institutional.css';
 
 const ImpactoSocialAlberguePage = () => {
+  const { currentUser } = useAuth();
+  const canOperate = Boolean(currentUser && ALBERGUE_OPERATION_ROLES.includes(currentUser.role));
   const {
     periodo,
     setPeriodo,
@@ -29,15 +33,16 @@ const ImpactoSocialAlberguePage = () => {
         onOpenForm={openModal}
         onPeriodoChange={setPeriodo}
         periodo={periodo}
+        canCreate={canOperate}
       />
-      <ImpactoFormModal
+      {canOperate && <ImpactoFormModal
         form={form}
         onClose={closeModal}
         onSubmit={handleSubmit}
         onUpdateForm={updateForm}
         open={modalOpen}
         saving={saving}
-      />
+      />}
     </main>
   );
 };

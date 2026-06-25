@@ -88,17 +88,29 @@ const ROLE_PROFILES: Record<UsuarioRole, RoleProfile> = {
     serviceLabel: 'Albergue Noturno',
     homePath: '/albergue',
   },
+  [UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE]: {
+    roleLabel: 'Auxiliar de coordenação',
+    service: UsuarioServiceScope.ALBERGUE,
+    serviceLabel: 'Albergue Noturno',
+    homePath: '/albergue',
+  },
+  [UsuarioRole.DIRETOR_ALBERGUE]: {
+    roleLabel: 'Direção do Albergue',
+    service: UsuarioServiceScope.ALBERGUE,
+    serviceLabel: 'Albergue Noturno',
+    homePath: '/albergue',
+  },
+  [UsuarioRole.EQUIPE_TECNICA_ALBERGUE]: {
+    roleLabel: 'Equipe técnica do Albergue',
+    service: UsuarioServiceScope.ALBERGUE,
+    serviceLabel: 'Albergue Noturno',
+    homePath: '/albergue',
+  },
   [UsuarioRole.COORDENADOR_CRECHE]: {
     roleLabel: 'Coordenação',
     service: UsuarioServiceScope.CRECHE,
     serviceLabel: 'E.E.I. Casa do Pequenino',
     homePath: '/escola',
-  },
-  [UsuarioRole.EQUIPE_TECNICA]: {
-    roleLabel: 'Equipe técnica',
-    service: UsuarioServiceScope.INSTITUCIONAL,
-    serviceLabel: 'Atendimento institucional',
-    homePath: '/gestao',
   },
   [UsuarioRole.EDUCADOR_ALBERGUE]: {
     roleLabel: 'Educador',

@@ -21,7 +21,8 @@ describe('canAccessPath — RoleGuard', () => {
   // ── /minha-conta é universal ──
   it('permite /minha-conta para qualquer role', () => {
     const roles: DemoUser['role'][] = [
-      'gestora', 'suporte', 'coordenador_albergue', 'educador_creche', 'comercial', 'loja_bazar',
+      'gestora', 'suporte', 'coordenador_albergue', 'auxiliar_coordenacao_albergue',
+      'diretor_albergue', 'equipe_tecnica_albergue', 'educador_creche', 'comercial', 'loja_bazar',
     ];
 
     for (const role of roles) {
@@ -60,6 +61,37 @@ describe('canAccessPath — RoleGuard', () => {
     expect(canAccessPath(user, '/gestao')).toBe(false);
   });
 
+  it('auxiliar de coordenação tem o mesmo acesso do coordenador do albergue', () => {
+    const coordenador = stubUser('coordenador_albergue');
+    const auxiliar = stubUser('auxiliar_coordenacao_albergue');
+    const paths = [
+      '/albergue',
+      '/albergue/buscar',
+      '/albergue/relatorios',
+      '/albergue/qualidade-dados',
+      '/albergue/presencas',
+      '/albergue/conferencia-rma',
+      '/escola',
+      '/lojas/secretaria',
+    ];
+
+    for (const path of paths) {
+      expect(canAccessPath(auxiliar, path)).toBe(canAccessPath(coordenador, path));
+    }
+  });
+
+  it('diretor do albergue acessa somente painéis e relatórios de leitura', () => {
+    const user = stubUser('diretor_albergue');
+    expect(canAccessPath(user, '/albergue')).toBe(true);
+    expect(canAccessPath(user, '/albergue/relatorios')).toBe(true);
+    expect(canAccessPath(user, '/albergue/impacto-social')).toBe(true);
+    expect(canAccessPath(user, '/albergue/buscar')).toBe(false);
+    expect(canAccessPath(user, '/albergue/presencas')).toBe(false);
+    expect(canAccessPath(user, '/albergue/qualidade-dados')).toBe(false);
+    expect(canAccessPath(user, '/albergue/conferencia-rma')).toBe(false);
+    expect(canAccessPath(user, '/escola')).toBe(false);
+  });
+
   // ── Financeiro ──
   it('comercial acessa apenas /lojas/secretaria e subrotas', () => {
     const user = stubUser('comercial');
@@ -95,26 +127,31 @@ describe('canAccessPath — RoleGuard', () => {
     expect(canAccessPath(user, '/albergue')).toBe(false);
   });
 
-  // ── Equipe técnica ──
-  it('equipe_tecnica acessa gestão, albergue, creche e relatórios, mas não lojas individuais', () => {
-    const user = stubUser('equipe_tecnica');
-    expect(canAccessPath(user, '/gestao')).toBe(true);
+  // ── Equipe técnica do Albergue ──
+  it('equipe_tecnica_albergue fica restrita à consulta operacional do albergue', () => {
+    const user = stubUser('equipe_tecnica_albergue');
     expect(canAccessPath(user, '/albergue')).toBe(true);
-    expect(canAccessPath(user, '/escola')).toBe(true);
-    expect(canAccessPath(user, '/albergue/relatorios')).toBe(true);
-    expect(canAccessPath(user, '/escola/relatorios')).toBe(true);
-    expect(canAccessPath(user, '/lojas/secretaria')).toBe(true);
-    expect(canAccessPath(user, '/lojas/secretaria/historico')).toBe(true);
-    expect(canAccessPath(user, '/lojas/bazar')).toBe(false);
-    expect(canAccessPath(user, '/lojas/brecho')).toBe(false);
+    expect(canAccessPath(user, '/albergue/buscar')).toBe(true);
+    expect(canAccessPath(user, '/albergue/qualidade-dados')).toBe(true);
+    expect(canAccessPath(user, '/albergue/impacto-social')).toBe(true);
+    expect(canAccessPath(user, '/albergue/relatorios')).toBe(false);
+    expect(canAccessPath(user, '/albergue/presencas')).toBe(false);
+    expect(canAccessPath(user, '/albergue/conferencia-rma')).toBe(false);
+    expect(canAccessPath(user, '/gestao')).toBe(false);
+    expect(canAccessPath(user, '/escola')).toBe(false);
+    expect(canAccessPath(user, '/lojas/secretaria')).toBe(false);
   });
 
   // ── Educadores ──
-  it('educador_albergue acessa /albergue/* e /dashboard', () => {
+  it('educador_albergue opera a rotina sem acessar governança e relatórios', () => {
     const user = stubUser('educador_albergue');
     expect(canAccessPath(user, '/albergue')).toBe(true);
     expect(canAccessPath(user, '/albergue/buscar')).toBe(true);
     expect(canAccessPath(user, '/dashboard')).toBe(true);
+    expect(canAccessPath(user, '/albergue/presencas')).toBe(true);
+    expect(canAccessPath(user, '/albergue/relatorios')).toBe(false);
+    expect(canAccessPath(user, '/albergue/qualidade-dados')).toBe(false);
+    expect(canAccessPath(user, '/albergue/conferencia-rma')).toBe(false);
     expect(canAccessPath(user, '/escola')).toBe(false);
     expect(canAccessPath(user, '/gestao')).toBe(false);
   });
@@ -130,7 +167,8 @@ describe('canAccessPath — RoleGuard', () => {
   // ── Regra de auditoria: ninguém acessa ──
   it('nenhum role acessa /auditoria', () => {
     const roles: DemoUser['role'][] = [
-      'gestora', 'suporte', 'coordenador_albergue', 'equipe_tecnica', 'comercial',
+      'gestora', 'suporte', 'coordenador_albergue', 'auxiliar_coordenacao_albergue',
+      'diretor_albergue', 'equipe_tecnica_albergue', 'comercial',
     ];
     for (const role of roles) {
       expect(canAccessPath(stubUser(role), '/albergue/auditoria')).toBe(false);

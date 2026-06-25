@@ -13,7 +13,6 @@ export type ServiceScope =
   | 'suporte'
   | 'albergue'
   | 'creche'
-  | 'institucional'
   | 'comercial'
   | 'bazar'
   | 'brecho'
@@ -23,8 +22,10 @@ export type UserRole =
   | 'gestora'
   | 'suporte'
   | 'coordenador_albergue'
+  | 'auxiliar_coordenacao_albergue'
+  | 'diretor_albergue'
+  | 'equipe_tecnica_albergue'
   | 'coordenador_creche'
-  | 'equipe_tecnica'
   | 'educador_albergue'
   | 'educador_creche'
   | 'comercial'
@@ -103,15 +104,37 @@ const DEFAULT_PROFILES: DemoUser[] = [
     homePath: '/escola',
   },
   {
-    id: 'equipe-tecnica',
-    login: 'equipe-tecnica',
-    name: 'Equipe Técnica',
-    displayName: 'Equipe Técnica',
-    role: 'equipe_tecnica',
-    roleLabel: 'Equipe técnica',
-    service: 'institucional',
-    serviceLabel: 'Atendimento institucional',
-    homePath: '/gestao',
+    id: 'aux-coord-albergue',
+    login: 'aux-coord-albergue',
+    name: 'Auxiliar de Coordenação do Albergue',
+    displayName: 'Auxiliar de Coordenação',
+    role: 'auxiliar_coordenacao_albergue',
+    roleLabel: 'Auxiliar de coordenação',
+    service: 'albergue',
+    serviceLabel: 'Albergue Noturno',
+    homePath: '/albergue',
+  },
+  {
+    id: 'diretor-albergue',
+    login: 'diretor-albergue',
+    name: 'Diretor do Albergue',
+    displayName: 'Diretor do Albergue',
+    role: 'diretor_albergue',
+    roleLabel: 'Direção do Albergue',
+    service: 'albergue',
+    serviceLabel: 'Albergue Noturno',
+    homePath: '/albergue',
+  },
+  {
+    id: 'equipe-tecnica-albergue',
+    login: 'equipe-tecnica-albergue',
+    name: 'Equipe Técnica do Albergue',
+    displayName: 'Equipe Técnica do Albergue',
+    role: 'equipe_tecnica_albergue',
+    roleLabel: 'Equipe técnica do Albergue',
+    service: 'albergue',
+    serviceLabel: 'Albergue Noturno',
+    homePath: '/albergue',
   },
   {
     id: 'educador-albergue',

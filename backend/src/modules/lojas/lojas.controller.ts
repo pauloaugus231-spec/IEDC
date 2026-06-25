@@ -18,7 +18,7 @@ import {
 } from './dto/lojas-operacao.dto';
 
 @Controller('lojas')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL, UsuarioRole.LOJA_BAZAR, UsuarioRole.LOJA_BRECHO, UsuarioRole.LOJA_FEIRAO)
+@Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL, UsuarioRole.LOJA_BAZAR, UsuarioRole.LOJA_BRECHO, UsuarioRole.LOJA_FEIRAO)
 export class LojasController {
   constructor(
     private readonly lojasService: LojasService,
@@ -26,7 +26,7 @@ export class LojasController {
   ) {}
 
   @Get('dashboard')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL)
   getDashboard(@Query('periodo') periodo?: string) {
     return this.lojasService.getDashboard(periodo);
   }
@@ -105,7 +105,7 @@ export class LojasController {
   }
 
   @Get('fechamento/excel')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL)
   async exportFechamentoExcel(@Query('periodo') periodo: string | undefined, @Res() res: Response) {
     const buffer = await this.lojasService.exportFechamentoExcel(periodo);
     const dataAtual = new Date().toISOString().split('T')[0];
@@ -117,7 +117,7 @@ export class LojasController {
   }
 
   @Get('fechamento/pdf')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL)
   async exportFechamentoPdf(@Query('periodo') periodo: string | undefined, @Res() res: Response) {
     const buffer = await this.lojasService.exportFechamentoPdf(periodo);
     const dataAtual = new Date().toISOString().split('T')[0];
@@ -174,7 +174,7 @@ export class LojasController {
   }
 
   @Patch('comandas/:id/status')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COMERCIAL)
+  @Roles(UsuarioRole.GESTORA, UsuarioRole.COMERCIAL)
   updateStatus(@Param('id') id: string, @Body() body: AtualizarStatusComandaDto) {
     return this.lojasService.updateStatus(id, body);
   }

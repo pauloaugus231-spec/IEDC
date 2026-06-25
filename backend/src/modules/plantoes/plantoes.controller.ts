@@ -8,11 +8,11 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { PlantoesService, PlantaoFilters, PlantaoDto } from './plantoes.service';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_COORDINATION_ROLES } from '../../auth/albergue-roles';
 
 @ApiTags('plantoes')
 @Controller('plantoes')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+@Roles(...ALBERGUE_COORDINATION_ROLES)
 export class PlantoesController {
   constructor(private readonly plantoesService: PlantoesService) {}
 

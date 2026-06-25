@@ -16,8 +16,10 @@ import '../styles/design-system.css';
 const roleOptions: Array<{ value: ManagedUserRole; label: string; detail: string }> = [
   { value: 'gestora', label: 'Gestão', detail: 'Acesso institucional amplo' },
   { value: 'suporte', label: 'Suporte', detail: 'Criação de usuários e suporte operacional' },
-  { value: 'equipe_tecnica', label: 'Equipe técnica', detail: 'Gestão, Albergue, E.E.I. e secretaria' },
   { value: 'coordenador_albergue', label: 'Coordenação Albergue', detail: 'Operação e relatórios do Albergue' },
+  { value: 'auxiliar_coordenacao_albergue', label: 'Auxiliar de Coordenação', detail: 'Mesmas permissões da coordenação do Albergue' },
+  { value: 'diretor_albergue', label: 'Diretor do Albergue', detail: 'Painéis e relatórios, somente leitura' },
+  { value: 'equipe_tecnica_albergue', label: 'Equipe Técnica do Albergue', detail: 'Consulta operacional restrita ao Albergue' },
   { value: 'educador_albergue', label: 'Educador Albergue', detail: 'Rotina operacional do Albergue' },
   { value: 'coordenador_creche', label: 'Coordenação E.E.I.', detail: 'Gestão pedagógica e relatórios da E.E.I.' },
   { value: 'educador_creche', label: 'Educador E.E.I.', detail: 'Crianças, turmas e frequência' },
@@ -31,7 +33,7 @@ const emptyForm = {
   login: '',
   name: '',
   displayName: '',
-  role: 'equipe_tecnica' as ManagedUserRole,
+  role: 'educador_albergue' as ManagedUserRole,
   temporaryPassword: '',
   ativo: true,
 };

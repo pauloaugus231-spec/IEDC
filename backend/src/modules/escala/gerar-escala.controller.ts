@@ -1,10 +1,10 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { EscalaService } from './escala.service';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_COORDINATION_ROLES } from '../../auth/albergue-roles';
 
 @Controller()
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+@Roles(...ALBERGUE_COORDINATION_ROLES)
 export class GerarEscalaController {
   constructor(private readonly escalaService: EscalaService) {}
 

@@ -24,6 +24,7 @@ type ImpactoDashboardProps = {
   periodo: ImpactoSocialPeriodo;
   onPeriodoChange: (p: ImpactoSocialPeriodo) => void;
   onOpenForm: () => void;
+  canCreate: boolean;
 };
 
 export default function ImpactoDashboard({
@@ -33,6 +34,7 @@ export default function ImpactoDashboard({
   periodo,
   onPeriodoChange,
   onOpenForm,
+  canCreate,
 }: ImpactoDashboardProps) {
   const demandas = topItems(data?.distribuicoes.demandasEquipe ?? [], 8);
   const fatores = completeDistribution(data?.distribuicoes.fatoresSemMoradia ?? [], fatoresOptions);
@@ -56,9 +58,11 @@ export default function ImpactoDashboard({
             próximos passos e relatos qualitativos do serviço.
           </p>
         </div>
-        <button className="impact-primary-action" onClick={onOpenForm} type="button">
-          Formulário de impacto
-        </button>
+        {canCreate && (
+          <button className="impact-primary-action" onClick={onOpenForm} type="button">
+            Formulário de impacto
+          </button>
+        )}
       </section>
 
       <section className="impact-toolbar">

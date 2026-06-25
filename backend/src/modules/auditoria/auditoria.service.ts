@@ -144,7 +144,13 @@ export class AuditoriaService {
   private resolveAudience(actor?: AuthUser | null): AuditAudience {
     if (!actor || actor.role === UsuarioRole.SUPORTE) return 'suporte';
     if (actor.role === UsuarioRole.GESTORA) return 'executiva';
-    if (actor.role === UsuarioRole.COORDENADOR_ALBERGUE) return 'albergue';
+    if (
+      actor.role === UsuarioRole.COORDENADOR_ALBERGUE ||
+      actor.role === UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE ||
+      actor.role === UsuarioRole.DIRETOR_ALBERGUE ||
+      actor.role === UsuarioRole.EQUIPE_TECNICA_ALBERGUE ||
+      actor.role === UsuarioRole.EDUCADOR_ALBERGUE
+    ) return 'albergue';
     if (actor.role === UsuarioRole.COORDENADOR_CRECHE) return 'creche';
     if (actor.role === UsuarioRole.COMERCIAL) return 'comercial';
     return 'executiva';

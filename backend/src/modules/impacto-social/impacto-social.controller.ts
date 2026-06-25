@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ImpactoSocialService } from './impacto-social.service';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
 import { CreateRespostaAlbergueDto } from './dto/create-resposta-albergue.dto';
+import { ALBERGUE_OPERATION_ROLES, ALBERGUE_READ_ROLES } from '../../auth/albergue-roles';
 
 @Controller('impacto-social')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
+@Roles(...ALBERGUE_READ_ROLES)
 export class ImpactoSocialController {
   constructor(private readonly impactoSocialService: ImpactoSocialService) {}
 
@@ -19,6 +19,7 @@ export class ImpactoSocialController {
   }
 
   @Post('albergue/respostas')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   createResposta(@Body() body: CreateRespostaAlbergueDto) {
     return this.impactoSocialService.createRespostaAlbergue(body);
   }

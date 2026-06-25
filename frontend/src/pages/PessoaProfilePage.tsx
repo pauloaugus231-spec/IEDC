@@ -4,7 +4,9 @@ import { apiFetch, createOcorrencia, getEstadiasByPessoaId, getOcorrenciasByPess
 import CheckinModal from '../components/CheckinModal';
 import EditarPessoaModal from '../components/EditarPessoaModal';
 import FotoPreview from '../components/FotoPreview';
+import { useAuth } from '../context/AuthContext';
 import { getNomePrincipal } from '../utils';
+import { ALBERGUE_COORDINATION_ROLES, ALBERGUE_OPERATION_ROLES } from '../utils/alberguePermissions';
 import './PessoaProfilePage.css';
 
 interface Pessoa {
@@ -152,6 +154,9 @@ function getAge(dataNascimento?: string) {
 const PessoaProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const canOperate = Boolean(currentUser && ALBERGUE_OPERATION_ROLES.includes(currentUser.role));
+  const canCoordinate = Boolean(currentUser && ALBERGUE_COORDINATION_ROLES.includes(currentUser.role));
 
   const [pessoa, setPessoa] = useState<Pessoa | null>(null);
   const [estadias, setEstadias] = useState<Estadia[]>([]);
@@ -288,6 +293,7 @@ const PessoaProfilePage: React.FC = () => {
   }, [bloqueioAtivo, estadiaAtiva, pessoa?.liberacao_antecipada, pessoa?.status_cadastro, podeIniciarEstadia, retornoRegra]);
 
   const handleLiberarAntecipada = async () => {
+    if (!canCoordinate) return;
     const funcionario = window.prompt('Nome de quem está autorizando a liberação:');
     if (!funcionario) return;
     if (!window.confirm('Confirmar liberação antecipada para nova entrada?')) return;
@@ -305,6 +311,7 @@ const PessoaProfilePage: React.FC = () => {
   };
 
   const handleCheckout = async () => {
+    if (!canOperate) return;
     if (!pessoa) return;
     if (!window.confirm(`Registrar saída de ${getNomePrincipal(pessoa)}?`)) return;
 
@@ -324,6 +331,7 @@ const PessoaProfilePage: React.FC = () => {
   };
 
   const handleToggleLGBT = async () => {
+    if (!canOperate) return;
     if (!pessoa) return;
     try {
       const lgbt = !pessoa.lgbt;
@@ -339,6 +347,7 @@ const PessoaProfilePage: React.FC = () => {
   };
 
   const handleCreateOcorrencia = async (data: any) => {
+    if (!canOperate) return;
     try {
       await createOcorrencia({ pessoa_id: id!, ...data });
       setShowOcorrenciaModal(false);
@@ -350,6 +359,7 @@ const PessoaProfilePage: React.FC = () => {
   };
 
   const handleDeleteOcorrencia = async (ocorrenciaId: string) => {
+    if (!canCoordinate) return;
     if (!window.confirm('Excluir esta ocorrência?')) return;
     try {
       await apiFetch(`/api/ocorrencias/${ocorrenciaId}`, { method: 'DELETE' });
@@ -361,6 +371,7 @@ const PessoaProfilePage: React.FC = () => {
   };
 
   const handleSavePessoa = async (data: any) => {
+    if (!canOperate) return;
     if (!pessoa) return;
     try {
       await updatePessoa(pessoa.id, data);
@@ -429,7 +440,7 @@ const PessoaProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="profile-hero-actions">
+        {canOperate && <div className="profile-hero-actions">
           <button className="profile-button secondary" onClick={() => setShowEditar(true)} type="button">
             Editar cadastro
           </button>
@@ -438,7 +449,7 @@ const PessoaProfilePage: React.FC = () => {
               Iniciar estadia
             </button>
           )}
-        </div>
+        </div>}
       </section>
 
       <section className={`stay-command-card ${statusOperacional.tone}`}>
@@ -475,9 +486,11 @@ const PessoaProfilePage: React.FC = () => {
                   : 'Bloqueio sem data final definida'}
               </small>
             </div>
-            <button className="profile-button warning" onClick={handleLiberarAntecipada} type="button">
-              Liberar bloqueio
-            </button>
+            {canCoordinate && (
+              <button className="profile-button warning" onClick={handleLiberarAntecipada} type="button">
+                Liberar bloqueio
+              </button>
+            )}
           </div>
         )}
 
@@ -488,9 +501,11 @@ const PessoaProfilePage: React.FC = () => {
               <p>O operador pode iniciar a estadia selecionando uma cama disponível.</p>
               <small>Quarto sugerido: {getTipoVagaLabel(pessoa.tipo_vaga)}</small>
             </div>
-            <button className="profile-button primary large" onClick={() => setShowCheckin(true)} type="button">
-              Iniciar estadia
-            </button>
+            {canOperate && (
+              <button className="profile-button primary large" onClick={() => setShowCheckin(true)} type="button">
+                Iniciar estadia
+              </button>
+            )}
           </div>
         )}
 
@@ -507,9 +522,11 @@ const PessoaProfilePage: React.FC = () => {
               )}
               {retornoRegra && <small>Retorno automático a partir de {formatDate(retornoRegra.dataLiberada.toISOString())}</small>}
             </div>
-            <button className="profile-button warning" onClick={handleLiberarAntecipada} type="button">
-              Liberar entrada
-            </button>
+            {canCoordinate && (
+              <button className="profile-button warning" onClick={handleLiberarAntecipada} type="button">
+                Liberar entrada
+              </button>
+            )}
           </div>
         )}
 
@@ -518,9 +535,11 @@ const PessoaProfilePage: React.FC = () => {
             <button className="profile-button secondary" onClick={() => setActiveTab('historico')} type="button">
               Ver histórico
             </button>
-            <button className="profile-button danger" onClick={handleCheckout} type="button">
-              Registrar saída
-            </button>
+            {canOperate && (
+              <button className="profile-button danger" onClick={handleCheckout} type="button">
+                Registrar saída
+              </button>
+            )}
           </div>
         )}
       </section>
@@ -604,7 +623,7 @@ const PessoaProfilePage: React.FC = () => {
             <FieldRow label="Cor/raça" value={pessoa.cor || '-'} />
             <FieldRow label="Tipo de vaga" value={getTipoVagaLabel(pessoa.tipo_vaga)} />
             <label className="profile-switch">
-              <input checked={Boolean(pessoa.lgbt)} onChange={handleToggleLGBT} type="checkbox" />
+              <input checked={Boolean(pessoa.lgbt)} disabled={!canOperate} onChange={handleToggleLGBT} type="checkbox" />
               <span>Identificação LGBT+</span>
             </label>
           </article>
@@ -625,9 +644,11 @@ const PessoaProfilePage: React.FC = () => {
               <h3>Ocorrências</h3>
               <p>Registros operacionais vinculados à pessoa.</p>
             </div>
-            <button className="profile-button primary" onClick={() => setShowOcorrenciaModal(true)} type="button">
-              Nova ocorrência
-            </button>
+            {canOperate && (
+              <button className="profile-button primary" onClick={() => setShowOcorrenciaModal(true)} type="button">
+                Nova ocorrência
+              </button>
+            )}
           </div>
 
           {ocorrencias.length === 0 ? (
@@ -648,9 +669,11 @@ const PessoaProfilePage: React.FC = () => {
                       {ocorrencia.criado_por ? ` · Por ${ocorrencia.criado_por}` : ''}
                     </small>
                   </div>
-                  <button className="profile-delete-button" onClick={() => handleDeleteOcorrencia(ocorrencia.id)} type="button">
-                    Excluir
-                  </button>
+                  {canCoordinate && (
+                    <button className="profile-delete-button" onClick={() => handleDeleteOcorrencia(ocorrencia.id)} type="button">
+                      Excluir
+                    </button>
+                  )}
                 </article>
               ))}
             </div>
@@ -729,7 +752,7 @@ const PessoaProfilePage: React.FC = () => {
         </section>
       )}
 
-      {showEditar && (
+      {canOperate && showEditar && (
         <EditarPessoaModal
           onClose={() => setShowEditar(false)}
           onSave={handleSavePessoa}
@@ -737,7 +760,7 @@ const PessoaProfilePage: React.FC = () => {
         />
       )}
 
-      {showCheckin && (
+      {canOperate && showCheckin && (
         <CheckinModal
           onCheckinSuccess={() => {
             setShowCheckin(false);
@@ -749,7 +772,7 @@ const PessoaProfilePage: React.FC = () => {
         />
       )}
 
-      {showOcorrenciaModal && (
+      {canOperate && showOcorrenciaModal && (
         <div className="profile-modal-overlay" onClick={() => setShowOcorrenciaModal(false)}>
           <div className="profile-modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="profile-modal-header">

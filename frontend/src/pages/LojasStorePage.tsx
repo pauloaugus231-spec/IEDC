@@ -137,7 +137,7 @@ const LojasStorePage = ({ mode = 'operacao' }: { mode?: LojasStoreMode }) => {
   const loja = lojaInfo[lojaSlug];
   const { currentUser } = useAuth();
   const canOpenSecretaria = Boolean(
-    currentUser && ['gestora', 'equipe_tecnica'].includes(currentUser.role),
+    currentUser?.role === 'gestora',
   );
 
   const [reload, setReload] = useState(0);

@@ -11,11 +11,11 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ColaboradoresService, ColaboradorResponse, CreateColaboradorDto, UpdateColaboradorDto } from './colaboradores.service';
 import { Colaborador } from '../../entities/colaborador.entity';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_COORDINATION_ROLES } from '../../auth/albergue-roles';
 
 @ApiTags('colaboradores')
 @Controller('colaboradores')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+@Roles(...ALBERGUE_COORDINATION_ROLES)
 export class ColaboradoresController {
   constructor(private readonly colaboradoresService: ColaboradoresService) {}
 

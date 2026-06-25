@@ -175,7 +175,7 @@ export class RelatoriosGestao360Service {
   }
 
   private ensureGestao360Access(actor: AuthUser | undefined) {
-    if (!actor || (actor.role !== UsuarioRole.GESTORA && actor.role !== UsuarioRole.EQUIPE_TECNICA)) {
+    if (!actor || actor.role !== UsuarioRole.GESTORA) {
       throw new ForbiddenException('Este perfil não acessa o Explorador Institucional 360.');
     }
   }

@@ -4,17 +4,19 @@ import { Roles } from '../../auth/roles.decorator';
 import { UsuarioRole } from '../../entities/usuario.entity';
 import { SalvarDashboardDto } from './dto/salvar-dashboard.dto';
 import { AuthRequest } from '../../auth/auth.types';
+import { ALBERGUE_COORDINATION_ROLES, ALBERGUE_MANAGEMENT_READ_ROLES } from '../../auth/albergue-roles';
 
 @Controller('relatorios')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+@Roles(...ALBERGUE_MANAGEMENT_READ_ROLES)
 export class RelatoriosController {
   constructor(private readonly relatoriosService: RelatoriosService) {}
 
   @Get('executivo')
   @Roles(
     UsuarioRole.GESTORA,
-    UsuarioRole.EQUIPE_TECNICA,
     UsuarioRole.COORDENADOR_ALBERGUE,
+    UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE,
+    UsuarioRole.DIRETOR_ALBERGUE,
     UsuarioRole.COORDENADOR_CRECHE,
     UsuarioRole.COMERCIAL,
   )
@@ -27,7 +29,7 @@ export class RelatoriosController {
   }
 
   @Get('gestao-360')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA)
+  @Roles(UsuarioRole.GESTORA)
   async getRelatorioGestao360(
     @Req() req: AuthRequest,
     @Query('periodo') periodo?: string,
@@ -39,7 +41,7 @@ export class RelatoriosController {
   }
 
   @Get('gestao-360/drilldown')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA)
+  @Roles(UsuarioRole.GESTORA)
   async getRelatorioGestao360Drilldown(
     @Req() req: AuthRequest,
     @Query('periodo') periodo?: string,
@@ -123,6 +125,7 @@ export class RelatoriosController {
   }
 
   @Post('dashboards')
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   async salvarDashboard(@Body() body: SalvarDashboardDto) {
     return this.relatoriosService.salvarDashboardPersonalizado(body.userId, body.nome, body.config);
   }

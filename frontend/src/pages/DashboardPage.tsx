@@ -6,6 +6,8 @@ import PessoaCasaModal from '../components/PessoaCasaModal';
 import PresenceFloater from '../components/PresenceFloater';
 import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE } from '../styles/echarts-theme-iedc';
 import { clearTriagemCensoStorage, getTriagemCensoStorageState } from '../utils';
+import { useAuth } from '../context/AuthContext';
+import { ALBERGUE_OPERATION_ROLES, ALBERGUE_PERSON_READ_ROLES } from '../utils/alberguePermissions';
 
 // --- INTERFACES ---
 interface OcupacaoData {
@@ -22,6 +24,9 @@ const casaConfig: Record<string, { label: string }> = {
 };
 
 const DashboardPage = () => {
+  const { currentUser } = useAuth();
+  const canOperate = Boolean(currentUser && ALBERGUE_OPERATION_ROLES.includes(currentUser.role));
+  const canReadPeople = Boolean(currentUser && ALBERGUE_PERSON_READ_ROLES.includes(currentUser.role));
   
   // --- ESTADOS ---
   const [ocupacao, setOcupacao] = useState<OcupacaoData | null>(null);
@@ -77,10 +82,12 @@ const DashboardPage = () => {
     const fetchDadosOperacionais = async () => {
       try {
         // 1. Buscar pendentes de presença (Presença não marcada)
-        const ativos = await apiFetch<any[]>('/api/pessoas/ativos').catch(() => []);
-        const ativosList = Array.isArray(ativos) ? ativos : [];
-        setPendentesCount(ativosList.filter((a: any) => !a.presente).length);
-        setTotalAtivosPresenca(ativosList.length);
+        if (canOperate) {
+          const ativos = await apiFetch<any[]>('/api/pessoas/ativos').catch(() => []);
+          const ativosList = Array.isArray(ativos) ? ativos : [];
+          setPendentesCount(ativosList.filter((a: any) => !a.presente).length);
+          setTotalAtivosPresenca(ativosList.length);
+        }
         
         // 2. Buscar saídas previstas para hoje (estadias que terminam hoje)
         const saidasData = await apiFetch<{ count: number }>('/api/dashboard/saidas-previstas-hoje').catch(() => ({ count: 0 }));
@@ -89,10 +96,11 @@ const DashboardPage = () => {
       } catch (e) { console.error(e); }
     };
     fetchDadosOperacionais();
-  }, []);
+  }, [canOperate]);
 
   // --- LÓGICA DE UI ---
   const handleCasaClick = (key: string) => {
+    if (!canReadPeople) return;
     const config = casaConfig[key] || { label: key };
     setSelectedCasa(key);
     setSelectedCasaLabel(config.label);
@@ -228,7 +236,7 @@ const DashboardPage = () => {
                     return (
                     <div
                         key={key}
-                        onClick={() => handleCasaClick(key)}
+                        onClick={canReadPeople ? () => handleCasaClick(key) : undefined}
                         className="albergue-room-card"
                         style={roomCardStyle}
                     >
@@ -359,7 +367,7 @@ const DashboardPage = () => {
 
       {/* MODAL E FLOATER */}
       {modalOpen && <PessoaCasaModal isOpen={modalOpen} onClose={() => setModalOpen(false)} casa={selectedCasa} casaLabel={selectedCasaLabel} />}
-      <PresenceFloater
+      {canOperate && <PresenceFloater
         censoData={censoData}
         isTriagemEncerrada={isTriagemEncerrada}
         onCensoExpired={() => {
@@ -368,7 +376,7 @@ const DashboardPage = () => {
         }}
         pendentesCount={pendentesCount}
         totalCount={totalAtivosPresenca}
-      />
+      />}
       
     </main>
   );

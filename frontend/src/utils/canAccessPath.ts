@@ -1,4 +1,13 @@
 import type { DemoUser } from '../context/AuthContext';
+import {
+  ALBERGUE_COORDINATION_ROLES,
+  ALBERGUE_DATA_QUALITY_ROLES,
+  ALBERGUE_MANAGEMENT_READ_ROLES,
+  ALBERGUE_OPERATION_ROLES,
+  ALBERGUE_PERSON_READ_ROLES,
+  ALBERGUE_READ_ROLES,
+  hasAlbergueRole,
+} from './alberguePermissions';
 
 /**
  * Verifica se o usuário tem permissão para acessar o caminho informado.
@@ -18,11 +27,31 @@ export function canAccessPath(user: DemoUser, pathname: string): boolean {
   }
 
   if (pathname === '/albergue/relatorios') {
-    return user.role === 'gestora' || user.role === 'equipe_tecnica' || user.role === 'coordenador_albergue';
+    return hasAlbergueRole(user.role, ALBERGUE_MANAGEMENT_READ_ROLES);
+  }
+
+  if (pathname === '/albergue/conferencia-rma') {
+    return hasAlbergueRole(user.role, ALBERGUE_COORDINATION_ROLES);
+  }
+
+  if (pathname === '/albergue/qualidade-dados') {
+    return hasAlbergueRole(user.role, ALBERGUE_DATA_QUALITY_ROLES);
+  }
+
+  if (pathname === '/albergue/presencas') {
+    return hasAlbergueRole(user.role, ALBERGUE_OPERATION_ROLES);
+  }
+
+  if (pathname === '/albergue/buscar' || pathname.startsWith('/albergue/pessoa/')) {
+    return hasAlbergueRole(user.role, ALBERGUE_PERSON_READ_ROLES);
+  }
+
+  if (pathname.startsWith('/pessoa/')) {
+    return hasAlbergueRole(user.role, ALBERGUE_PERSON_READ_ROLES);
   }
 
   if (pathname === '/escola/relatorios') {
-    return user.role === 'gestora' || user.role === 'equipe_tecnica' || user.role === 'coordenador_creche';
+    return user.role === 'gestora' || user.role === 'coordenador_creche';
   }
 
   if (pathname === '/lojas/secretaria/relatorio-executivo') {
@@ -45,15 +74,7 @@ export function canAccessPath(user: DemoUser, pathname: string): boolean {
     return true;
   }
 
-  if (user.role === 'equipe_tecnica') {
-    if (pathname.startsWith('/lojas/') && !pathname.startsWith('/lojas/secretaria')) {
-      return false;
-    }
-
-    return true;
-  }
-
-  if (user.role === 'coordenador_albergue' || user.role === 'educador_albergue') {
+  if (hasAlbergueRole(user.role, ALBERGUE_READ_ROLES)) {
     return pathname.startsWith('/albergue') || pathname === '/dashboard';
   }
 

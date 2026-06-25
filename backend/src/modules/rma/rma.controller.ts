@@ -14,12 +14,12 @@ import { Response } from 'express';
 import { RmaService } from './rma.service';
 import { UploadRmaDto } from './dto/upload-rma.dto';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
 import { assertXlsxUpload, FILE_LIMITS } from '../../common/upload/file-validation';
 import { ResultadoConferencia } from './interfaces/rma.interface';
+import { ALBERGUE_COORDINATION_ROLES } from '../../auth/albergue-roles';
 
 @Controller('rma')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
+@Roles(...ALBERGUE_COORDINATION_ROLES)
 export class RmaController {
   // Armazenamento temporário dos resultados (em produção, usar Redis ou banco)
   private resultadosCache = new Map<string, ResultadoConferencia>();
@@ -118,7 +118,7 @@ export class RmaController {
    * Limpar cache de resultados antigos (chamar via cron job)
    */
   @Post('limpar-cache')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   limparCache() {
     this.resultadosCache.clear();
     return {

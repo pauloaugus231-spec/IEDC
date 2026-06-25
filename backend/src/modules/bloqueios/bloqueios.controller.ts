@@ -2,14 +2,14 @@ import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BloqueiosService } from './bloqueios.service';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
 import { CriarBloqueioDto } from './dto/criar-bloqueio.dto';
 import { LiberarBloqueioDto } from './dto/liberar-bloqueio.dto';
 import { EncerrarBloqueioDto } from './dto/encerrar-bloqueio.dto';
+import { ALBERGUE_COORDINATION_ROLES, ALBERGUE_OPERATIONAL_READ_ROLES } from '../../auth/albergue-roles';
 
 @ApiTags('bloqueios')
 @Controller('bloqueios')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
+@Roles(...ALBERGUE_OPERATIONAL_READ_ROLES)
 export class BloqueiosController {
   constructor(private readonly bloqueiosService: BloqueiosService) {}
 
@@ -50,7 +50,7 @@ export class BloqueiosController {
   }
 
   @Post()
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   @ApiOperation({ summary: 'Criar novo bloqueio' })
   @ApiResponse({ status: 201, description: 'Bloqueio criado com sucesso' })
   criar(
@@ -60,7 +60,7 @@ export class BloqueiosController {
   }
 
   @Patch(':id/liberar')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   @ApiOperation({ summary: 'Liberação antecipada de bloqueio' })
   @ApiResponse({ status: 200, description: 'Bloqueio liberado com sucesso' })
   @ApiResponse({ status: 404, description: 'Bloqueio não encontrado' })
@@ -73,7 +73,7 @@ export class BloqueiosController {
   }
 
   @Patch(':id/encerrar')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   @ApiOperation({ summary: 'Encerrar bloqueio manualmente' })
   @ApiResponse({ status: 200, description: 'Bloqueio encerrado com sucesso' })
   @ApiResponse({ status: 404, description: 'Bloqueio não encontrado' })

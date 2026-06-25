@@ -105,16 +105,12 @@ export class NotificacoesService {
       return [...albergue, ...creche, ...financeiro];
     }
 
-    if (role === UsuarioRole.EQUIPE_TECNICA) {
-      const [albergue, creche, financeiro] = await Promise.all([
-        this.buildAlbergueItems(createdAt, 'area'),
-        this.buildCrecheItems(createdAt, 'area'),
-        this.buildFinanceiroItems(createdAt, { hideValues: true }),
-      ]);
-      return [...albergue, ...creche, ...financeiro];
-    }
-
-    if (role === UsuarioRole.COORDENADOR_ALBERGUE) {
+    if (
+      role === UsuarioRole.COORDENADOR_ALBERGUE ||
+      role === UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE ||
+      role === UsuarioRole.DIRETOR_ALBERGUE ||
+      role === UsuarioRole.EQUIPE_TECNICA_ALBERGUE
+    ) {
       return this.buildAlbergueItems(createdAt, 'area');
     }
 
@@ -642,8 +638,10 @@ export class NotificacoesService {
     if (role === UsuarioRole.SUPORTE) return 'Console técnico e segurança';
     if (role === UsuarioRole.GESTORA) return 'Governança executiva';
     if (role === UsuarioRole.COORDENADOR_ALBERGUE) return 'Coordenação do Albergue';
+    if (role === UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE) return 'Auxiliar de coordenação do Albergue';
+    if (role === UsuarioRole.DIRETOR_ALBERGUE) return 'Direção do Albergue';
+    if (role === UsuarioRole.EQUIPE_TECNICA_ALBERGUE) return 'Equipe técnica do Albergue';
     if (role === UsuarioRole.COORDENADOR_CRECHE) return 'Coordenação da E.E.I.';
-    if (role === UsuarioRole.EQUIPE_TECNICA) return 'Operação institucional';
     if (role === UsuarioRole.EDUCADOR_ALBERGUE) return 'Rotina do Albergue';
     if (role === UsuarioRole.EDUCADOR_CRECHE) return 'Rotina da E.E.I.';
     if (role === UsuarioRole.COMERCIAL) return 'Comercial';

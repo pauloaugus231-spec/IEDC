@@ -158,13 +158,14 @@ export class QualidadeDadosService {
   }
 
   private getAllowedAreas(actor: AuthUser | null): QualidadeAreaId[] {
-    if (!actor || actor.role === UsuarioRole.GESTORA || actor.role === UsuarioRole.EQUIPE_TECNICA) {
+    if (!actor || actor.role === UsuarioRole.GESTORA) {
       return ['albergue', 'creche', 'comercial'];
     }
 
     if (
       actor.role === UsuarioRole.COORDENADOR_ALBERGUE ||
-      actor.role === UsuarioRole.EDUCADOR_ALBERGUE
+      actor.role === UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE ||
+      actor.role === UsuarioRole.EQUIPE_TECNICA_ALBERGUE
     ) {
       return ['albergue'];
     }

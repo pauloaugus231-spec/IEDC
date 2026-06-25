@@ -1,10 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_READ_ROLES } from '../../auth/albergue-roles';
 
 @Controller('dashboard')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
+@Roles(...ALBERGUE_READ_ROLES)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

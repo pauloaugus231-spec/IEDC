@@ -6,6 +6,13 @@ import Toast from './Toast';
 import type { ToastType } from './Toast';
 import { useNotificacoes, type NotificacaoNivel } from '../api';
 import { useAuth, type DemoUser, type UserRole } from '../context/AuthContext';
+import {
+  ALBERGUE_DATA_QUALITY_ROLES,
+  ALBERGUE_MANAGEMENT_READ_ROLES,
+  ALBERGUE_OPERATION_ROLES,
+  ALBERGUE_PERSON_READ_ROLES,
+  ALBERGUE_READ_ROLES,
+} from '../utils/alberguePermissions';
 import '../styles/institutional.css';
 import '../styles/design-system.css';
 
@@ -48,18 +55,18 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
         type: 'group',
         label: 'Visão institucional',
         to: '/gestao',
-        roles: ['gestora', 'equipe_tecnica'],
+        roles: ['gestora'],
         children: [
           {
             label: 'Painel institucional',
             to: '/gestao',
-            roles: ['gestora', 'equipe_tecnica'],
+            roles: ['gestora'],
             end: true,
           },
           {
             label: 'Qualidade de dados',
             to: '/gestao/qualidade-dados',
-            roles: ['gestora', 'equipe_tecnica'],
+            roles: ['gestora'],
           },
         ],
       },
@@ -91,33 +98,33 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
         type: 'group',
         label: 'Albergue',
         to: '/albergue',
-        roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
+        roles: ALBERGUE_READ_ROLES,
         children: [
           {
             type: 'action',
             action: 'novoCadastro',
             label: 'Novo cadastro',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
+            roles: ALBERGUE_OPERATION_ROLES,
           },
           {
             label: 'Buscar pessoas',
             to: '/albergue/buscar',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
+            roles: ALBERGUE_PERSON_READ_ROLES,
           },
           {
             label: 'Relatórios',
             to: '/albergue/relatorios',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica'],
+            roles: ALBERGUE_MANAGEMENT_READ_ROLES,
           },
           {
             label: 'Qualidade de dados',
             to: '/albergue/qualidade-dados',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
+            roles: ALBERGUE_DATA_QUALITY_ROLES,
           },
           {
             label: 'Impacto social',
             to: '/albergue/impacto-social',
-            roles: ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'],
+            roles: ALBERGUE_READ_ROLES,
           },
         ],
       },
@@ -125,37 +132,37 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
         type: 'group',
         label: 'Escola',
         to: '/escola',
-        roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
+        roles: ['gestora', 'coordenador_creche', 'educador_creche'],
         children: [
           {
             label: 'Crianças',
             to: '/escola/criancas',
-            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
+            roles: ['gestora', 'coordenador_creche', 'educador_creche'],
           },
           {
             label: 'Turmas',
             to: '/escola/turmas',
-            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
+            roles: ['gestora', 'coordenador_creche', 'educador_creche'],
           },
           {
             label: 'Equipe',
             to: '/escola/professoras',
-            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica'],
+            roles: ['gestora', 'coordenador_creche'],
           },
           {
             label: 'Frequência',
             to: '/escola/frequencia',
-            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
+            roles: ['gestora', 'coordenador_creche', 'educador_creche'],
           },
           {
             label: 'Qualidade de dados',
             to: '/escola/qualidade-dados',
-            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica', 'educador_creche'],
+            roles: ['gestora', 'coordenador_creche', 'educador_creche'],
           },
           {
             label: 'Relatórios',
             to: '/escola/relatorios',
-            roles: ['gestora', 'coordenador_creche', 'equipe_tecnica'],
+            roles: ['gestora', 'coordenador_creche'],
           },
         ],
       },
@@ -163,18 +170,18 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
         type: 'group',
         label: 'Comercial',
         to: '/lojas/secretaria',
-        roles: ['gestora', 'equipe_tecnica', 'comercial'],
+        roles: ['gestora', 'comercial'],
         children: [
           {
             label: 'Visão financeira',
             to: '/lojas/secretaria',
-            roles: ['gestora', 'equipe_tecnica', 'comercial'],
+            roles: ['gestora', 'comercial'],
             end: true,
           },
           {
             label: 'Histórico de pagamento',
             to: '/lojas/secretaria/historico',
-            roles: ['equipe_tecnica', 'comercial'],
+            roles: ['comercial'],
           },
           {
             label: 'Caixa',
@@ -277,7 +284,7 @@ const Layout = ({ children }: LayoutProps) => {
   (window as any).showToast = showToastMsg;
 
   const canOpenCadastro = Boolean(
-    currentUser && ['gestora', 'coordenador_albergue', 'equipe_tecnica', 'educador_albergue'].includes(currentUser.role),
+    currentUser && ALBERGUE_OPERATION_ROLES.includes(currentUser.role),
   );
   const notificationItems = notificacoes?.items ?? [];
   const notificationCount = notificacoes?.unreadCount ?? 0;

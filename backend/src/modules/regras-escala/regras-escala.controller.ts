@@ -11,11 +11,11 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RegrasEscalaService, CreateRegraEscalaDto, UpdateRegraEscalaDto } from './regras-escala.service';
 import { RegraEscala } from '../../entities/regra-escala.entity';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_COORDINATION_ROLES } from '../../auth/albergue-roles';
 
 @ApiTags('escala/regras')
 @Controller('regras-escala')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+@Roles(...ALBERGUE_COORDINATION_ROLES)
 export class RegrasEscalaController {
   constructor(private readonly regrasEscalaService: RegrasEscalaService) {}
 

@@ -7,9 +7,9 @@ import { QualidadeDadosResponse, QualidadeDadosService } from './qualidade-dados
 @Controller('qualidade-dados')
 @Roles(
   UsuarioRole.GESTORA,
-  UsuarioRole.EQUIPE_TECNICA,
   UsuarioRole.COORDENADOR_ALBERGUE,
-  UsuarioRole.EDUCADOR_ALBERGUE,
+  UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE,
+  UsuarioRole.EQUIPE_TECNICA_ALBERGUE,
   UsuarioRole.COORDENADOR_CRECHE,
   UsuarioRole.EDUCADOR_CRECHE,
   UsuarioRole.COMERCIAL,

@@ -1,24 +1,21 @@
 import { Controller, Post, Body, Get } from '@nestjs/common';
 import { TriagemService } from './triagem.service';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_OPERATION_ROLES, ALBERGUE_OPERATIONAL_READ_ROLES } from '../../auth/albergue-roles';
 
 @Controller('triagem')
-@Roles(
-  UsuarioRole.GESTORA,
-  UsuarioRole.COORDENADOR_ALBERGUE,
-  UsuarioRole.EQUIPE_TECNICA,
-  UsuarioRole.EDUCADOR_ALBERGUE,
-)
+@Roles(...ALBERGUE_OPERATIONAL_READ_ROLES)
 export class TriagemController {
   constructor(private readonly triagemService: TriagemService) {}
 
   @Post('encerrar')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   async encerrar(@Body() body: { ausentes: string[] }) {
     return this.triagemService.encerrar(body.ausentes);
   }
 
   @Post('notificar-encerramento')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   async notificarEncerramento(@Body() dadosRelatorio: {
     total: number;
     masc: number;

@@ -8,10 +8,14 @@ import { CreateAbandonoDto } from './dto/create-abandono.dto';
 import { TrocarCamaDto } from './dto/trocar-cama.dto';
 import { MotivoSaida } from '../../entities/estadia.entity';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import {
+  ALBERGUE_COORDINATION_ROLES,
+  ALBERGUE_OPERATION_ROLES,
+  ALBERGUE_OPERATIONAL_READ_ROLES,
+} from '../../auth/albergue-roles';
 
 @Controller('estadias')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
+@Roles(...ALBERGUE_OPERATIONAL_READ_ROLES)
 export class EstadiasController {
   constructor(
     private readonly estadiasService: EstadiasService,
@@ -19,12 +23,14 @@ export class EstadiasController {
   ) {}
 
   @Post('checkin')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async checkin(@Body() createCheckinDto: CreateCheckinDto) {
     return this.estadiasService.checkin(createCheckinDto);
   }
 
   @Post('checkout')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async checkout(@Body() createCheckoutDto: CreateCheckoutDto) {
     const { pessoa_id, funcionario, observacoes_checkout, motivo_saida } = createCheckoutDto;
@@ -32,6 +38,7 @@ export class EstadiasController {
   }
 
   @Post('abandono')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   async registrarAbandono(@Body() body: CreateAbandonoDto) {
     return this.estadiasService.registrarAbandono(body.pessoa_id, body.funcionario, body.observacoes);
   }
@@ -42,21 +49,21 @@ export class EstadiasController {
   }
 
   @Post('checkout-automatico')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   async forcarCheckoutAutomatico() {
     this.assertMaintenanceRoutesEnabled();
     return this.checkoutAutomaticoService.handleCheckoutAutomatico();
   }
 
   @Get('diagnostico-checkout')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   async diagnosticarCheckout() {
     this.assertMaintenanceRoutesEnabled();
     return this.estadiasService.diagnosticarCheckoutPendente();
   }
 
   @Post('forcar-checkout/:pessoa_id')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   async forcarCheckoutPorPessoa(@Param('pessoa_id') pessoa_id: string) {
     this.assertMaintenanceRoutesEnabled();
     // Força checkout usando o método testado do service
@@ -81,25 +88,27 @@ export class EstadiasController {
   }
 
   @Patch(':id/prorrogar')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async prorrogacao(@Param('id') id: string, @Body() createProrrogacaoDto: CreateProrrogacaoDto) {
     return this.estadiasService.prorrogacao(id, createProrrogacaoDto.dias, createProrrogacaoDto.motivo);
   }
 
   @Post('trocar-cama')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   async trocarCama(@Body() { estadia_origem_id, cama_destino_id }: TrocarCamaDto) {
     return this.estadiasService.trocarCama(estadia_origem_id, cama_destino_id);
   }
 
   @Post('corrigir-duplicacoes')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   async corrigirDuplicacoes() {
     this.assertMaintenanceRoutesEnabled();
     return this.estadiasService.corrigirDuplicacoes();
   }
 
   @Get('diagnosticar-camas')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   async diagnosticarCamas() {
     this.assertMaintenanceRoutesEnabled();
     return this.estadiasService.diagnosticarCamas();

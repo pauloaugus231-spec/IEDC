@@ -2,11 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { EscalaService } from './escala.service';
 import { Escala } from '../../entities/escala.entity';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
+import { ALBERGUE_COORDINATION_ROLES } from '../../auth/albergue-roles';
 import { EscalaDto, GerarEscalaAutomaticaDto, GerarEscalaDto, UpdateEscalaDto } from './dto/escala.dto';
 
 @Controller('escala')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE)
+@Roles(...ALBERGUE_COORDINATION_ROLES)
 export class EscalaController {
   constructor(private readonly escalaService: EscalaService) {}
 

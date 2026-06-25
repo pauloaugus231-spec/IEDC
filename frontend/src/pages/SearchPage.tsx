@@ -11,7 +11,9 @@ import CadastroPessoaModal from '../components/CadastroPessoaModal';
 import CheckinModal from '../components/CheckinModal';
 import { MetricCard, MetricGrid, PageHeader } from '../components/DesignSystem';
 import FotoPreview from '../components/FotoPreview';
+import { useAuth } from '../context/AuthContext';
 import { getNomePrincipal } from '../utils';
+import { ALBERGUE_OPERATION_ROLES } from '../utils/alberguePermissions';
 import '../styles/institutional.css';
 
 type StatusFilter = 'todos' | 'hospedados' | 'aprovados' | 'liberados' | 'inativos';
@@ -77,6 +79,8 @@ const SearchPage = () => {
   const [pessoaParaCheckin, setPessoaParaCheckin] = useState<PessoaApi | null>(null);
   const [cadastroOpen, setCadastroOpen] = useState(false);
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const canOperate = Boolean(currentUser && ALBERGUE_OPERATION_ROLES.includes(currentUser.role));
   const statusQuery = statusFilter === 'hospedados'
     ? 'ativa'
     : statusFilter === 'aprovados'
@@ -124,6 +128,7 @@ const SearchPage = () => {
   };
 
   const handleCheckout = async (pessoa: PessoaApi) => {
+    if (!canOperate) return;
     if (!window.confirm(`Realizar saída de ${getNomePrincipal(pessoa)}?`)) return;
 
     try {
@@ -168,9 +173,11 @@ const SearchPage = () => {
           <button className="report-button secondary" onClick={() => setReload((current) => current + 1)} type="button">
             Atualizar
           </button>
-          <button className="report-button" onClick={() => setCadastroOpen(true)} type="button">
-            Novo cadastro
-          </button>
+          {canOperate && (
+            <button className="report-button" onClick={() => setCadastroOpen(true)} type="button">
+              Novo cadastro
+            </button>
+          )}
           </>
         )}
       />
@@ -250,13 +257,13 @@ const SearchPage = () => {
 
           return (
             <article className="people-card" key={pessoa.id}>
-              <button className="people-photo-button" onClick={() => navigate(`/pessoa/${pessoa.id}`)} type="button">
+              <button className="people-photo-button" onClick={() => navigate(`/albergue/pessoa/${pessoa.id}`)} type="button">
                 <FotoPreview fotoUrl={pessoa.foto_url} size={58} altText={getNomePrincipal(pessoa)} />
               </button>
 
               <div className="people-card-main">
                 <div className="people-card-title">
-                  <button onClick={() => navigate(`/pessoa/${pessoa.id}`)} type="button">
+                  <button onClick={() => navigate(`/albergue/pessoa/${pessoa.id}`)} type="button">
                     {getNomePrincipal(pessoa)}
                   </button>
                   <StatusBadge pessoa={pessoa} />
@@ -277,15 +284,15 @@ const SearchPage = () => {
               </div>
 
               <div className="people-card-actions">
-                <button className="report-button secondary" onClick={() => navigate(`/pessoa/${pessoa.id}`)} type="button">
+                <button className="report-button secondary" onClick={() => navigate(`/albergue/pessoa/${pessoa.id}`)} type="button">
                   Abrir
                 </button>
-                {canCheckin(pessoa) && (
+                {canOperate && canCheckin(pessoa) && (
                   <button className="report-button" onClick={() => setPessoaParaCheckin(pessoa)} type="button">
                     Entrada
                   </button>
                 )}
-                {pessoa.status_cadastro === 'ativa' && (
+                {canOperate && pessoa.status_cadastro === 'ativa' && (
                   <button className="people-danger-button" onClick={() => handleCheckout(pessoa)} type="button">
                     Saída
                   </button>
@@ -313,7 +320,7 @@ const SearchPage = () => {
         </section>
       )}
 
-      {pessoaParaCheckin && (
+      {canOperate && pessoaParaCheckin && (
         <CheckinModal
           onCheckinSuccess={handleCheckinSuccess}
           onClose={() => setPessoaParaCheckin(null)}
@@ -321,14 +328,16 @@ const SearchPage = () => {
         />
       )}
 
-      <CadastroPessoaModal
-        onClose={() => setCadastroOpen(false)}
-        onSuccess={() => {
-          window.showToast?.('Pessoa cadastrada com sucesso.', 'success');
-          setReload((current) => current + 1);
-        }}
-        open={cadastroOpen}
-      />
+      {canOperate && (
+        <CadastroPessoaModal
+          onClose={() => setCadastroOpen(false)}
+          onSuccess={() => {
+            window.showToast?.('Pessoa cadastrada com sucesso.', 'success');
+            setReload((current) => current + 1);
+          }}
+          open={cadastroOpen}
+        />
+      )}
     </main>
   );
 };

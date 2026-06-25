@@ -87,11 +87,15 @@ export function clampScore(value: number) {
 export function getAllowedExecutiveScopes(actor: AuthUser | undefined): RelatorioExecutivoEscopo[] {
   if (!actor) return [];
 
-  if (actor.role === UsuarioRole.GESTORA || actor.role === UsuarioRole.EQUIPE_TECNICA) {
+  if (actor.role === UsuarioRole.GESTORA) {
     return ['institucional', 'albergue', 'creche', 'comercial'];
   }
 
-  if (actor.role === UsuarioRole.COORDENADOR_ALBERGUE) {
+  if (
+    actor.role === UsuarioRole.COORDENADOR_ALBERGUE ||
+    actor.role === UsuarioRole.AUXILIAR_COORDENACAO_ALBERGUE ||
+    actor.role === UsuarioRole.DIRETOR_ALBERGUE
+  ) {
     return ['albergue'];
   }
 

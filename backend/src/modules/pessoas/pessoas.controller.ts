@@ -18,14 +18,18 @@ import { CreatePessoaDto } from './dto/create-pessoa.dto';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { Roles } from '../../auth/roles.decorator';
-import { UsuarioRole } from '../../entities/usuario.entity';
 import { FILE_LIMITS } from '../../common/upload/file-validation';
 import { UpdatePresencaDto } from './dto/update-presenca.dto';
 import { LiberarAntecipadamenteDto } from './dto/liberar-antecipadamente.dto';
+import {
+  ALBERGUE_COORDINATION_ROLES,
+  ALBERGUE_OPERATION_ROLES,
+  ALBERGUE_OPERATIONAL_READ_ROLES,
+} from '../../auth/albergue-roles';
 
 @ApiTags('pessoas')
 @Controller('pessoas')
-@Roles(UsuarioRole.GESTORA, UsuarioRole.EQUIPE_TECNICA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EDUCADOR_ALBERGUE)
+@Roles(...ALBERGUE_OPERATIONAL_READ_ROLES)
 export class PessoasController {
   constructor(private readonly pessoasService: PessoasService) {}
 
@@ -40,6 +44,7 @@ export class PessoasController {
   }
 
   @Post()
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @ApiOperation({ summary: 'Criar nova pessoa' })
   @ApiResponse({ status: 201, description: 'Pessoa criada com sucesso', type: Pessoa })
   create(@Body() createPessoaDto: CreatePessoaDto): Promise<Pessoa> {
@@ -105,6 +110,7 @@ export class PessoasController {
   }
 
   @Patch(':id')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @ApiOperation({ summary: 'Atualizar dados da pessoa' })
   @ApiResponse({ status: 200, description: 'Pessoa atualizada com sucesso', type: Pessoa })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
@@ -116,7 +122,7 @@ export class PessoasController {
   }
 
   @Delete(':id')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   @ApiOperation({ summary: 'Excluir pessoa (soft delete)' })
   @ApiResponse({ status: 200, description: 'Pessoa excluída com sucesso' })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
@@ -125,6 +131,7 @@ export class PessoasController {
   }
 
   @Patch(':id/presenca')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @ApiOperation({ summary: 'Atualizar presença da pessoa' })
   @ApiResponse({ status: 200, description: 'Presença atualizada com sucesso' })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
@@ -136,6 +143,7 @@ export class PessoasController {
   }
 
   @Post(':id/liberar-antecipadamente')
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   @ApiOperation({ summary: 'Liberar pessoa antecipadamente (libera bloqueio também)' })
   @ApiResponse({ status: 200, description: 'Pessoa liberada antecipadamente com sucesso' })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
@@ -147,6 +155,7 @@ export class PessoasController {
   }
 
   @Post(':id/foto')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
   @UseInterceptors(FileInterceptor('foto', { limits: { fileSize: FILE_LIMITS.pessoaFoto } }))
   @ApiOperation({ summary: 'Upload de foto da pessoa' })
   @ApiResponse({ status: 200, description: 'Foto enviada com sucesso' })
@@ -159,7 +168,7 @@ export class PessoasController {
   }
 
   @Delete(':id/foto')
-  @Roles(UsuarioRole.GESTORA, UsuarioRole.COORDENADOR_ALBERGUE, UsuarioRole.EQUIPE_TECNICA)
+  @Roles(...ALBERGUE_COORDINATION_ROLES)
   @ApiOperation({ summary: 'Remover foto da pessoa' })
   @ApiResponse({ status: 200, description: 'Foto removida com sucesso' })
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
