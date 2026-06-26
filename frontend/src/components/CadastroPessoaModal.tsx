@@ -11,7 +11,7 @@ interface Props {
 const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   // --- Estado Unificado do Formulário ---
   const [form, setForm] = useState({
-    nome: '', nomeSocial: '', cpf: '', rg: '', dataNascimento: '',
+    nome: '', nomeSocial: '', cpf: '', rg: '', nis: '', dataNascimento: '',
     sexo: '', genero: '', cor: '', raca: '', sexualidade: '',
     telefone: '', endereco: '', cep: '', cidade: '', uf: '', naturalidade: '',
     nomeMae: '', nomePai: '', contatoEmergencia: '', telefoneEmergencia: '',
@@ -42,6 +42,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
       }
       return nums.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
     },
+    nis: (value: string) => value.replace(/\D/g, '').substring(0, 11),
     cep: (value: string) => {
       const nums = value.replace(/\D/g, '').substring(0, 8);
       return nums.replace(/(\d{5})(\d)/, '$1-$2');
@@ -54,6 +55,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
     let finalValue = value;
 
     if (name === 'cpf') finalValue = masks.cpf(value);
+    if (name === 'nis') finalValue = masks.nis(value);
     if (name === 'telefone' || name === 'telefoneEmergencia') finalValue = masks.phone(value);
     if (name === 'cep') finalValue = masks.cep(value);
 
@@ -122,7 +124,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   // --- Progresso ---
   const stepProgress = useMemo(() => {
     const fields = {
-      1: ['nome', 'cpf', 'sexo', 'genero', 'dataNascimento', 'cor'],
+      1: ['nome', 'cpf', 'nis', 'sexo', 'genero', 'dataNascimento', 'cor'],
       2: ['cep', 'endereco', 'cidade', 'uf', 'telefone', 'nomeMae', 'contatoEmergencia'],
       3: ['medicamentos', 'condicoesCronicas', 'alergias', 'observacoes']
     };
@@ -145,6 +147,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
         nome_social: form.nomeSocial || undefined,
         cpf: form.cpf,
         rg: form.rg || undefined,
+        nis: form.nis || undefined,
         data_nascimento: form.dataNascimento || undefined,
         sexo: form.sexo,
         genero: form.genero || undefined,
@@ -190,7 +193,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
 
       // Reset form
       setForm({
-        nome: '', nomeSocial: '', cpf: '', rg: '', dataNascimento: '',
+        nome: '', nomeSocial: '', cpf: '', rg: '', nis: '', dataNascimento: '',
         sexo: '', genero: '', cor: '', raca: '', sexualidade: '',
         telefone: '', endereco: '', cep: '', cidade: '', uf: '', naturalidade: '',
         nomeMae: '', nomePai: '', contatoEmergencia: '', telefoneEmergencia: '',
@@ -271,6 +274,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
             <div className="cadastro-aside-person">
               <strong>{getNomeExibicao()}</strong>
               <span>{form.cpf || 'CPF não informado'}</span>
+              {form.nis && <span>NIS: {form.nis}</span>}
               {form.nomeSocial?.trim() && <em>Nome social informado</em>}
             </div>
 
@@ -344,6 +348,18 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                         placeholder="000.000.000-00"
                       />
                       {errors.cpf && <span className="error-text">{errors.cpf}</span>}
+                    </div>
+
+                    <div className="form-group">
+                      <label>NIS <span className="optional-badge">Opcional</span></label>
+                      <input
+                        name="nis"
+                        value={form.nis}
+                        onChange={handleChange}
+                        placeholder="00000000000"
+                        maxLength={11}
+                      />
+                      <span className="field-hint">11 dígitos, sem formatação.</span>
                     </div>
 
                     <div className="form-group">
@@ -567,6 +583,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                     <div className="summary-grid">
                       <div><strong>Nome:</strong> {getNomeExibicao()}</div>
                       <div><strong>CPF:</strong> {form.cpf || '-'}</div>
+                      <div><strong>NIS:</strong> {form.nis || '-'}</div>
                       <div><strong>Telefone:</strong> {form.telefone || '-'}</div>
                       <div><strong>Cidade:</strong> {form.cidade || '-'}</div>
                     </div>
