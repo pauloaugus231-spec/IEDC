@@ -209,7 +209,7 @@ export class QualidadeDadosService {
   }
 
   private async buildAlbergueItems(): Promise<QualidadeItem[]> {
-    const [cadastro, estadias, presencas] = await Promise.all([
+    const [cadastro, estadias, presencas, triagem, historico] = await Promise.all([
       this.countWithSamples(`
         WITH pendencias AS (
           SELECT DISTINCT
@@ -268,6 +268,16 @@ export class QualidadeDadosService {
           JOIN estadias e ON e.pessoa_id = p.id AND e.status = 'ativa'
           WHERE p.ativo = true
             AND p.presente = false
+            AND NOT EXISTS (
+              SELECT 1
+              FROM triagem_fechamentos f
+              WHERE f.data_ref = (
+                CASE
+                  WHEN EXTRACT(HOUR FROM CURRENT_TIMESTAMP) < 7 THEN CURRENT_DATE - INTERVAL '1 day'
+                  ELSE CURRENT_DATE
+                END
+              )::date
+            )
         )
         SELECT
           (SELECT COUNT(*)::int FROM pendencias) AS total,
@@ -280,12 +290,74 @@ export class QualidadeDadosService {
           ) AS samples
         FROM (SELECT * FROM pendencias ORDER BY nome LIMIT 5) s
       `, [], this.albergueDataSource),
+      this.countWithSamples(`
+        WITH plantao AS (
+          SELECT (
+            CASE
+              WHEN EXTRACT(HOUR FROM CURRENT_TIMESTAMP) < 7 THEN CURRENT_DATE - INTERVAL '1 day'
+              ELSE CURRENT_DATE
+            END
+          )::date AS data_ref
+        ),
+        pendencias AS (
+          SELECT
+            p.data_ref::text AS id,
+            to_char(p.data_ref, 'DD/MM/YYYY') AS label
+          FROM plantao p
+          WHERE EXISTS (SELECT 1 FROM estadias WHERE status = 'ativa')
+            AND NOT EXISTS (
+              SELECT 1 FROM triagem_fechamentos f WHERE f.data_ref = p.data_ref
+            )
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM pendencias) AS total,
+          COALESCE(
+            json_agg(
+              json_build_object('id', id, 'label', 'Plantão ' || label, 'detail', 'Triagem ainda sem fechamento oficial', 'path', '/albergue/presencas')
+            ) FILTER (WHERE id IS NOT NULL),
+            '[]'::json
+          ) AS samples
+        FROM pendencias
+      `, [], this.albergueDataSource),
+      this.countWithSamples(`
+        WITH sobreposicoes AS (
+          SELECT DISTINCT e1.pessoa_id::text AS id, p.nome
+          FROM estadias e1
+          JOIN estadias e2 ON e1.pessoa_id = e2.pessoa_id AND e1.id < e2.id
+          JOIN pessoas p ON p.id = e1.pessoa_id
+          WHERE daterange(e1.data_checkin::date, COALESCE(e1.data_checkout::date, CURRENT_DATE), '[]')
+             && daterange(e2.data_checkin::date, COALESCE(e2.data_checkout::date, CURRENT_DATE), '[]')
+        ),
+        snapshots AS (
+          SELECT data_ref::text AS id, to_char(data_ref, 'DD/MM/YYYY') AS nome
+          FROM ocupacao_diaria
+          WHERE inconsistente = true
+            AND data_ref >= CURRENT_DATE - INTERVAL '30 days'
+        ),
+        pendencias AS (
+          SELECT id, nome, 'Estadia sobreposta no histórico' AS detalhe FROM sobreposicoes
+          UNION ALL
+          SELECT id, 'Snapshot ' || nome, 'Ocupação diária marcada como inconsistente' FROM snapshots
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM pendencias) AS total,
+          COALESCE(
+            json_agg(
+              json_build_object('id', id, 'label', nome, 'detail', detalhe, 'path', '/albergue/relatorios')
+              ORDER BY nome
+            ) FILTER (WHERE id IS NOT NULL),
+            '[]'::json
+          ) AS samples
+        FROM (SELECT * FROM pendencias ORDER BY nome LIMIT 5) s
+      `, [], this.albergueDataSource),
     ]);
 
     return [
       this.makeItem('albergue-cadastros-incompletos', 'albergue', 'Cadastros ativos incompletos', 'Pessoas em estadia ativa com NIS, nascimento, endereço ou contato de emergência pendente.', 'critico', cadastro.total, '/albergue/buscar', 'Revisar cadastros', cadastro.samples),
       this.makeItem('albergue-estadias-vencidas', 'albergue', 'Estadias vencidas', 'Estadias ativas com data limite ultrapassada precisam de decisão operacional.', 'critico', estadias.total, '/albergue/buscar', 'Conferir estadias', estadias.samples),
       this.makeItem('albergue-presencas-pendentes', 'albergue', 'Presenças pendentes', 'Pessoas com estadia ativa ainda sem presença marcada no plantão.', 'atencao', presencas.total, '/albergue/presencas', 'Abrir presença', presencas.samples),
+      this.makeItem('albergue-triagem-sem-fechamento', 'albergue', 'Triagem sem fechamento oficial', 'Plantão atual ainda não possui fechamento registrado no servidor.', 'atencao', triagem.total, '/albergue/presencas', 'Encerrar triagem', triagem.samples),
+      this.makeItem('albergue-historico-inconsistente', 'albergue', 'Histórico de ocupação inconsistente', 'Sobreposições ou snapshots acima da capacidade precisam de revisão antes de relatórios históricos.', 'informativo', historico.total, '/albergue/relatorios', 'Revisar histórico', historico.samples),
     ];
   }
 

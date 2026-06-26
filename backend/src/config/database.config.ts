@@ -5,6 +5,7 @@ import { Cama } from '../entities/cama.entity';
 import { Colaborador } from '../entities/colaborador.entity';
 import { Escala } from '../entities/escala.entity';
 import { Estadia } from '../entities/estadia.entity';
+import { OcupacaoDiaria } from '../entities/ocupacao-diaria.entity';
 import { ObservabilityEvent } from '../entities/observability-event.entity';
 import { Ocorrencia } from '../entities/ocorrencia.entity';
 import { Pessoa } from '../entities/pessoa.entity';
@@ -12,6 +13,7 @@ import { Plantao } from '../entities/plantao.entity';
 import { RegraEscala } from '../entities/regra-escala.entity';
 import { Solicitacao } from '../entities/solicitacao.entity';
 import { Turno } from '../entities/turno.entity';
+import { TriagemFechamento } from '../entities/triagem-fechamento.entity';
 import { Usuario } from '../entities/usuario.entity';
 
 export const CORE_DATABASE_CONNECTION = 'core';
@@ -51,6 +53,8 @@ export const albergueDatabaseConfig: TypeOrmModuleOptions = {
     Ocorrencia,
     Solicitacao,
     Cama,
+    OcupacaoDiaria,
+    TriagemFechamento,
     Escala,
     Colaborador,
     Turno,

@@ -7,10 +7,13 @@ import { Estadia } from '../../entities/estadia.entity';
 import { Ocorrencia } from '../../entities/ocorrencia.entity';
 import { Cama } from '../../entities/cama.entity';
 import { Bloqueio } from '../../entities/bloqueio.entity';
+import { TriagemFechamento } from '../../entities/triagem-fechamento.entity';
+import { DashboardModule } from '../dashboard/dashboard.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Pessoa, Estadia, Ocorrencia, Cama, Bloqueio]),
+    TypeOrmModule.forFeature([Pessoa, Estadia, Ocorrencia, Cama, Bloqueio, TriagemFechamento]),
+    DashboardModule,
   ],
   controllers: [TriagemController],
   providers: [TriagemService],

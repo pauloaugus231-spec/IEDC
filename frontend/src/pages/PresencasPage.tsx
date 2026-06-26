@@ -29,6 +29,17 @@ interface NotificationStatus {
   emailError?: string;
 }
 
+interface TriagemStatusResponse {
+  data_ref: string;
+  encerrada: boolean;
+  fechamento?: {
+    total_presentes: number;
+    total_ausentes: number;
+    por_quarto: Record<string, number>;
+    fechada_em: string;
+  } | null;
+}
+
 const QUARTOS: Quarto[] = ["Masculino", "Feminino", "Idosos", "LGBT+"];
 
 function showOperationalReceipt(message: string, type: "success" | "info" = "success") {
@@ -52,6 +63,30 @@ const PresencasPage: React.FC = () => {
     email: "pending"
   });
 
+  const fetchTriagemStatus = async (plantaoAtual = getOperationalPlantaoKey()) => {
+    try {
+      const status = await apiFetch<TriagemStatusResponse>(`/api/triagem/status?data_ref=${plantaoAtual}`);
+      if (status.encerrada) {
+        setTriagemEncerrada(true);
+        localStorage.setItem('triagemEncerrada', 'true');
+        localStorage.setItem('lastTriagemDate', status.data_ref);
+        localStorage.setItem('lastTriagemClosedAt', status.fechamento?.fechada_em || new Date().toISOString());
+        if (!localStorage.getItem('censoData') && status.fechamento) {
+          localStorage.setItem('censoData', JSON.stringify({
+            total: status.fechamento.total_presentes,
+            porQuarto: status.fechamento.por_quarto,
+            ausentes: status.fechamento.total_ausentes,
+            data: new Date(`${status.data_ref}T12:00:00`).toLocaleDateString('pt-BR'),
+          }));
+        }
+      } else {
+        setTriagemEncerrada(false);
+      }
+    } catch (error) {
+      console.error('Erro ao consultar status da triagem:', error);
+    }
+  };
+
   // Verificar se triagem já foi encerrada hoje E monitorar mudança de dia
   useEffect(() => {
     const checkTriagemStatus = () => {
@@ -73,6 +108,8 @@ const PresencasPage: React.FC = () => {
       else {
         setTriagemEncerrada(false);
       }
+
+      fetchTriagemStatus(plantaoAtual);
     };
 
     // Verificar imediatamente ao montar
@@ -221,7 +258,7 @@ const PresencasPage: React.FC = () => {
       try {
         await apiFetch('/api/triagem/encerrar', {
           method: 'POST',
-          body: JSON.stringify({ ausentes: ausentesIds }),
+          body: JSON.stringify({ ausentes: ausentesIds, data_ref: plantaoAtual }),
           headers: { 'Content-Type': 'application/json' },
         });
       } catch (e) {
@@ -309,6 +346,7 @@ const PresencasPage: React.FC = () => {
     
     setIsClosing(false);
     setTriagemEncerrada(true);
+    await fetchTriagemStatus(plantaoAtual);
 
     // Salvar estado da triagem encerrada no localStorage
     localStorage.setItem('triagemEncerrada', 'true');

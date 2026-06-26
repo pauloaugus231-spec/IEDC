@@ -8,6 +8,9 @@ import { Cama, StatusCama } from '../../entities/cama.entity';
 import { Bloqueio, TipoBloqueio } from '../../entities/bloqueio.entity';
 import { Resend } from 'resend';
 import { getNomePrincipal } from '../../common/utils/pessoa-nome.util';
+import { TriagemFechamento } from '../../entities/triagem-fechamento.entity';
+import { DashboardService } from '../dashboard/dashboard.service';
+import { AuthUser } from '../../auth/auth.types';
 
 export interface NovoCadastroTriagem {
   nome: string;
@@ -18,6 +21,32 @@ export interface NovoCadastroTriagem {
   genero: string;
   lgbt: boolean;
   nome_social: string | null;
+}
+
+const PLANTAO_RESET_HOUR = 7;
+
+function padDatePart(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+function getLocalDateKey(date = new Date()): string {
+  return [
+    date.getFullYear(),
+    padDatePart(date.getMonth() + 1),
+    padDatePart(date.getDate()),
+  ].join('-');
+}
+
+function getOperationalPlantaoKey(date = new Date()): string {
+  const operationalDate = new Date(date);
+  if (operationalDate.getHours() < PLANTAO_RESET_HOUR) {
+    operationalDate.setDate(operationalDate.getDate() - 1);
+  }
+  return getLocalDateKey(operationalDate);
+}
+
+function dateFromKey(value: string): Date {
+  return new Date(`${value}T00:00:00`);
 }
 
 @Injectable()
@@ -35,9 +64,39 @@ export class TriagemService {
     private readonly camaRepository: Repository<Cama>,
     @InjectRepository(Bloqueio)
     private readonly bloqueioRepository: Repository<Bloqueio>,
+    @InjectRepository(TriagemFechamento)
+    private readonly triagemFechamentoRepository: Repository<TriagemFechamento>,
+    private readonly dashboardService: DashboardService,
   ) {}
 
-  async encerrar(ausentesIds: string[]) {
+  async getStatus(dataRef?: string) {
+    const plantao = dataRef || getOperationalPlantaoKey();
+    const fechamento = await this.triagemFechamentoRepository.findOne({
+      where: { data_ref: dateFromKey(plantao) },
+    });
+
+    return {
+      data_ref: plantao,
+      encerrada: Boolean(fechamento),
+      fechamento,
+    };
+  }
+
+  async encerrar(ausentesIds: string[], actor?: AuthUser, dataRef?: string, observacoes?: string) {
+    const plantao = dataRef || getOperationalPlantaoKey();
+    const fechamentoExistente = await this.triagemFechamentoRepository.findOne({
+      where: { data_ref: dateFromKey(plantao) },
+    });
+
+    if (fechamentoExistente) {
+      return {
+        success: true,
+        alreadyClosed: true,
+        message: 'Triagem já encerrada para este plantão.',
+        fechamento: fechamentoExistente,
+      };
+    }
+
     const resultados = [];
 
     for (const pessoaId of ausentesIds) {
@@ -127,12 +186,60 @@ export class TriagemService {
     const sucessos = resultados.filter(r => r.status === 'success').length;
     const erros = resultados.filter(r => r.status === 'error').length;
 
+    const fechamento = await this.registrarFechamentoOficial({
+      dataRef: plantao,
+      ausentesIds,
+      resultados,
+      actor,
+      observacoes,
+    });
+
+    const snapshot = await this.dashboardService.gerarSnapshotDiario(plantao, 'triagem');
+
     return {
       success: erros === 0,
       message: `Processamento concluído: ${sucessos} checkout(s) efetuado(s), ${erros} erro(s)`,
       ausentes: ausentesIds.length,
-      detalhes: resultados
+      detalhes: resultados,
+      fechamento,
+      snapshot,
     };
+  }
+
+  private async registrarFechamentoOficial(input: {
+    dataRef: string;
+    ausentesIds: string[];
+    resultados: Array<Record<string, unknown>>;
+    actor?: AuthUser;
+    observacoes?: string;
+  }) {
+    const rows = await this.estadiaRepository.query<Array<{ casa: string; total: number | string }>>(`
+      SELECT c.casa, COUNT(e.id)::int AS total
+      FROM estadias e
+      JOIN camas c ON c.id = e.cama_id
+      WHERE e.status = 'ativa'
+      GROUP BY c.casa
+    `);
+    const porQuarto = rows.reduce<Record<string, number>>((acc, row) => {
+      acc[row.casa] = Number(row.total || 0);
+      return acc;
+    }, {});
+    const totalPresentes = Object.values(porQuarto).reduce((sum, value) => sum + value, 0);
+    const fechamento = this.triagemFechamentoRepository.create({
+      data_ref: dateFromKey(input.dataRef),
+      fechada_em: new Date(),
+      fechada_por: input.actor?.displayName || input.actor?.login || 'sistema',
+      total_presentes: totalPresentes,
+      total_ausentes: input.ausentesIds.length,
+      por_quarto: porQuarto,
+      ausentes_ids: input.ausentesIds,
+      resultado_processamento: {
+        detalhes: input.resultados,
+      },
+      observacoes: input.observacoes || null,
+    });
+
+    return this.triagemFechamentoRepository.save(fechamento);
   }
 
   async notificarEncerramento(dadosRelatorio: {

@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, Query } from '@nestjs/common';
 import { TriagemService } from './triagem.service';
 import { Roles } from '../../auth/roles.decorator';
 import { ALBERGUE_OPERATION_ROLES, ALBERGUE_OPERATIONAL_READ_ROLES } from '../../auth/albergue-roles';
+import { AuthRequest } from '../../auth/auth.types';
 
 @Controller('triagem')
 @Roles(...ALBERGUE_OPERATIONAL_READ_ROLES)
@@ -10,8 +11,16 @@ export class TriagemController {
 
   @Post('encerrar')
   @Roles(...ALBERGUE_OPERATION_ROLES)
-  async encerrar(@Body() body: { ausentes: string[] }) {
-    return this.triagemService.encerrar(body.ausentes);
+  async encerrar(
+    @Body() body: { ausentes: string[]; observacoes?: string; data_ref?: string },
+    @Req() request: AuthRequest,
+  ) {
+    return this.triagemService.encerrar(body.ausentes, request.user, body.data_ref, body.observacoes);
+  }
+
+  @Get('status')
+  async status(@Query('data_ref') dataRef?: string) {
+    return this.triagemService.getStatus(dataRef);
   }
 
   @Post('notificar-encerramento')

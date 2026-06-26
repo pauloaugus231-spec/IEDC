@@ -4,6 +4,17 @@ import { Repository, Between } from 'typeorm';
 import { Estadia, StatusEstadia } from '../../entities/estadia.entity';
 import { Cama } from '../../entities/cama.entity';
 import { Pessoa } from '../../entities/pessoa.entity';
+import { OcupacaoDiaria } from '../../entities/ocupacao-diaria.entity';
+
+function toDateKey(value = new Date()): string {
+  const date = value instanceof Date ? value : new Date(value);
+  const localDate = new Date(date);
+  return [
+    localDate.getFullYear(),
+    String(localDate.getMonth() + 1).padStart(2, '0'),
+    String(localDate.getDate()).padStart(2, '0'),
+  ].join('-');
+}
 
 @Injectable()
 export class DashboardService {
@@ -14,6 +25,8 @@ export class DashboardService {
     private readonly camaRepo: Repository<Cama>,
     @InjectRepository(Pessoa)
     private readonly pessoaRepo: Repository<Pessoa>,
+    @InjectRepository(OcupacaoDiaria)
+    private readonly ocupacaoDiariaRepo: Repository<OcupacaoDiaria>,
   ) {}
 
   async getOcupacao() {
@@ -85,11 +98,16 @@ export class DashboardService {
         )
         SELECT
           to_char(d.data, 'YYYY-MM-DD') AS data,
-          ocupacao.ocupadas::int AS ocupadas,
-          $2::int AS total,
-          COALESCE(ROUND(100.0 * ocupacao.ocupadas / NULLIF($2::int, 0))::int, 0) AS percentual,
-          ingressos.ingressos::int AS ingressos
+          COALESCE(snapshot.ocupadas, LEAST(ocupacao.ocupadas, $2::int))::int AS ocupadas,
+          COALESCE(snapshot.capacidade, $2::int)::int AS total,
+          COALESCE(
+            snapshot.percentual,
+            ROUND(100.0 * LEAST(ocupacao.ocupadas, $2::int) / NULLIF($2::int, 0))::int,
+            0
+          ) AS percentual,
+          COALESCE(snapshot.ingressos, ingressos.ingressos)::int AS ingressos
         FROM dias d
+        LEFT JOIN ocupacao_diaria snapshot ON snapshot.data_ref = d.data
         LEFT JOIN LATERAL (
           SELECT COUNT(e.id)::int AS ocupadas
           FROM estadias e
@@ -119,6 +137,100 @@ export class DashboardService {
       `,
       [dias, capacidade],
     );
+  }
+
+  async gerarSnapshotDiario(dataRef = toDateKey(), origem = 'triagem'): Promise<OcupacaoDiaria> {
+    const [capacidadeRows, ocupacaoRows, movimentoRows, duplicadasRows, historicoExcedidoRows] = await Promise.all([
+      this.camaRepo.query(`
+        SELECT casa, COUNT(*)::int AS total
+        FROM camas
+        GROUP BY casa
+      `),
+      this.estadiaRepo.query(`
+        SELECT c.casa, COUNT(e.id)::int AS total
+        FROM estadias e
+        JOIN camas c ON c.id = e.cama_id
+        WHERE e.status = 'ativa'
+        GROUP BY c.casa
+      `),
+      this.estadiaRepo.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE data_checkin::date = $1::date)::int AS ingressos,
+          COUNT(*) FILTER (WHERE data_checkout::date = $1::date)::int AS saidas
+        FROM estadias
+        WHERE status <> 'cancelada'
+      `, [dataRef]),
+      this.estadiaRepo.query(`
+        SELECT COUNT(*)::int AS total
+        FROM (
+          SELECT cama_id
+          FROM estadias
+          WHERE status = 'ativa' AND cama_id IS NOT NULL
+          GROUP BY cama_id
+          HAVING COUNT(*) > 1
+        ) duplicadas
+      `),
+      this.estadiaRepo.query(`
+        WITH ocupacao AS (
+          SELECT COUNT(e.id)::int AS total
+          FROM estadias e
+          WHERE e.data_checkin::date <= $1::date
+            AND e.status <> 'cancelada'
+            AND COALESCE(e.data_checkout::date, $1::date) >= $1::date
+        )
+        SELECT total FROM ocupacao
+      `, [dataRef]),
+    ]);
+
+    const capacidadePorCasa = this.rowsToCasaMap(capacidadeRows);
+    const ocupadasPorCasa = this.rowsToCasaMap(ocupacaoRows);
+    const capacidade = Object.values(capacidadePorCasa).reduce((sum, value) => sum + value, 0);
+    const ocupadas = Object.values(ocupadasPorCasa).reduce((sum, value) => sum + value, 0);
+    const movimento = movimentoRows[0] ?? {};
+    const duplicadas = Number(duplicadasRows[0]?.total || 0);
+    const historicoExcedido = Number(historicoExcedidoRows[0]?.total || 0);
+    const alertas: string[] = [];
+
+    if (ocupadas > capacidade) {
+      alertas.push('ocupacao_atual_acima_da_capacidade');
+    }
+
+    if (historicoExcedido > capacidade) {
+      alertas.push('historico_bruto_acima_da_capacidade');
+    }
+
+    if (duplicadas > 0) {
+      alertas.push('camas_com_mais_de_uma_estadia_ativa');
+    }
+
+    const percentual = capacidade > 0 ? Math.min(100, Math.round((ocupadas / capacidade) * 100)) : 0;
+    const snapshot = this.ocupacaoDiariaRepo.create({
+      data_ref: new Date(`${dataRef}T00:00:00`),
+      ocupadas: Math.min(ocupadas, capacidade || ocupadas),
+      capacidade,
+      percentual,
+      ingressos: Number(movimento.ingressos || 0),
+      saidas: Number(movimento.saidas || 0),
+      ocupadas_por_casa: ocupadasPorCasa,
+      capacidade_por_casa: capacidadePorCasa,
+      inconsistente: alertas.length > 0,
+      alertas,
+      origem,
+      gerado_em: new Date(),
+    });
+
+    await this.ocupacaoDiariaRepo.upsert(snapshot, ['data_ref']);
+    return this.ocupacaoDiariaRepo.findOneOrFail({ where: { data_ref: snapshot.data_ref } });
+  }
+
+  private rowsToCasaMap(rows: Array<Record<string, unknown>>): Record<string, number> {
+    return rows.reduce<Record<string, number>>((acc, row) => {
+      const casa = String(row.casa || '');
+      if (casa) {
+        acc[casa] = Number(row.total || 0);
+      }
+      return acc;
+    }, {});
   }
 
   async getRelatoriosSociais(inicio?: string, fim?: string) {
