@@ -20,7 +20,6 @@ function parsePositiveIntegerEnv(name: string, fallback: number): number {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Public()
   @Get('profiles')
   profiles() {
     return this.authService.listProfiles();

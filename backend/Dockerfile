@@ -19,7 +19,12 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/scripts ./scripts
 
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads \
+ && addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nestjs \
+ && chown -R nestjs:nodejs /app
+
+USER nestjs
 
 EXPOSE 3001
 

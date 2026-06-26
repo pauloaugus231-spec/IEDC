@@ -24,8 +24,8 @@ async function bootstrap() {
   );
 
   // Configuração para aumentar limites de payload para uploads.
-  app.useBodyParser('json', { limit: '10mb' });
-  app.useBodyParser('urlencoded', { limit: '10mb', extended: true });
+  app.useBodyParser('json', { limit: '1mb' });
+  app.useBodyParser('urlencoded', { limit: '5mb', extended: true });
 
   // Configuração do CORS. Em produção Docker, o frontend fala com a API via Nginx no mesmo host.
   app.enableCors({
