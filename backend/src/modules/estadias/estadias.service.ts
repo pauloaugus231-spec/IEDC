@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Estadia, StatusEstadia, MotivoSaida } from '../../entities/estadia.entity';
+import { Estadia, StatusEstadia, MotivoSaida, TipoEstadia } from '../../entities/estadia.entity';
 import { CreateCheckinDto } from './dto/create-checkin.dto';
 import { Cama, StatusCama, Casa } from '../../entities/cama.entity';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
@@ -88,7 +88,7 @@ export class EstadiasService {
   }
 
   async checkin(createCheckinDto: CreateCheckinDto): Promise<Estadia> {
-    const { pessoa_id, cama_id, funcionario } = createCheckinDto;
+    const { pessoa_id, cama_id, funcionario, tipo_estadia = TipoEstadia.COMPLETA } = createCheckinDto;
 
     // Usar transação para garantir a atomicidade da operação
     const estadia = await this.estadiaRepository.manager.transaction(async transactionalEntityManager => {
@@ -169,17 +169,21 @@ export class EstadiasService {
       // data_limite = 18/01 (última noite permitida)
       const now = new Date();
       const data_limite = new Date(now);
-      data_limite.setDate(now.getDate() + DIAS_ATE_LIMITE_NOVA); // 29 dias APÓS check-in = 30 noites totais
-      data_limite.setHours(0, 0, 0, 0); // Zerar horas para comparação precisa
+      // PERNOITE: data_limite = hoje (checkout automático na meia-noite seguinte)
+      // COMPLETA: data_limite = hoje + 29 dias = 30 noites totais
+      const diasAteLimite = tipo_estadia === TipoEstadia.PERNOITE ? 0 : DIAS_ATE_LIMITE_NOVA;
+      data_limite.setDate(now.getDate() + diasAteLimite);
+      data_limite.setHours(0, 0, 0, 0);
 
-      console.log(`📅 Check-in: ${now.toISOString()}`);
-      console.log(`📅 Data limite: ${data_limite.toISOString()} (30 noites)`);
+      console.log(`📅 Check-in: ${now.toISOString()} | Tipo: ${tipo_estadia}`);
+      console.log(`📅 Data limite: ${data_limite.toISOString()}`);
 
       const novaEstadia = this.estadiaRepository.create({
         pessoa_id,
         cama_id: cama.id,
         data_checkin: now,
         data_limite,
+        tipo_estadia,
         status: StatusEstadia.ATIVA,
         funcionario_checkin: funcionario || 'sistema',
       });

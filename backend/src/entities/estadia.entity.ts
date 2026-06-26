@@ -10,6 +10,11 @@ export enum StatusEstadia {
   CHECKOUT_AUTOMATICO = 'checkout_automatico', // Saída automática após 30 dias
 }
 
+export enum TipoEstadia {
+  COMPLETA = 'completa',  // Estadia padrão até 30 noites
+  PERNOITE = 'pernoite',  // Apenas 1 noite, saída no dia seguinte
+}
+
 export enum MotivoSaida {
   VOLUNTARIO = 'voluntario',           // Pessoa solicitou saída
   AUTOMATICO = 'automatico',           // Sistema encerrou após prazo
@@ -57,6 +62,9 @@ export class Estadia {
 
   @Column({ type: 'boolean', default: false })
   prorrogada!: boolean;
+
+  @Column({ type: 'enum', enum: TipoEstadia, default: TipoEstadia.COMPLETA })
+  tipo_estadia!: TipoEstadia;
 
   @Column({ type: 'int', default: 0 })
   dias_prorrogacao!: number;

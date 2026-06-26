@@ -98,6 +98,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
   const [selectedCasa, setSelectedCasa] = useState<Casa>(() => getRecommendedCasa(pessoa));
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tipoEstadia, setTipoEstadia] = useState<'completa' | 'pernoite'>('completa');
 
   const recommendedCasa = useMemo(() => getRecommendedCasa(pessoa), [pessoa]);
 
@@ -169,6 +170,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
         body: JSON.stringify({
           pessoa_id: pessoa.id,
           cama_id: selectedCamaId,
+          tipo_estadia: tipoEstadia,
         }),
       });
       onCheckinSuccess(novaEstadia);
@@ -209,6 +211,31 @@ const CheckinModal: React.FC<CheckinModalProps> = ({ pessoa, onClose, onCheckinS
               <small>
                 {selectedCasaResumo?.livres ?? 0} vagas livres de {selectedCasaResumo?.total ?? 0}
               </small>
+            </div>
+
+            <div className="checkin-tipo-select">
+              <span>Tipo de estadia</span>
+              <div className="checkin-tipo-options">
+                <button
+                  className={`checkin-tipo-btn${tipoEstadia === 'completa' ? ' active' : ''}`}
+                  onClick={() => setTipoEstadia('completa')}
+                  type="button"
+                >
+                  <strong>Completa</strong>
+                  <small>Até 30 noites</small>
+                </button>
+                <button
+                  className={`checkin-tipo-btn${tipoEstadia === 'pernoite' ? ' active' : ''}`}
+                  onClick={() => setTipoEstadia('pernoite')}
+                  type="button"
+                >
+                  <strong>Pernoite</strong>
+                  <small>1 noite apenas</small>
+                </button>
+              </div>
+              {tipoEstadia === 'pernoite' && (
+                <p className="checkin-tipo-hint">A cama será liberada automaticamente ao final da noite.</p>
+              )}
             </div>
 
             <div className={`checkin-selection ${selectedCama ? 'active' : ''}`}>

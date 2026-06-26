@@ -415,6 +415,89 @@
   opacity: 0.58;
 }
 
+
+/* ─── Tipo de estadia (sidebar) ─────────────────────────────────────── */
+.checkin-tipo-select {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dfe7f2;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 14px 16px;
+}
+
+.checkin-tipo-select > span {
+  color: #68778e;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.checkin-tipo-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.checkin-tipo-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid #d9e1ee;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #29354a;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 12px;
+  text-align: left;
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease;
+}
+
+.checkin-tipo-btn:hover {
+  border-color: #bfd2ee;
+  background: #eef5ff;
+}
+
+.checkin-tipo-btn.active {
+  border-color: #0041aa;
+  background: #eaf2ff;
+  box-shadow: inset 0 0 0 1px rgba(0, 65, 170, 0.15);
+}
+
+.checkin-tipo-btn strong {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.checkin-tipo-btn.active strong {
+  color: #0041aa;
+}
+
+.checkin-tipo-btn small {
+  color: #68778e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.checkin-tipo-btn.active small {
+  color: #3a68b0;
+}
+
+.checkin-tipo-hint {
+  margin: 0;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #7a5400;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 7px 10px;
+}
+
 @media (max-width: 980px) {
   .checkin-modal-container {
     max-height: 96vh;
