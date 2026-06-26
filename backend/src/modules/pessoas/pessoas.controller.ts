@@ -8,6 +8,7 @@ import {
   Param,
   Delete,
   Query,
+  Req,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
@@ -26,6 +27,7 @@ import {
   ALBERGUE_OPERATION_ROLES,
   ALBERGUE_OPERATIONAL_READ_ROLES,
 } from '../../auth/albergue-roles';
+import { AuthRequest } from '../../auth/auth.types';
 
 @ApiTags('pessoas')
 @Controller('pessoas')
@@ -149,9 +151,10 @@ export class PessoasController {
   @ApiResponse({ status: 404, description: 'Pessoa não encontrada' })
   async liberarAntecipadamente(
     @Param('id') id: string,
-    @Body() body: LiberarAntecipadamenteDto
+    @Body() body: LiberarAntecipadamenteDto,
+    @Req() req: AuthRequest,
   ): Promise<Pessoa> {
-    return this.pessoasService.liberarAntecipadamente(id, body?.funcionario);
+    return this.pessoasService.liberarAntecipadamente(id, req.user, body?.motivo);
   }
 
   @Post(':id/foto')

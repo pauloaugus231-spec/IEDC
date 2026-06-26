@@ -294,14 +294,13 @@ const PessoaProfilePage: React.FC = () => {
 
   const handleLiberarAntecipada = async () => {
     if (!canCoordinate) return;
-    const funcionario = window.prompt('Nome de quem está autorizando a liberação:');
-    if (!funcionario) return;
     if (!window.confirm('Confirmar liberação antecipada para nova entrada?')) return;
+    const motivo = window.prompt('Motivo da liberação antecipada (opcional):') ?? undefined;
 
     try {
       await apiFetch(`/api/pessoas/${id}/liberar-antecipadamente`, {
         method: 'POST',
-        body: JSON.stringify({ funcionario }),
+        body: JSON.stringify({ motivo: motivo || undefined }),
       });
       showToast('Pessoa liberada para nova entrada.');
       fetchData();

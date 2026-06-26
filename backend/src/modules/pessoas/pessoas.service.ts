@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { assertImageUpload, resolveImageExtension } from '../../common/upload/file-validation';
+import { AuthUser } from '../../auth/auth.types';
 
 @Injectable()
 export class PessoasService {
@@ -160,11 +161,13 @@ export class PessoasService {
     return qb.getMany();
   }
 
-  async liberarAntecipadamente(pessoa_id: string, funcionario?: string): Promise<Pessoa> {
+  async liberarAntecipadamente(pessoa_id: string, actor?: AuthUser, motivo?: string): Promise<Pessoa> {
     const pessoa = await this.pessoaRepository.findOne({ where: { id: pessoa_id } });
     if (!pessoa) {
       throw new NotFoundException(`Pessoa com ID ${pessoa_id} não encontrada.`);
     }
+
+    const responsavel = actor?.displayName || actor?.login || 'sistema';
 
     // Liberar pessoa
     pessoa.liberacao_antecipada = true;
@@ -176,26 +179,26 @@ export class PessoasService {
       where: { pessoa_id, ativo: true }
     });
 
-    const nomesResponsaveis = [];
     for (const bloqueio of bloqueiosAtivos) {
       bloqueio.ativo = false;
       bloqueio.liberacao_antecipada = true;
       bloqueio.data_liberacao_antecipada = new Date();
-      bloqueio.liberado_por = funcionario || 'sistema';
+      bloqueio.liberado_por = responsavel;
       await this.bloqueioRepository.save(bloqueio);
-
-      nomesResponsaveis.push(funcionario || 'sistema');
     }
 
     // Registrar ocorrência no histórico
+    const descricaoBase = `Liberação antecipada autorizada por ${responsavel}. ${bloqueiosAtivos.length} bloqueio(s) removido(s).`;
+    const descricao = motivo ? `${descricaoBase} Motivo: ${motivo}` : descricaoBase;
+
     const ocorrencia = this.ocorrenciaRepository.create({
       pessoa_id,
       tipo: TipoOcorrencia.OUTROS,
       severidade: SeveridadeOcorrencia.BAIXA,
-      titulo: 'Liberação Antecipada de Bloqueio',
-      descricao: `Pessoa liberada antecipadamente por ${funcionario || 'sistema'}. ${bloqueiosAtivos.length} bloqueio(s) foram removidos.`,
+      titulo: 'Liberação Antecipada',
+      descricao,
       data_ocorrencia: new Date(),
-      criado_por: funcionario || 'sistema',
+      criado_por: responsavel,
     });
 
     await this.ocorrenciaRepository.save(ocorrencia);
