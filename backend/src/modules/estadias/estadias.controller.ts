@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Body, Get, UsePipes, ValidationPipe, Patch, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Param, Body, Get, UsePipes, ValidationPipe, Patch, NotFoundException, Req } from '@nestjs/common';
 import { EstadiasService } from './estadias.service';
 import { CheckoutAutomaticoService } from './checkout-automatico.service';
 import { CreateCheckinDto } from './dto/create-checkin.dto';
@@ -13,6 +13,7 @@ import {
   ALBERGUE_OPERATION_ROLES,
   ALBERGUE_OPERATIONAL_READ_ROLES,
 } from '../../auth/albergue-roles';
+import { AuthRequest } from '../../auth/auth.types';
 
 @Controller('estadias')
 @Roles(...ALBERGUE_OPERATIONAL_READ_ROLES)
@@ -32,8 +33,11 @@ export class EstadiasController {
   @Post('checkout')
   @Roles(...ALBERGUE_OPERATION_ROLES)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async checkout(@Body() createCheckoutDto: CreateCheckoutDto) {
-    const { pessoa_id, funcionario, observacoes_checkout, motivo_saida } = createCheckoutDto;
+  async checkout(@Body() createCheckoutDto: CreateCheckoutDto, @Req() req: AuthRequest) {
+    const { pessoa_id, observacoes_checkout, motivo_saida } = createCheckoutDto;
+    const funcionario = req.user
+      ? (req.user.displayName || req.user.login)
+      : 'sistema';
     return this.estadiasService.checkout(pessoa_id, funcionario, observacoes_checkout, motivo_saida as unknown as MotivoSaida);
   }
 

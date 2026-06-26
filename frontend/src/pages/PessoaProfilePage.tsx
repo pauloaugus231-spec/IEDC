@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch, createOcorrencia, getEstadiasByPessoaId, getOcorrenciasByPessoaId, getPessoaById, updatePessoa } from '../api';
 import CheckinModal from '../components/CheckinModal';
+import CheckoutModal from '../components/CheckoutModal';
 import EditarPessoaModal from '../components/EditarPessoaModal';
 import FotoPreview from '../components/FotoPreview';
 import { useAuth } from '../context/AuthContext';
@@ -166,6 +167,7 @@ const PessoaProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('geral');
   const [showEditar, setShowEditar] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
   const [showOcorrenciaModal, setShowOcorrenciaModal] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -309,24 +311,9 @@ const PessoaProfilePage: React.FC = () => {
     }
   };
 
-  const handleCheckout = async () => {
-    if (!canOperate) return;
-    if (!pessoa) return;
-    if (!window.confirm(`Registrar saída de ${getNomePrincipal(pessoa)}?`)) return;
-
-    try {
-      await apiFetch('/api/estadias/checkout', {
-        method: 'POST',
-        body: JSON.stringify({
-          pessoa_id: pessoa.id,
-          observacoes_checkout: 'Saída registrada pelo perfil da pessoa.',
-        }),
-      });
-      showToast('Saída registrada.');
-      fetchData();
-    } catch (error: any) {
-      showToast(error?.message || 'Erro ao registrar saída.', 'error');
-    }
+  const handleCheckout = () => {
+    if (!canOperate || !pessoa) return;
+    setShowCheckout(true);
   };
 
   const handleToggleLGBT = async () => {
@@ -768,6 +755,18 @@ const PessoaProfilePage: React.FC = () => {
           }}
           onClose={() => setShowCheckin(false)}
           pessoa={pessoa}
+        />
+      )}
+
+      {canOperate && showCheckout && pessoa && (
+        <CheckoutModal
+          pessoa={pessoa}
+          estadia={estadiaAtiva ? {
+            data_checkin: estadiaAtiva.data_checkin,
+            cama: estadiaAtiva.cama_id ? { numero: (estadiaAtiva as any).cama?.numero ?? 0, casa: (estadiaAtiva as any).cama?.casa ?? '' } : null,
+          } : null}
+          onClose={() => setShowCheckout(false)}
+          onSuccess={() => { setShowCheckout(false); showToast('Saída registrada.'); fetchData(); }}
         />
       )}
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getPessoasByCasa, apiFetch } from '../api';
 import { getNomePrincipal } from '../utils';
 import './PessoaCasaModal.css';
+import CheckoutModal from './CheckoutModal';
 
 // Cache local simples
 const camasCache: Record<string, { data: PessoaHospedada[], timestamp: number }> = {};
@@ -57,6 +58,10 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
 
   // Estado de visualização: 'cards' ou 'lista'
   const [viewMode, setViewMode] = useState<'cards' | 'lista'>('cards');
+  const [checkoutPessoa, setCheckoutPessoa] = useState<{
+    id: string; nome: string; nome_social?: string | null;
+    data_checkin?: string; cama?: { numero: number; casa: string } | null;
+  } | null>(null);
 
   const navigate = useNavigate();
 
@@ -192,18 +197,14 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     }
   };
 
-  const handleCheckout = async (pessoaId: string, nome: string) => {
-    if (!window.confirm(`Confirmar checkout de ${nome}?`)) return;
-    try {
-      await apiFetch('/api/estadias/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ pessoa_id: pessoaId, observacoes_checkout: 'Checkout manual' }),
-      });
-      setFeedback({ tipo: 'success', msg: 'Checkout realizado!' });
-      refreshSilencioso();
-    } catch (e) { 
-      setFeedback({ tipo: 'error', msg: 'Erro no checkout' }); 
-    }
+  const handleCheckout = (cama: PessoaHospedada) => {
+    const p = cama.estadia?.pessoa;
+    if (!p) return;
+    setCheckoutPessoa({
+      id: p.id, nome: p.nome, nome_social: p.nome_social,
+      data_checkin: cama.estadia?.data_checkin,
+      cama: { numero: cama.numero, casa: cama.casa },
+    });
   };
 
   // Copiar CPF para clipboard
@@ -581,11 +582,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                               className="action-btn checkout" 
                               title="Fazer checkout"
                               aria-label="Fazer checkout"
-                              onClick={() => {
-                                const pessoaId = cama.estadia?.pessoa?.id;
-                                const nome = getNomePrincipal(cama.estadia?.pessoa);
-                                if (pessoaId) handleCheckout(pessoaId, nome);
-                              }}
+                              onClick={() => handleCheckout(cama)}
                             >
                               Checkout
                             </button>
@@ -601,6 +598,19 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
         </div>
       </div>
     </div>
+
+      {checkoutPessoa && (
+        <CheckoutModal
+          pessoa={checkoutPessoa}
+          estadia={{ data_checkin: checkoutPessoa.data_checkin, cama: checkoutPessoa.cama }}
+          onClose={() => setCheckoutPessoa(null)}
+          onSuccess={() => {
+            setCheckoutPessoa(null);
+            setFeedback({ tipo: 'success', msg: 'Saída registrada!' });
+            refreshSilencioso();
+          }}
+        />
+      )}
   );
 };
 
