@@ -763,7 +763,9 @@ const PessoaProfilePage: React.FC = () => {
           pessoa={pessoa}
           estadia={estadiaAtiva ? {
             data_checkin: estadiaAtiva.data_checkin,
-            cama: estadiaAtiva.cama ?? null,
+            cama: estadiaAtiva.cama
+              ? { numero: Number(estadiaAtiva.cama.numero), casa: estadiaAtiva.cama.casa }
+              : null,
           } : null}
           onClose={() => setShowCheckout(false)}
           onSuccess={() => { setShowCheckout(false); showToast('Saída registrada.'); fetchData(); }}
