@@ -21,18 +21,18 @@ const identityVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      delayChildren: 0.18,
-      staggerChildren: 0.18,
+      delayChildren: 0.22,
+      staggerChildren: 0.2,
     },
   },
 };
 
 const riseItem: Variants = {
-  hidden: { opacity: 0, y: 34 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.72, ease: motionEase },
+    transition: { duration: 0.92, ease: motionEase },
   },
 };
 
@@ -40,10 +40,10 @@ function LoginAmbientScene({ reduceMotion }: { reduceMotion: boolean }) {
   return (
     <div aria-hidden="true" className="login-motion-layer">
       <motion.div
-        animate={reduceMotion ? { opacity: 0.48 } : { opacity: [0.44, 0.78, 0.44], scale: [0.98, 1.035, 0.98] }}
+        animate={reduceMotion ? { opacity: 0.34 } : { opacity: [0.22, 0.42, 0.22], scale: [0.995, 1.012, 0.995] }}
         className="login-network"
         initial={{ opacity: 0 }}
-        transition={{ duration: 11.5, ease: 'easeInOut', repeat: reduceMotion ? 0 : Infinity }}
+        transition={{ duration: 18, ease: 'easeInOut', repeat: reduceMotion ? 0 : Infinity }}
       >
         <svg className="login-network-lines" viewBox="0 0 620 420" preserveAspectRatio="none">
           <motion.path
@@ -53,8 +53,8 @@ function LoginAmbientScene({ reduceMotion }: { reduceMotion: boolean }) {
             strokeLinecap="round"
             strokeWidth="1.8"
             initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-            animate={reduceMotion ? { opacity: 0.5 } : { pathLength: 1, opacity: 0.68 }}
-            transition={{ duration: 2.4, ease: 'easeOut' }}
+            animate={reduceMotion ? { opacity: 0.28 } : { pathLength: 1, opacity: 0.42 }}
+            transition={{ duration: 3.4, ease: 'easeOut' }}
           />
           <motion.path
             d="M112 292 C198 236 274 256 348 218 S482 138 544 286"
@@ -63,8 +63,8 @@ function LoginAmbientScene({ reduceMotion }: { reduceMotion: boolean }) {
             strokeLinecap="round"
             strokeWidth="1.55"
             initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-            animate={reduceMotion ? { opacity: 0.42 } : { pathLength: 1, opacity: 0.56 }}
-            transition={{ delay: 0.34, duration: 2.7, ease: 'easeOut' }}
+            animate={reduceMotion ? { opacity: 0.24 } : { pathLength: 1, opacity: 0.34 }}
+            transition={{ delay: 0.48, duration: 3.8, ease: 'easeOut' }}
           />
           <motion.path
             d="M86 214 C172 188 232 320 324 282 S462 210 572 236"
@@ -73,23 +73,23 @@ function LoginAmbientScene({ reduceMotion }: { reduceMotion: boolean }) {
             strokeLinecap="round"
             strokeWidth="1.2"
             initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-            animate={reduceMotion ? { opacity: 0.3 } : { pathLength: 1, opacity: 0.42 }}
-            transition={{ delay: 0.62, duration: 3.1, ease: 'easeOut' }}
+            animate={reduceMotion ? { opacity: 0.18 } : { pathLength: 1, opacity: 0.26 }}
+            transition={{ delay: 0.78, duration: 4.2, ease: 'easeOut' }}
           />
         </svg>
 
         {moduleNodes.map((node, index) => (
           <motion.span
             animate={reduceMotion ? undefined : {
-              scale: [1, 1.035, 1],
-              y: [0, index % 2 ? -12 : 12, 0],
+              scale: [1, 1.012, 1],
+              y: [0, index % 2 ? -5 : 5, 0],
             }}
             className={`login-node ${node.className}`}
             initial={{ opacity: 0, scale: 0.9 }}
             key={node.label}
             transition={{
               delay: 0.32 + index * 0.14,
-              duration: reduceMotion ? 0.2 : 8.2,
+              duration: reduceMotion ? 0.2 : 14.5,
               ease: 'easeInOut',
               repeat: reduceMotion ? 0 : Infinity,
             }}
@@ -154,8 +154,8 @@ const LoginPage = () => {
           <motion.p className="eyebrow" variants={riseItem}>Acolher, servir, esclarecer</motion.p>
           <motion.h1 variants={riseItem}>Gestão integrada para cuidar melhor.</motion.h1>
           <motion.p variants={riseItem}>
-            Uma base local para acompanhar Albergue, E.E.I. Casa do Pequenino,
-            relatórios e aferições com clareza operacional.
+            Acesso local para Albergue, E.E.I., lojas e financeiro,
+            com informação organizada para decisões mais rápidas.
           </motion.p>
         </motion.div>
       </motion.section>
@@ -164,15 +164,15 @@ const LoginPage = () => {
         className="login-form-panel"
         variants={{
           hidden: { opacity: 0 },
-          visible: { opacity: 1, transition: { duration: 0.56 } },
+          visible: { opacity: 1, transition: { duration: 0.72 } },
         }}
       >
         <motion.form
           animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
           className="login-card"
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 36, scale: 0.972 }}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.985 }}
           onSubmit={handleSubmit}
-          transition={{ delay: 0.1, duration: 0.78, ease: motionEase }}
+          transition={{ delay: 0.16, duration: 0.9, ease: motionEase }}
         >
           <h2>Acesso institucional</h2>
           <p>Entre com seu usuário para abrir o painel correspondente.</p>
