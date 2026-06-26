@@ -7,7 +7,7 @@
   grid-template-columns: minmax(540px, 46vw) minmax(420px, 1fr);
   background:
     linear-gradient(90deg, rgba(0, 48, 126, 0.58), rgba(40, 94, 178, 0.36)),
-    url('/iedc/institucional.webp') center / cover;
+    url('/iedc/fachada-login.jpg') center / cover;
   color: #ffffff;
   overflow: hidden;
 }
