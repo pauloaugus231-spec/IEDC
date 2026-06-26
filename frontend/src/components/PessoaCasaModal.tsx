@@ -597,7 +597,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
           )}
         </div>
       </div>
-    </div>
 
       {checkoutPessoa && (
         <CheckoutModal
@@ -611,6 +610,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
           }}
         />
       )}
+    </div>
   );
 };
 
