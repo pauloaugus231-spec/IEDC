@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import './ConfirmModal.css';
 
 interface Props {
@@ -20,14 +20,37 @@ const ConfirmModal: React.FC<Props> = ({
   onConfirm,
   onCancel,
 }) => {
+  const titleId = useId();
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  // Foco inicial no botão de confirmação
+  useEffect(() => {
+    confirmRef.current?.focus();
+  }, []);
+
+  // Fechar com Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
   return (
     <div className="confirm-overlay" onClick={onCancel}>
-      <div className="confirm-container" onClick={e => e.stopPropagation()}>
+      <div
+        className="confirm-container"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={e => e.stopPropagation()}
+      >
         <div className={`confirm-header ${danger ? 'danger' : ''}`}>
           <span className="confirm-eyebrow">
             {danger ? 'ATENÇÃO' : 'CONFIRMAÇÃO'}
           </span>
-          <h3 className="confirm-title">{title}</h3>
+          <h3 id={titleId} className="confirm-title">{title}</h3>
         </div>
 
         <div className="confirm-body">
@@ -39,6 +62,7 @@ const ConfirmModal: React.FC<Props> = ({
             {cancelLabel}
           </button>
           <button
+            ref={confirmRef}
             className={`confirm-btn-ok ${danger ? 'danger' : ''}`}
             onClick={onConfirm}
           >

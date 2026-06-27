@@ -10,16 +10,9 @@ import {
 } from "../utils";
 import CheckoutModal from "../components/CheckoutModal";
 import TrocaModal from "../components/TrocaModal";
+import { QUARTO_PARA_CASA, type QuartoLabel } from "../utils/casaUtils";
 
-type Quarto = "Masculino" | "Feminino" | "Idosos" | "LGBT+";
-
-// Mapeamento quarto → casa (chave backend)
-const QUARTO_PARA_CASA: Record<Quarto, string> = {
-  Masculino: "MASCULINA",
-  Feminino:  "MISTA_MULHERES",
-  Idosos:    "IDOSOS",
-  "LGBT+":   "LGBT",
-};
+type Quarto = QuartoLabel;
 
 interface Acolhido {
   id: string;           // pessoa_id

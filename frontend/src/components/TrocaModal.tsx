@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { getPessoasByCasa, apiFetch } from '../api';
 import { getNomePrincipal } from '../utils';
+import { CASA_OPTIONS, getCasaLabel } from '../utils/casaUtils';
 import ConfirmModal from './ConfirmModal';
 import './TrocaModal.css';
 
@@ -37,21 +38,10 @@ interface Props {
   onSuccess: () => void;
 }
 
-const CASA_OPTIONS = [
-  { value: 'MASCULINA',      label: 'Quarto Masculino' },
-  { value: 'MISTA_MULHERES', label: 'Quarto Feminino' },
-  { value: 'IDOSOS',         label: 'Quarto Idosos' },
-  { value: 'LGBT',           label: 'Quarto LGBT+' },
-];
-
-const CASA_LABELS: Record<string, string> = {
-  MASCULINA:      'Masculino',
-  MISTA_MULHERES: 'Feminino',
-  IDOSOS:         'Idosos',
-  LGBT:           'LGBT+',
-};
-
 const TrocaModal: React.FC<Props> = ({ pessoa, onClose, onSuccess }) => {
+  const titleId = useId();
+  const firstFocusRef = useRef<HTMLSelectElement>(null);
+
   const [casaDestino, setCasaDestino] = useState('');
   const [camas, setCamas] = useState<CamaDestino[]>([]);
   const [loadingCamas, setLoadingCamas] = useState(false);
@@ -60,7 +50,22 @@ const TrocaModal: React.FC<Props> = ({ pessoa, onClose, onSuccess }) => {
   const [confirmTroca, setConfirmTroca] = useState<ConfirmTrocaPayload | null>(null);
 
   const nomePessoa = getNomePrincipal(pessoa);
-  const casaAtualLabel = CASA_LABELS[pessoa.casa] ?? pessoa.casa;
+  const casaAtualLabel = getCasaLabel(pessoa.casa);
+
+  // Foco inicial no select de quarto destino
+  useEffect(() => {
+    firstFocusRef.current?.focus();
+  }, []);
+
+  // Fechar com Escape (só quando ConfirmModal interno não está aberto)
+  useEffect(() => {
+    if (confirmTroca) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose, confirmTroca]);
 
   const handleSelectCasa = async (casa: string) => {
     setCasaDestino(casa);
@@ -113,13 +118,19 @@ const TrocaModal: React.FC<Props> = ({ pessoa, onClose, onSuccess }) => {
   return (
     <>
       <div className="troca-overlay" onClick={onClose}>
-        <div className="troca-container" onClick={e => e.stopPropagation()}>
+        <div
+          className="troca-container"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          onClick={e => e.stopPropagation()}
+        >
 
           {/* Header */}
           <div className="troca-header">
             <div>
               <span className="troca-eyebrow">TROCAR DE CAMA</span>
-              <h3 className="troca-title">{nomePessoa}</h3>
+              <h3 id={titleId} className="troca-title">{nomePessoa}</h3>
               <p className="troca-subtitle">
                 Cama {pessoa.cama_numero} · {casaAtualLabel}
               </p>
@@ -131,6 +142,7 @@ const TrocaModal: React.FC<Props> = ({ pessoa, onClose, onSuccess }) => {
           <div className="troca-body">
             <label className="troca-label">Quarto destino</label>
             <select
+              ref={firstFocusRef}
               className="troca-select"
               value={casaDestino}
               onChange={e => handleSelectCasa(e.target.value)}
