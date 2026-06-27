@@ -79,7 +79,7 @@ const TrocaModal: React.FC<Props> = ({ pessoa, onClose, onSuccess }) => {
     }
   };
 
-  const executarTroca = async (camaDestinoId: string, camaNumero: number, camaOcupada: boolean) => {
+  const executarTroca = async (camaDestinoId: string, _camaNumero: number, _camaOcupada: boolean) => {
     setIsSubmitting(true);
     setError(null);
     try {
