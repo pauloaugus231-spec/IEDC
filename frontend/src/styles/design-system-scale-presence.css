@@ -987,3 +987,66 @@
   text-transform: capitalize;
   white-space: nowrap;
 }
+
+/* ============================================================
+   Botões de ação inline na linha de presença (Trocar / Checkout)
+   Adicionado em: presença — ações de estadia por linha
+   ============================================================ */
+
+.presence-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+  align-items: center;
+  margin: 0 6px;
+}
+
+.presence-action-btn {
+  padding: 5px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1.4;
+  transition: background 0.14s, border-color 0.14s, opacity 0.14s;
+}
+
+.presence-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.presence-action-btn.trocar {
+  background: #eaf2ff;
+  border-color: #b3d0ff;
+  color: #0041aa;
+}
+
+.presence-action-btn.trocar:hover:not(:disabled) {
+  background: #d0e5ff;
+  border-color: #0041aa;
+}
+
+.presence-action-btn.checkout {
+  background: #fff0f0;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.presence-action-btn.checkout:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #b91c1c;
+}
+
+/* Em tela pequena, esconder texto e exibir somente ícone-like */
+@media (max-width: 520px) {
+  .presence-row-actions {
+    gap: 4px;
+  }
+  .presence-action-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+}

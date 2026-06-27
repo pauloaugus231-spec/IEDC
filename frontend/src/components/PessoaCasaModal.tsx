@@ -4,6 +4,7 @@ import { getPessoasByCasa, apiFetch } from '../api';
 import { getNomePrincipal } from '../utils';
 import './PessoaCasaModal.css';
 import CheckoutModal from './CheckoutModal';
+import ConfirmModal from './ConfirmModal';
 
 // Cache local simples
 const camasCache: Record<string, { data: PessoaHospedada[], timestamp: number }> = {};
@@ -39,6 +40,13 @@ interface PessoaHospedada {
   };
 }
 
+interface ConfirmTrocaPayload {
+  estadiaIdOrigem: string;
+  camaDestinoId: string;
+  camaNumero: number;
+  ocupanteNome: string;
+}
+
 const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa, casaLabel }) => {
   // --- Estados ---
   const [camas, setCamas] = useState<PessoaHospedada[]>([]);
@@ -55,6 +63,9 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
   // Estados de Troca
   const [casaDestinoSelect, setCasaDestinoSelect] = useState('');
   const [camasDestino, setCamasDestino] = useState<PessoaHospedada[]>([]);
+
+  // Confirmação visual de troca mútua (substitui window.confirm)
+  const [confirmTroca, setConfirmTroca] = useState<ConfirmTrocaPayload | null>(null);
 
   // Estado de visualização: 'cards' ou 'lista'
   const [viewMode, setViewMode] = useState<'cards' | 'lista'>('cards');
@@ -87,7 +98,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
 
   // --- Buscas OTIMIZADAS ---
   const fetchDados = useCallback(async (forceRefresh = false) => {
-    // Verificar cache local primeiro
     const cached = camasCache[casa];
     const now = Date.now();
     
@@ -97,16 +107,12 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
       return;
     }
 
-    // Só mostrar loading no primeiro carregamento
     if (initialLoad) setLoading(true);
     
     try {
       const data = await getPessoasByCasa(casa) as PessoaHospedada[];
       const sortedData = data.sort((a, b) => a.numero - b.numero);
-      
-      // Atualizar cache local
       camasCache[casa] = { data: sortedData, timestamp: now };
-      
       setCamas(sortedData);
     } catch (err) {
       console.error(err);
@@ -117,7 +123,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     }
   }, [casa, initialLoad]);
 
-  // Refresh silencioso após ações
   const refreshSilencioso = useCallback(() => {
     delete camasCache[casa];
     fetchDados(true);
@@ -134,23 +139,20 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
 
   // --- Lógica Visual ---
   const getProgressColor = (percent: number) => {
-    if (percent > 100) return '#EF4444'; // Vermelho (Vencido)
-    if (percent > 80) return '#F59E0B';  // Laranja (Quase)
-    return '#10B981';                    // Verde (OK)
+    if (percent > 100) return '#EF4444';
+    if (percent > 80) return '#F59E0B';
+    return '#10B981';
   };
 
   const calcularEstadiaInfo = (checkin: string, limite: string) => {
     if (!checkin || !limite) return { percent: 0, restantes: 0 };
-    
     const start = new Date(checkin).getTime();
     const end = new Date(limite).getTime();
     const now = new Date().getTime();
-    
     const total = end - start;
     const decorridos = now - start;
     const percent = Math.min(100, Math.max(0, (decorridos / total) * 100));
     const restantes = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-
     return { percent, restantes };
   };
 
@@ -171,15 +173,7 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     }
   };
 
-  const handleTrocaConfirm = async (estadiaIdOrigem: string, camaDestinoId: string, camaNumero: number, camaOcupada?: boolean, ocupanteNome?: string) => {
-    // Se cama ocupada, pedir confirmação
-    if (camaOcupada) {
-      const confirmou = window.confirm(
-        `TROCA MÚTUA\n\nA cama ${camaNumero} está ocupada por ${ocupanteNome}.\n\nDeseja realizar a troca mútua entre os dois hóspedes?\n\n• O hóspede atual irá para a cama ${camaNumero}\n• ${ocupanteNome} virá para a cama atual`
-      );
-      if (!confirmou) return;
-    }
-    
+  const executarTroca = async (estadiaIdOrigem: string, camaDestinoId: string, camaNumero: number, camaOcupada: boolean) => {
     try {
       await apiFetch('/api/estadias/trocar-cama', {
         method: 'POST',
@@ -188,12 +182,20 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
       setFeedback({ tipo: 'success', msg: camaOcupada ? `Troca mútua realizada! Cama ${camaNumero}` : `Transferido para cama ${camaNumero}!` });
       setAcaoAtiva(null);
       setCasaDestinoSelect('');
-      // Invalidar cache de ambas as casas
       delete camasCache[casa];
       if (casaDestinoSelect) delete camasCache[casaDestinoSelect];
       refreshSilencioso();
     } catch (e) { 
       setFeedback({ tipo: 'error', msg: 'Erro na troca' }); 
+    }
+  };
+
+  const handleTrocaConfirm = (estadiaIdOrigem: string, camaDestinoId: string, camaNumero: number, camaOcupada?: boolean, ocupanteNome?: string) => {
+    if (camaOcupada && ocupanteNome) {
+      // Abrir ConfirmModal no lugar de window.confirm
+      setConfirmTroca({ estadiaIdOrigem, camaDestinoId, camaNumero, ocupanteNome });
+    } else {
+      executarTroca(estadiaIdOrigem, camaDestinoId, camaNumero, false);
     }
   };
 
@@ -207,13 +209,11 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     });
   };
 
-  // Copiar CPF para clipboard
   const handleCopyCpf = (cpf: string) => {
     navigator.clipboard.writeText(cpf);
     setFeedback({ tipo: 'success', msg: 'CPF copiado!' });
   };
 
-  // Copiar toda a lista para clipboard
   const handleCopyAll = () => {
     const listaTexto = pessoasOcupadas
       .map(p => `${p.nome}\t${p.cpf || 'Sem CPF'}`)
@@ -222,7 +222,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     setFeedback({ tipo: 'success', msg: `${pessoasOcupadas.length} registros copiados!` });
   };
 
-  // Filtro local
   const camasFiltradas = useMemo(() => {
     if (!filtro) return camas;
     const termo = filtro.toLowerCase();
@@ -235,7 +234,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     });
   }, [camas, filtro]);
 
-  // Lista de pessoas ocupadas (para modo lista)
   const pessoasOcupadas = useMemo(() => {
     return camasFiltradas
       .filter(c => c.estadia?.pessoa)
@@ -249,7 +247,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [camasFiltradas]);
 
-  // Estatísticas
   const stats = useMemo(() => {
     const ocupadas = camas.filter(c => c.estadia).length;
     const total = camas.length;
@@ -263,14 +260,12 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-wide" onClick={e => e.stopPropagation()}>
         
-        {/* Feedback Toast */}
         {feedback && (
           <div className={`feedback-toast ${feedback.tipo}`}>
             <strong>{feedback.tipo === 'success' ? 'Sucesso' : 'Erro'}:</strong> {feedback.msg}
           </div>
         )}
 
-        {/* Header Moderno */}
         <div className="modal-header-modern">
           <div className="header-left">
             <h2>{casaLabel}</h2>
@@ -282,7 +277,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
           </div>
           
           <div className="header-right">
-            {/* Toggle de Visualização */}
             <div className="view-toggle">
               <button 
                 className={`toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
@@ -317,7 +311,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
 
         <div className="modal-body-scroll">
           {loading ? (
-            /* SKELETON LOADING - mais rápido visualmente */
             <div className="beds-grid">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} className="bed-card skeleton">
@@ -328,7 +321,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
               ))}
             </div>
           ) : viewMode === 'lista' ? (
-            /* ========== MODO LISTA ========== */
             <div className="lista-export-container">
               <div className="lista-header">
                 <div className="lista-info">
@@ -413,13 +405,11 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                     key={cama.id} 
                     className={`bed-card ${ocupada ? 'occupied' : 'free'} ${isEditing ? 'editing' : ''} ${vencido ? 'expired' : ''}`}
                   >
-                    {/* Topo do Card */}
                     <div className="bed-header">
                       <span className="bed-number">Cama {cama.numero}</span>
                       <span className="bed-position">{cama.posicao}</span>
                     </div>
 
-                    {/* Conteúdo */}
                     {!ocupada ? (
                       <div className="bed-free">
                         <span className="free-icon">✓</span>
@@ -444,7 +434,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                           </div>
                         </div>
                         
-                        {/* Barra de Progresso */}
                         <div className="progress-wrapper">
                           <div className="progress-track">
                             <div 
@@ -457,7 +446,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                           </span>
                         </div>
 
-                        {/* Área de Ações */}
                         {isEditing ? (
                           <div className="inline-action-panel">
                             {acaoAtiva.tipo === 'PRORROGAR' ? (
@@ -507,7 +495,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                       <span className="no-beds">Nenhuma cama encontrada</span>
                                     ) : (
                                       <>
-                                        {/* Camas Livres */}
                                         {camasDestino.filter(c => !c.estadia).length > 0 && (
                                           <>
                                             <div className="camas-section-label">Camas livres</div>
@@ -523,7 +510,6 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
                                           </>
                                         )}
                                         
-                                        {/* Camas Ocupadas */}
                                         {camasDestino.filter(c => c.estadia && c.id !== cama.id).length > 0 && (
                                           <>
                                             <div className="camas-section-label ocupadas">Troca mútua (ocupadas)</div>
@@ -608,6 +594,22 @@ const PessoaCasaModal: React.FC<PessoaCasaModalProps> = ({ isOpen, onClose, casa
             setFeedback({ tipo: 'success', msg: 'Saída registrada!' });
             refreshSilencioso();
           }}
+        />
+      )}
+
+      {confirmTroca && (
+        <ConfirmModal
+          title="Troca mútua"
+          message={`A cama ${confirmTroca.camaNumero} está ocupada por ${confirmTroca.ocupanteNome}.\n\nDeseja realizar a troca mútua?\n• O hóspede atual irá para a cama ${confirmTroca.camaNumero}\n• ${confirmTroca.ocupanteNome} virá para a cama atual`}
+          confirmLabel="Confirmar troca"
+          cancelLabel="Cancelar"
+          danger={false}
+          onConfirm={() => {
+            const { estadiaIdOrigem, camaDestinoId, camaNumero } = confirmTroca;
+            setConfirmTroca(null);
+            executarTroca(estadiaIdOrigem, camaDestinoId, camaNumero, true);
+          }}
+          onCancel={() => setConfirmTroca(null)}
         />
       )}
     </div>

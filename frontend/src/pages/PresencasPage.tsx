@@ -8,18 +8,41 @@ import {
   getTriagemCensoStorageState,
   getNomePrincipal,
 } from "../utils";
+import CheckoutModal from "../components/CheckoutModal";
+import TrocaModal from "../components/TrocaModal";
 
 type Quarto = "Masculino" | "Feminino" | "Idosos" | "LGBT+";
 
+// Mapeamento quarto → casa (chave backend)
+const QUARTO_PARA_CASA: Record<Quarto, string> = {
+  Masculino: "MASCULINA",
+  Feminino:  "MISTA_MULHERES",
+  Idosos:    "IDOSOS",
+  "LGBT+":   "LGBT",
+};
+
 interface Acolhido {
-  id: string;
+  id: string;           // pessoa_id
   nome: string;
+  nome_social?: string | null;
   quarto: Quarto;
   cama: string | number;
+  casa: string;         // chave backend
+  estadia_id: string;
   presente: boolean;
   idoso?: boolean;
   lgbt?: boolean;
   data_entrada: string;
+}
+
+interface AcolhidoParaModal {
+  id: string;
+  nome: string;
+  nome_social?: string | null;
+  estadia_id: string;
+  cama_numero: number | string;
+  casa: string;
+  data_checkin?: string;
 }
 
 interface NotificationStatus {
@@ -87,64 +110,52 @@ const PresencasPage: React.FC = () => {
     }
   };
 
+  // Estados para Trocar e Checkout na linha de presença
+  const [trocaAtivo, setTrocaAtivo] = useState<AcolhidoParaModal | null>(null);
+  const [checkoutAtivo, setCheckoutAtivo] = useState<AcolhidoParaModal | null>(null);
+
   // Verificar se triagem já foi encerrada hoje E monitorar mudança de dia
   useEffect(() => {
     const checkTriagemStatus = () => {
       const plantaoAtual = getOperationalPlantaoKey();
       const storageState = getTriagemCensoStorageState();
 
-      // Se existe um plantão anterior, resetar apenas depois das 07h.
       if (storageState.shouldClear) {
         console.log(`Novo ciclo operacional detectado (${storageState.storedPlantaoKey} -> ${plantaoAtual}) - resetando censo`);
         clearTriagemCensoStorage();
         setTriagemEncerrada(false);
         fetchAcolhidos();
-      }
-      // Se o plantão é o atual E triagem foi encerrada, manter bloqueado.
-      else if (storageState.mode === 'censo') {
+      } else if (storageState.mode === 'censo') {
         setTriagemEncerrada(true);
-      }
-      // Caso contrário (primeira vez ou data foi resetada), desbloquear
-      else {
+      } else {
         setTriagemEncerrada(false);
       }
 
       fetchTriagemStatus(plantaoAtual);
     };
 
-    // Verificar imediatamente ao montar
     checkTriagemStatus();
-    
-    // Carregar dados sempre na inicialização
     fetchAcolhidos();
 
-    // Verificar a cada 60 segundos se mudou o dia
-    const interval = setInterval(checkTriagemStatus, 60000); // 1 minuto
-
+    const interval = setInterval(checkTriagemStatus, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Função CORRIGIDA aqui
   const fetchAcolhidos = async () => {
     setIsLoading(true);
     try {
       const pessoas: any[] = await apiFetch("/api/pessoas/ativos");
       
-      // Transformar dados da API para o formato esperado
       const acolhidosData: Acolhido[] = pessoas.map((pessoa: any) => {
         const estadiaAtiva = pessoa.estadias?.find((e: any) => e.status === 'ativa');
         const cama = estadiaAtiva?.cama;
         
-        // Mapear casa para quarto
         let quarto: Quarto = "Masculino";
         if (cama?.casa === "MISTA_MULHERES") quarto = "Feminino";
         else if (cama?.casa === "IDOSOS") quarto = "Idosos";
         else if (cama?.casa === "LGBT") quarto = "LGBT+";
         
-        // Normalizar data de entrada para formato YYYY-MM-DD
         const dataCheckin = getOperationalPlantaoKeyFromValue(estadiaAtiva?.data_checkin);
-        
-        // Novatos do plantão atual já vêm com presença confirmada automaticamente.
         const plantaoAtual = getOperationalPlantaoKey();
         const isNovato = dataCheckin === plantaoAtual;
         const presenteValue = isNovato ? true : (pessoa.presente || false);
@@ -152,12 +163,15 @@ const PresencasPage: React.FC = () => {
         return {
           id: pessoa.id,
           nome: getNomePrincipal(pessoa),
+          nome_social: pessoa.nome_social ?? null,
           quarto,
           cama: cama?.numero || 0,
-          presente: presenteValue, // Novatos já vêm marcados
+          casa: cama?.casa || QUARTO_PARA_CASA[quarto],
+          estadia_id: estadiaAtiva?.id || '',
+          presente: presenteValue,
           idoso: pessoa.idade >= 60,
           lgbt: pessoa.lgbt,
-          data_entrada: dataCheckin, // Usando data_checkin normalizada
+          data_entrada: dataCheckin,
         };
       });
       
@@ -166,9 +180,6 @@ const PresencasPage: React.FC = () => {
     } catch (e) { console.error(e); } 
     finally { setIsLoading(false); }
   };
-
-  // REMOVIDO: useEffect(() => { fetchAcolhidos(); }, []);
-  // O fetchAcolhidos() agora é chamado apenas dentro do useEffect de verificação de triagem
 
   const filteredAcolhidos = useMemo(() => {
     let data = acolhidos;
@@ -193,7 +204,6 @@ const PresencasPage: React.FC = () => {
       });
     }
 
-    // Ordenar: pendentes primeiro
     data = [...data].sort((a, b) => {
       if (a.presente === b.presente) return 0;
       return a.presente ? 1 : -1;
@@ -247,7 +257,6 @@ const PresencasPage: React.FC = () => {
   const handleConfirmEncerrar = async () => {
     setIsClosing(true);
     
-    // Passo 1: Filtrar ausentes (veteranos ausentes - entraram antes de hoje e não marcaram presença)
     const plantaoAtual = getOperationalPlantaoKey();
     
     const ausentesIds = acolhidos
@@ -266,7 +275,6 @@ const PresencasPage: React.FC = () => {
       }
     }
     
-    // Passo 2: Calcular censo da noite
     const ocupacaoFinal = acolhidos.filter(a => a.presente || a.data_entrada === plantaoAtual);
     const total = ocupacaoFinal.length;
     const porQuarto = QUARTOS.reduce((acc, q) => {
@@ -289,7 +297,6 @@ const PresencasPage: React.FC = () => {
     setShowConfirmModal(false);
     setShowReportModal(true);
     
-    // Passo 3: Enviar notificações (Telegram + Email via endpoint único)
     setNotifStatus({ telegram: "sending", email: "sending" });
     
     try {
@@ -307,7 +314,6 @@ const PresencasPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
       });
       
-      // Se o backend retornar status individual, usar; senão, assumir sucesso
       if (notifResponse?.telegram !== undefined) {
         setNotifStatus({
           telegram: notifResponse.telegram ? "success" : "error",
@@ -328,7 +334,6 @@ const PresencasPage: React.FC = () => {
       });
     }
     
-    // Passo 4: Resetar presença para o dia seguinte
     const presentes = acolhidos.filter(a => a.presente === true);
     if (presentes.length > 0) {
       try {
@@ -348,7 +353,6 @@ const PresencasPage: React.FC = () => {
     setTriagemEncerrada(true);
     await fetchTriagemStatus(plantaoAtual);
 
-    // Salvar estado da triagem encerrada no localStorage
     localStorage.setItem('triagemEncerrada', 'true');
     localStorage.setItem('lastTriagemDate', plantaoAtual);
     localStorage.setItem('lastTriagemClosedAt', new Date().toISOString());
@@ -464,39 +468,76 @@ const PresencasPage: React.FC = () => {
                     {residents.map((a) => {
                       const plantaoAtual = getOperationalPlantaoKey();
                       const isNovato = a.data_entrada === plantaoAtual;
+                      const temEstadia = !!a.estadia_id;
                       
                       return (
-                      <div
-                        key={a.id}
-                        className={`presence-resident-row ${a.presente ? "present" : "pending"} ${isNovato ? "new" : ""} ${triagemEncerrada ? "locked" : ""}`}
-                        onClick={() => !triagemEncerrada && !isNovato && handleTogglePresenca(a.id)}
-                        title={isNovato ? "Novato - Check-in realizado hoje" : undefined}
-                      >
-                        <div className="presence-resident-main">
-                          <div className="presence-bed-avatar">
-                            {a.cama}
+                        <div
+                          key={a.id}
+                          className={`presence-resident-row ${a.presente ? "present" : "pending"} ${isNovato ? "new" : ""} ${triagemEncerrada ? "locked" : ""}`}
+                          onClick={() => !triagemEncerrada && !isNovato && handleTogglePresenca(a.id)}
+                          title={isNovato ? "Novato - Check-in realizado hoje" : undefined}
+                        >
+                          <div className="presence-resident-main">
+                            <div className="presence-bed-avatar">
+                              {a.cama}
+                            </div>
+                            <div>
+                              <div className="presence-resident-name">
+                                {a.nome}
+                                {isNovato && (
+                                  <span className="presence-tag new">
+                                    NOVO
+                                  </span>
+                                )}
+                              </div>
+                              <div className="presence-tag-row">
+                                {a.idoso && <span className="presence-tag age">60+</span>}
+                                {a.lgbt && <span className="presence-tag identity">LGBT+</span>}
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="presence-resident-name">
-                              {a.nome}
-                              {isNovato && (
-                                <span className="presence-tag new">
-                                  NOVO
-                                </span>
-                              )}
+
+                          {/* Botões de ação — só aparecem se não encerrado e tem estadia */}
+                          {!triagemEncerrada && temEstadia && (
+                            <div className="presence-row-actions" onClick={e => e.stopPropagation()}>
+                              <button
+                                className="presence-action-btn trocar"
+                                title="Trocar de cama"
+                                onClick={() => setTrocaAtivo({
+                                  id: a.id,
+                                  nome: a.nome,
+                                  nome_social: a.nome_social,
+                                  estadia_id: a.estadia_id,
+                                  cama_numero: a.cama,
+                                  casa: a.casa,
+                                })}
+                              >
+                                Trocar
+                              </button>
+                              <button
+                                className="presence-action-btn checkout"
+                                title="Registrar saída"
+                                onClick={() => setCheckoutAtivo({
+                                  id: a.id,
+                                  nome: a.nome,
+                                  nome_social: a.nome_social,
+                                  estadia_id: a.estadia_id,
+                                  cama_numero: a.cama,
+                                  casa: a.casa,
+                                  data_checkin: a.data_entrada,
+                                })}
+                              >
+                                Checkout
+                              </button>
                             </div>
-                            <div className="presence-tag-row">
-                              {a.idoso && <span className="presence-tag age">60+</span>}
-                              {a.lgbt && <span className="presence-tag identity">LGBT+</span>}
-                            </div>
+                          )}
+                          
+                          <div className="presence-check">
+                            {a.presente && <span>✓</span>}
                           </div>
                         </div>
-                        
-                        <div className="presence-check">
-                          {a.presente && <span>✓</span>}
-                        </div>
-                      </div>
-                    );})}
+                      );
+                    })}
                   </div>
                 </article>
               );
@@ -603,6 +644,40 @@ const PresencasPage: React.FC = () => {
             >{isSending ? "Aguarde..." : "Concluir"}</button>
           </ModalFrame>
         </div>
+      )}
+
+      {/* TrocaModal — aberto via botão Trocar na linha */}
+      {trocaAtivo && (
+        <TrocaModal
+          pessoa={trocaAtivo}
+          onClose={() => setTrocaAtivo(null)}
+          onSuccess={() => {
+            setTrocaAtivo(null);
+            fetchAcolhidos();
+            showOperationalReceipt('Cama alterada com sucesso.');
+          }}
+        />
+      )}
+
+      {/* CheckoutModal — aberto via botão Checkout na linha */}
+      {checkoutAtivo && (
+        <CheckoutModal
+          pessoa={{
+            id: checkoutAtivo.id,
+            nome: checkoutAtivo.nome,
+            nome_social: checkoutAtivo.nome_social,
+          }}
+          estadia={{
+            data_checkin: checkoutAtivo.data_checkin,
+            cama: { numero: Number(checkoutAtivo.cama_numero), casa: checkoutAtivo.casa },
+          }}
+          onClose={() => setCheckoutAtivo(null)}
+          onSuccess={() => {
+            setCheckoutAtivo(null);
+            fetchAcolhidos();
+            showOperationalReceipt('Saída registrada com sucesso.');
+          }}
+        />
       )}
     </main>
   );

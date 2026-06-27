@@ -1,0 +1,115 @@
+/* ConfirmModal — confirmação visual genérica */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 20, 38, 0.56);
+  backdrop-filter: blur(8px);
+}
+
+.confirm-container {
+  display: flex;
+  width: min(420px, 100%);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(0, 65, 170, 0.12);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 30px 90px rgba(8, 20, 38, 0.3);
+}
+
+/* Header neutro */
+.confirm-header {
+  padding: 22px 24px 18px;
+  background: linear-gradient(135deg, rgba(14, 24, 52, 0.97), rgba(38, 55, 106, 0.95));
+  color: #ffffff;
+}
+
+/* Header danger — tom vermelho */
+.confirm-header.danger {
+  background: linear-gradient(135deg, rgba(100, 10, 10, 0.97), rgba(160, 30, 30, 0.95));
+}
+
+.confirm-eyebrow {
+  display: block;
+  color: #f7b044;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.confirm-header.danger .confirm-eyebrow {
+  color: #ffb3b3;
+}
+
+.confirm-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+/* Body */
+.confirm-body {
+  padding: 20px 24px;
+}
+
+.confirm-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+  white-space: pre-line;
+}
+
+/* Ações */
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 24px 22px;
+  justify-content: flex-end;
+}
+
+.confirm-btn-cancel {
+  padding: 9px 18px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.confirm-btn-cancel:hover {
+  background: #f3f4f6;
+}
+
+.confirm-btn-ok {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0041aa, #1a5cd4);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.confirm-btn-ok:hover {
+  opacity: 0.88;
+}
+
+.confirm-btn-ok.danger {
+  background: linear-gradient(135deg, #b42318, #d9392b);
+}
