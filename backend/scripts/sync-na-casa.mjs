@@ -210,6 +210,79 @@ function buildDbNameIndex(people) {
   return index;
 }
 
+function normalizeStatus(value) {
+  return normalizeWhitespace(value).toLowerCase();
+}
+
+function hasActiveBed(person) {
+  return Number.isFinite(Number(person.active_cama_numero));
+}
+
+function chooseBestExactMatch(matches, row) {
+  if (matches.length === 1) {
+    return matches[0];
+  }
+
+  const sameBed = matches.filter((person) => Number(person.active_cama_numero) === row.chave);
+  if (sameBed.length === 1) {
+    return sameBed[0];
+  }
+
+  if (sameBed.length > 1) {
+    const sameBedActive = sameBed.find((person) => normalizeStatus(person.status_cadastro) === 'ativa');
+    if (sameBedActive) {
+      return sameBedActive;
+    }
+
+    const sameBedPresent = sameBed.find((person) => person.presente === true);
+    if (sameBedPresent) {
+      return sameBedPresent;
+    }
+
+    return sameBed[0];
+  }
+
+  const activeStatus = matches.filter((person) => normalizeStatus(person.status_cadastro) === 'ativa');
+  if (activeStatus.length === 1) {
+    return activeStatus[0];
+  }
+
+  if (activeStatus.length > 1) {
+    const activeWithBed = activeStatus.find((person) => hasActiveBed(person));
+    if (activeWithBed) {
+      return activeWithBed;
+    }
+
+    const activePresent = activeStatus.find((person) => person.presente === true);
+    if (activePresent) {
+      return activePresent;
+    }
+
+    return activeStatus[0];
+  }
+
+  const withBed = matches.filter((person) => hasActiveBed(person));
+  if (withBed.length === 1) {
+    return withBed[0];
+  }
+
+  if (withBed.length > 1) {
+    const withBedAndPresent = withBed.find((person) => person.presente === true);
+    if (withBedAndPresent) {
+      return withBedAndPresent;
+    }
+
+    return withBed[0];
+  }
+
+  const present = matches.find((person) => person.presente === true);
+  if (present) {
+    return present;
+  }
+
+  return matches[0];
+}
+
 function resolvePersonByOverride(row, dbIndex) {
   const rowVariants = getNameVariants(row.nome).map((variant) => normalizeForMatch(variant));
 
@@ -232,7 +305,7 @@ function resolvePersonByOverride(row, dbIndex) {
         return matches[0];
       }
 
-      const exact = matches.find((person) => normalizeForMatch(person.nome) === candidateKey && !person.nome_social);
+      const exact = chooseBestExactMatch(matches, row);
       if (exact) {
         return exact;
       }
@@ -328,7 +401,7 @@ function resolvePerson(row, dbIndex, profiles, tokenFrequency) {
     }
 
     if (matches && matches.length > 1) {
-      const exact = matches.find((person) => normalizeForMatch(person.nome) === key);
+      const exact = chooseBestExactMatch(matches, row);
       if (exact) {
         return exact;
       }
@@ -389,8 +462,12 @@ async function main() {
   const html = await response.text();
   const frontRows = parseFrontPage(html);
 
-  if (frontRows.length !== 90) {
-    fail(`Esperava 90 linhas na pagina na_casa, mas encontrei ${frontRows.length}.`);
+  if (frontRows.length === 0) {
+    fail('A pagina na_casa nao trouxe ocupantes validos.');
+  }
+
+  if (frontRows.length > 90) {
+    fail(`A pagina na_casa trouxe mais de 90 linhas (${frontRows.length}), o que nao e esperado.`);
   }
 
   const pool = new Pool({
@@ -404,9 +481,29 @@ async function main() {
   const client = await pool.connect();
   try {
     const { rows: people } = await client.query(`
-      SELECT id, nome, nome_social, status_cadastro, ativo, presente, lgbt, tipo_vaga
-      FROM pessoas
-      WHERE ativo = true
+      SELECT
+        p.id,
+        p.nome,
+        p.nome_social,
+        p.status_cadastro,
+        p.ativo,
+        p.presente,
+        p.lgbt,
+        p.tipo_vaga,
+        e.id AS active_estadia_id,
+        c.numero AS active_cama_numero,
+        e.status AS active_estadia_status
+      FROM pessoas p
+      LEFT JOIN LATERAL (
+        SELECT e.id, e.status, e.cama_id, e.updated_at, e.created_at
+        FROM estadias e
+        WHERE e.pessoa_id = p.id
+          AND e.status = 'ativa'
+        ORDER BY e.updated_at DESC NULLS LAST, e.created_at DESC NULLS LAST
+        LIMIT 1
+      ) e ON TRUE
+      LEFT JOIN camas c ON c.id = e.cama_id
+      WHERE p.ativo = true
     `);
 
     const { rows: camas } = await client.query(`
@@ -429,6 +526,12 @@ async function main() {
 
     if (camas.length !== 90) {
       fail(`Esperava 90 camas oficiais, mas encontrei ${camas.length}.`);
+    }
+
+    if (frontRows.length < 90) {
+      console.log(
+        `Aviso: a fonte na_casa trouxe ${frontRows.length} linha(s) de ocupantes. Isso pode ocorrer quando ha camas livres na casa.`,
+      );
     }
 
     const alvo = [];
