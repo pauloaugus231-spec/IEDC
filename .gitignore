@@ -57,3 +57,6 @@ PROMPT_*.md
 
 # Documentos internos de planejamento
 *.docx
+.playwright-cli/
+output/
+docs/qa/
