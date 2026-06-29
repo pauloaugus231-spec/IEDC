@@ -12,7 +12,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   // --- Estado Unificado do Formulário ---
   const [form, setForm] = useState({
     nome: '', nomeSocial: '', cpf: '', rg: '', nis: '', dataNascimento: '',
-    sexo: '', genero: '', cor: '', raca: '', sexualidade: '',
+    sexo: '', genero: '', cor: '', raca: '', sexualidade: '', escolaridade: '',
     telefone: '', endereco: '', cep: '', cidade: '', uf: '', naturalidade: '',
     nomeMae: '', nomePai: '', contatoEmergencia: '', telefoneEmergencia: '',
     alergias: '', condicoesCronicas: '', medicamentos: '', observacoes: ''
@@ -124,7 +124,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   // --- Progresso ---
   const stepProgress = useMemo(() => {
     const fields = {
-      1: ['nome', 'cpf', 'nis', 'sexo', 'genero', 'dataNascimento', 'cor'],
+      1: ['nome', 'cpf', 'nis', 'sexo', 'genero', 'dataNascimento', 'cor', 'escolaridade'],
       2: ['cep', 'endereco', 'cidade', 'uf', 'telefone', 'nomeMae', 'contatoEmergencia'],
       3: ['medicamentos', 'condicoesCronicas', 'alergias', 'observacoes']
     };
@@ -154,6 +154,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
         cor: form.cor || undefined,
         raca: form.raca || undefined,
         sexualidade: form.sexualidade || undefined,
+        escolaridade: form.escolaridade || undefined,
         telefone: form.telefone || undefined,
         endereco: form.endereco || undefined,
         cidade: form.cidade || undefined,
@@ -194,7 +195,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
       // Reset form
       setForm({
         nome: '', nomeSocial: '', cpf: '', rg: '', nis: '', dataNascimento: '',
-        sexo: '', genero: '', cor: '', raca: '', sexualidade: '',
+        sexo: '', genero: '', cor: '', raca: '', sexualidade: '', escolaridade: '',
         telefone: '', endereco: '', cep: '', cidade: '', uf: '', naturalidade: '',
         nomeMae: '', nomePai: '', contatoEmergencia: '', telefoneEmergencia: '',
         alergias: '', condicoesCronicas: '', medicamentos: '', observacoes: ''
@@ -383,6 +384,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                         <option value="">Selecione...</option>
                         <option value="Masculino">Masculino</option>
                         <option value="Feminino">Feminino</option>
+                        <option value="Intersexual">Intersexual</option>
                       </select>
                       {errors.sexo && <span className="error-text">{errors.sexo}</span>}
                     </div>
@@ -397,6 +399,21 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                         <option value="Mulher transgênero">Mulher transgênero</option>
                         <option value="Travesti">Travesti</option>
                         <option value="Não binário">Não binário</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Escolaridade</label>
+                      <select name="escolaridade" value={form.escolaridade} onChange={handleChange}>
+                        <option value="">Selecione...</option>
+                        <option value="Não alfabetizado/a">Não alfabetizado/a</option>
+                        <option value="Ensino Fundamental incompleto">Ensino Fundamental incompleto</option>
+                        <option value="Ensino Fundamental completo">Ensino Fundamental completo</option>
+                        <option value="Ensino Médio incompleto">Ensino Médio incompleto</option>
+                        <option value="Ensino Médio completo">Ensino Médio completo</option>
+                        <option value="Ensino Superior incompleto">Ensino Superior incompleto</option>
+                        <option value="Ensino Superior completo">Ensino Superior completo</option>
+                        <option value="Pós-graduação">Pós-graduação</option>
                       </select>
                     </div>
 

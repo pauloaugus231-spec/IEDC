@@ -147,4 +147,10 @@ export class CreatePessoaDto {
   @ApiProperty({ description: 'Pessoa LGBT', required: false })
   @IsOptional()
   lgbt?: boolean;
+
+  @ApiProperty({ description: 'Escolaridade', required: false })
+  @IsOptional()
+  @IsString()
+  @Length(2, 100)
+  escolaridade?: string;
 }

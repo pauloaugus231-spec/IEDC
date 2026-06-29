@@ -21,7 +21,7 @@ const TAB_CONFIG: Array<{ id: EditTab; label: string; description: string; field
     id: 'identidade',
     label: 'Identidade e vaga',
     description: 'Perfil declarado e quarto de referência',
-    fields: ['sexo', 'genero', 'cor', 'raca', 'sexualidade', 'tipo_vaga', 'lgbt'],
+    fields: ['sexo', 'genero', 'cor', 'raca', 'sexualidade', 'tipo_vaga', 'lgbt', 'escolaridade'],
   },
   {
     id: 'contatos',
@@ -66,6 +66,7 @@ interface PessoaForm {
   condicoes_cronicas?: string | null;
   medicamentos_uso_continuo?: string | null;
   lgbt?: boolean | null;
+  escolaridade?: string | null;
   foto_url?: string | null;
 }
 
@@ -97,6 +98,7 @@ const EDITABLE_FIELDS = [
   'condicoes_cronicas',
   'medicamentos_uso_continuo',
   'lgbt',
+  'escolaridade',
 ] as const satisfies ReadonlyArray<keyof Omit<PessoaForm, 'id'>>;
 
 type EditableField = typeof EDITABLE_FIELDS[number];
@@ -454,6 +456,7 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
                       <option value="">Selecione...</option>
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
+                      <option value="Intersexual">Intersexual</option>
                     </SelectField>
                     <SelectField label="Gênero" name="genero" onChange={handleChange} value={form.genero || ''}>
                       <option value="">Selecione...</option>
@@ -497,6 +500,17 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
                         <small>Disponibiliza marcador textual e apoia a sugestão de vaga quando necessário.</small>
                       </span>
                     </label>
+                    <SelectField label="Escolaridade" name="escolaridade" onChange={handleChange} value={form.escolaridade || ''}>
+                      <option value="">Selecione...</option>
+                      <option value="Não alfabetizado/a">Não alfabetizado/a</option>
+                      <option value="Ensino Fundamental incompleto">Ensino Fundamental incompleto</option>
+                      <option value="Ensino Fundamental completo">Ensino Fundamental completo</option>
+                      <option value="Ensino Médio incompleto">Ensino Médio incompleto</option>
+                      <option value="Ensino Médio completo">Ensino Médio completo</option>
+                      <option value="Ensino Superior incompleto">Ensino Superior incompleto</option>
+                      <option value="Ensino Superior completo">Ensino Superior completo</option>
+                      <option value="Pós-graduação">Pós-graduação</option>
+                    </SelectField>
                   </div>
                 </EditSection>
               )}

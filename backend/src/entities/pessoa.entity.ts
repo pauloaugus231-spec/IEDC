@@ -84,6 +84,9 @@ export class Pessoa {
   @Column({ length: 255, nullable: true })
   telefone_emergencia?: string;
 
+  @Column({ length: 100, nullable: true })
+  escolaridade?: string;
+
   @Column({ type: 'text', nullable: true })
   alergias?: string;
 

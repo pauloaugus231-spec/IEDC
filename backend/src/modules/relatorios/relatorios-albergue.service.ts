@@ -38,6 +38,7 @@ export class RelatoriosAlbergueService {
       'tipo_vaga',
       'created_at',
       'updated_at',
+      'escolaridade',
     ];
     const camposValidos = campos.filter(campo => camposPermitidos.includes(campo));
 
