@@ -44,7 +44,7 @@ try {
   }
 
   if ($status) {
-    Fail "worktree local tem alteracoes. Resolva antes de atualizar."
+    Write-Warning "worktree local tem alteracoes; o deploy vai realinhar o checkout com $Remote/$Branch."
   }
 
   Write-Host "Validando compose atual..."
@@ -56,7 +56,7 @@ try {
     Fail "falha ao buscar $Remote/$Branch."
   }
 
-  git checkout -B $Branch "$Remote/$Branch"
+  git checkout -f -B $Branch "$Remote/$Branch"
   if ($LASTEXITCODE -ne 0) {
     Fail "falha ao alinhar branch $Branch."
   }

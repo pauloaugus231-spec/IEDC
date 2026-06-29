@@ -8,7 +8,7 @@ Este fluxo transforma o repositorio Git em fonte de verdade da aplicacao.
 2. O GitHub Actions dispara o workflow de deploy.
 3. O workflow roda em um runner self-hosted Windows desta maquina.
 4. O runner executa `ops/deploy/update-from-repository.ps1`.
-5. O script faz `fetch`, alinha o worktree ao `origin/main`, rebuild e recriacao dos containers Docker.
+5. O script faz `fetch`, realinha o worktree ao `origin/main` mesmo que haja sujeira local no checkout de deploy, rebuild e recriacao dos containers Docker.
 6. O healthcheck valida a API antes de finalizar.
 
 ## Requisitos do runner local
@@ -29,6 +29,7 @@ C:\dev\IEDC
 ```
 
 O processo deve ter acesso ao Docker Desktop e permissao para executar Git e PowerShell.
+O checkout de deploy em `C:\dev\IEDC` deve ser tratado como ambiente de execucao, nao como area de edicao manual.
 
 ## Quando o servidor Ubuntu 24 entrar
 
