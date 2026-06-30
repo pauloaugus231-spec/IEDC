@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import CadastroPessoaModal from './CadastroPessoaModal';
+import CheckinModal from './CheckinModal';
 import Toast from './Toast';
 import type { ToastType } from './Toast';
 import { useNotificacoes, type NotificacaoNivel } from '../api';
@@ -271,6 +272,11 @@ const Layout = ({ children }: LayoutProps) => {
 
   // Modal cadastro pessoa
   const [openCadastro, setOpenCadastro] = useState(false);
+  const [pessoaParaCheckin, setPessoaParaCheckin] = useState<{
+    id: string; nome: string; nome_social?: string | null;
+    tipo_vaga?: string | null; sexo?: string | null;
+    genero?: string | null; lgbt?: boolean;
+  } | null>(null);
 
   // Função global para exibir toast
   const showToastMsg = useCallback((message: string, type: ToastType = 'success', duration = 3500) => {
@@ -567,12 +573,26 @@ const Layout = ({ children }: LayoutProps) => {
         <CadastroPessoaModal
           open={openCadastro}
           onClose={() => setOpenCadastro(false)}
-          onSuccess={() => {
-            window.showToast('Pessoa cadastrada com sucesso!', 'success');
+          onSuccess={(pessoa) => {
             if (window.reloadTodasPessoas) window.reloadTodasPessoas();
+            setPessoaParaCheckin(pessoa);
           }}
         />
       ) : null}
+      {pessoaParaCheckin && (
+        <CheckinModal
+          pessoa={pessoaParaCheckin}
+          onClose={() => {
+            setPessoaParaCheckin(null);
+            window.showToast('Pessoa cadastrada com sucesso!', 'success');
+          }}
+          onCheckinSuccess={() => {
+            setPessoaParaCheckin(null);
+            window.showToast('Cadastro e check-in realizados!', 'success');
+            if (window.reloadTodasPessoas) window.reloadTodasPessoas();
+          }}
+        />
+      )}
     </div>
   );
 };
