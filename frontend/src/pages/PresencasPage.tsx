@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, type CSSProperties } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef, type CSSProperties } from "react";
 import { apiFetch } from "../api";
 import { MetricCard, MetricGrid, ModalFrame, PageHeader } from "../components/DesignSystem";
 import {
@@ -9,6 +9,8 @@ import {
   getNomePrincipal,
 } from "../utils";
 import CheckoutModal from "../components/CheckoutModal";
+import CheckinModal from "../components/CheckinModal";
+import CadastroPessoaModal from "../components/CadastroPessoaModal";
 import TrocaModal from "../components/TrocaModal";
 import { QUARTO_PARA_CASA, type QuartoLabel } from "../utils/casaUtils";
 
@@ -38,13 +40,6 @@ interface AcolhidoParaModal {
   data_checkin?: string;
 }
 
-interface NotificationStatus {
-  telegram: "pending" | "sending" | "success" | "error";
-  email: "pending" | "sending" | "success" | "error";
-  telegramError?: string;
-  emailError?: string;
-}
-
 interface TriagemStatusResponse {
   data_ref: string;
   encerrada: boolean;
@@ -71,30 +66,28 @@ const PresencasPage: React.FC = () => {
   const [isClosing, setIsClosing] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [lastUpdate, setLastUpdate] = useState<string>("--:--");
-  const [showReportModal, setShowReportModal] = useState<boolean>(false);
-  const [reportData, setReportData] = useState<any>(null);
   const [triagemEncerrada, setTriagemEncerrada] = useState<boolean>(false);
-  const [notifStatus, setNotifStatus] = useState<NotificationStatus>({
-    telegram: "pending",
-    email: "pending"
-  });
+
+
+  // Iniciar / Encerrar
+  const [triagemAberta, setTriagemAberta] = useState<boolean>(false);
+  const [isOpening, setIsOpening] = useState<boolean>(false);
+
+  // Nova entrada (busca de pessoa existente)
+  const [searchNova, setSearchNova] = useState<string>('');
+  const [searchNovaResults, setSearchNovaResults] = useState<any[] | null>(null);
+  const [searchingNova, setSearchingNova] = useState<boolean>(false);
+  const [pessoaParaCheckin, setPessoaParaCheckin] = useState<any | null>(null);
+  const [openNovoCadastro, setOpenNovoCadastro] = useState<boolean>(false);
+  const searchNovaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchTriagemStatus = async (plantaoAtual = getOperationalPlantaoKey()) => {
     try {
-      const status = await apiFetch<TriagemStatusResponse>(`/api/triagem/status?data_ref=${plantaoAtual}`);
+      const status = await apiFetch<TriagemStatusResponse & { aberta?: boolean }>(`/api/triagem/status?data_ref=${plantaoAtual}`);
+      setTriagemAberta(Boolean(status.aberta));
       if (status.encerrada) {
         setTriagemEncerrada(true);
-        localStorage.setItem('triagemEncerrada', 'true');
-        localStorage.setItem('lastTriagemDate', status.data_ref);
-        localStorage.setItem('lastTriagemClosedAt', status.fechamento?.fechada_em || new Date().toISOString());
-        if (!localStorage.getItem('censoData') && status.fechamento) {
-          localStorage.setItem('censoData', JSON.stringify({
-            total: status.fechamento.total_presentes,
-            porQuarto: status.fechamento.por_quarto,
-            ausentes: status.fechamento.total_ausentes,
-            data: new Date(`${status.data_ref}T12:00:00`).toLocaleDateString('pt-BR'),
-          }));
-        }
+        setTriagemAberta(false);
       } else {
         setTriagemEncerrada(false);
       }
@@ -114,14 +107,10 @@ const PresencasPage: React.FC = () => {
       const storageState = getTriagemCensoStorageState();
 
       if (storageState.shouldClear) {
-        console.log(`Novo ciclo operacional detectado (${storageState.storedPlantaoKey} -> ${plantaoAtual}) - resetando censo`);
         clearTriagemCensoStorage();
         setTriagemEncerrada(false);
+        setTriagemAberta(false);
         fetchAcolhidos();
-      } else if (storageState.mode === 'censo') {
-        setTriagemEncerrada(true);
-      } else {
-        setTriagemEncerrada(false);
       }
 
       fetchTriagemStatus(plantaoAtual);
@@ -286,84 +275,72 @@ const PresencasPage: React.FC = () => {
       pendentesNoEncerramento: totalPendentes
     };
     
-    setReportData(censoPayload);
     setShowConfirmModal(false);
-    setShowReportModal(true);
-    
-    setNotifStatus({ telegram: "sending", email: "sending" });
-    
-    try {
-      const notifResponse: any = await apiFetch('/api/triagem/notificar-encerramento', {
-        method: 'POST',
-        body: JSON.stringify({
-          total,
-          masc: porQuarto['Masculino'],
-          fem: porQuarto['Feminino'],
-          idosos,
-          ausentes,
-          lgbt: porQuarto['LGBT+'] || 0,
-          data: censoPayload.data,
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (notifResponse?.telegram !== undefined) {
-        setNotifStatus({
-          telegram: notifResponse.telegram ? "success" : "error",
-          email: notifResponse.email ? "success" : "error",
-          telegramError: notifResponse.telegramError,
-          emailError: notifResponse.emailError
-        });
-      } else {
-        setNotifStatus({ telegram: "success", email: "success" });
-      }
-    } catch (e: any) {
-      console.error('Erro ao enviar notificações:', e);
-      setNotifStatus({ 
-        telegram: "error", 
-        email: "error", 
-        telegramError: e.message,
-        emailError: e.message 
-      });
-    }
-    
-    const presentes = acolhidos.filter(a => a.presente === true);
-    if (presentes.length > 0) {
-      try {
-        await Promise.all(presentes.map(a => 
-          apiFetch(`/api/pessoas/${a.id}/presenca`, {
-            method: 'PATCH',
-            body: JSON.stringify({ presente: false }),
-            headers: { 'Content-Type': 'application/json' },
-          })
-        ));
-      } catch (e) {
-        console.error('Erro ao resetar presença:', e);
-      }
-    }
-    
+
+    // Enviar notificação (fire-and-forget)
+    apiFetch('/api/triagem/notificar-encerramento', {
+      method: 'POST',
+      body: JSON.stringify({
+        total,
+        masc: porQuarto['Masculino'],
+        fem: porQuarto['Feminino'],
+        idosos,
+        ausentes,
+        lgbt: porQuarto['LGBT+'] || 0,
+        data: censoPayload.data,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(e => console.error('Erro ao notificar encerramento:', e));
+
     setIsClosing(false);
     setTriagemEncerrada(true);
+    setTriagemAberta(false);
     await fetchTriagemStatus(plantaoAtual);
 
     localStorage.setItem('triagemEncerrada', 'true');
     localStorage.setItem('lastTriagemDate', plantaoAtual);
     localStorage.setItem('lastTriagemClosedAt', new Date().toISOString());
-    localStorage.setItem('censoData', JSON.stringify(censoPayload));
-    showOperationalReceipt('Censo encerrado e registrado.');
+    showOperationalReceipt('Triagem encerrada. Relatório enviado para a coordenação.');
   };
 
-  const renderNotifLabel = (status: "pending" | "sending" | "success" | "error") => {
-    switch (status) {
-      case "pending": return "Aguardando";
-      case "sending": return "Enviando";
-      case "success": return "Enviado";
-      case "error": return "Erro";
+
+  // Iniciar triagem
+  const handleIniciarTriagem = async () => {
+    setIsOpening(true);
+    try {
+      await apiFetch('/api/triagem/iniciar', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      setTriagemAberta(true);
+      setTriagemEncerrada(false);
+      await fetchAcolhidos();
+      showOperationalReceipt('Triagem iniciada! Coordenação notificada.');
+    } catch (e) {
+      console.error('Erro ao iniciar triagem:', e);
+      showOperationalReceipt('Erro ao iniciar triagem.', 'info');
+    } finally {
+      setIsOpening(false);
     }
   };
 
+  // Busca de nova entrada (debounced)
+  const handleSearchNova = useCallback((q: string) => {
+    setSearchNova(q);
+    if (searchNovaTimer.current) clearTimeout(searchNovaTimer.current);
+    if (!q.trim()) { setSearchNovaResults(null); return; }
+    setSearchingNova(true);
+    searchNovaTimer.current = setTimeout(async () => {
+      try {
+        const results = await apiFetch<any[]>(`/api/pessoas/search?q=${encodeURIComponent(q.trim())}`);
+        setSearchNovaResults(Array.isArray(results) ? results.slice(0, 6) : []);
+      } catch { setSearchNovaResults([]); }
+      finally { setSearchingNova(false); }
+    }, 380);
+  }, []);
+
   const progressPercent = totalAtivos > 0 ? Math.round((totalPresentes / totalAtivos) * 100) : 0;
-  const isSending = notifStatus.telegram === "sending" || notifStatus.email === "sending";
   const progressStyle = { "--presence-progress": `${progressPercent}%` } as CSSProperties;
 
   return (
@@ -411,14 +388,86 @@ const PresencasPage: React.FC = () => {
         >
           {showOnlyPendentes ? "Mostrar pendentes" : "Mostrar todos"}
         </button>
-        <button
-          className="ds-button danger presence-close-button"
-          onClick={() => !triagemEncerrada && setShowConfirmModal(true)}
-          disabled={isClosing || triagemEncerrada}
-        >
-          Encerrar triagem
-        </button>
+        {!triagemAberta && !triagemEncerrada && (
+          <button
+            className="ds-button primary presence-open-button"
+            onClick={handleIniciarTriagem}
+            disabled={isOpening}
+          >
+            {isOpening ? 'Iniciando...' : '▶ Iniciar triagem'}
+          </button>
+        )}
+        {triagemAberta && !triagemEncerrada && (
+          <button
+            className="ds-button danger presence-close-button"
+            onClick={() => setShowConfirmModal(true)}
+            disabled={isClosing}
+          >
+            {isClosing ? 'Processando...' : 'Encerrar triagem'}
+          </button>
+        )}
       </section>
+
+      {/* Nova entrada — busca de pessoa existente */}
+      {triagemAberta && !triagemEncerrada && (
+        <section className="presence-nova-entrada" aria-label="Nova entrada">
+          <div className="presence-nova-entrada-search">
+            <input
+              type="text"
+              placeholder="Buscar por nome ou CPF para nova entrada..."
+              value={searchNova}
+              onChange={e => handleSearchNova(e.target.value)}
+            />
+            {searchingNova && <span className="presence-nova-searching">Buscando...</span>}
+          </div>
+          {searchNovaResults !== null && (
+            <div className="presence-nova-results">
+              {searchNovaResults.length === 0 ? (
+                <div className="presence-nova-empty">
+                  <span>Nenhum cadastro encontrado para "{searchNova}".</span>
+                  <button
+                    className="ds-button secondary"
+                    onClick={() => { setSearchNovaResults(null); setSearchNova(''); setOpenNovoCadastro(true); }}
+                  >
+                    + Criar novo cadastro
+                  </button>
+                </div>
+              ) : (
+                searchNovaResults.map((p: any) => {
+                  const temEstadiaAtiva = p.estadias?.some((e: any) => e.status === 'ativa');
+                  const nome = p.nome_social?.trim() || p.nome || '—';
+                  return (
+                    <button
+                      key={p.id}
+                      className={`presence-nova-result-item ${temEstadiaAtiva ? 'already-in' : ''}`}
+                      disabled={temEstadiaAtiva}
+                      onClick={() => {
+                        if (!temEstadiaAtiva) {
+                          setPessoaParaCheckin(p);
+                          setSearchNovaResults(null);
+                          setSearchNova('');
+                        }
+                      }}
+                    >
+                      <span className="presence-nova-nome">{nome}</span>
+                      {temEstadiaAtiva
+                        ? <span className="presence-nova-badge already">Já hospedado</span>
+                        : <span className="presence-nova-badge action">Iniciar estadia →</span>
+                      }
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {!triagemAberta && !triagemEncerrada && (
+        <div className="presence-waiting-start">
+          <p>Inicie a triagem para começar a registrar presenças e entradas.</p>
+        </div>
+      )}
 
       <section className="presence-main">
         {isLoading ? (
@@ -546,7 +595,7 @@ const PresencasPage: React.FC = () => {
             <span><strong>{totalPendentes}</strong> pendentes</span>
           </div>
           <div>
-            {triagemEncerrada ? "Encerrado" : `Atualizado às ${lastUpdate}`}
+            {triagemEncerrada ? "Encerrado" : triagemAberta ? `Atualizado às ${lastUpdate}` : "Aguardando início"}
           </div>
         </div>
       </div>
@@ -555,7 +604,7 @@ const PresencasPage: React.FC = () => {
         <div className="ds-modal-backdrop support-modal-backdrop presence-modal-backdrop">
           <ModalFrame
             title="Encerrar triagem?"
-            subtitle="Após confirmar, pendências de veteranos serão registradas como abandono e o censo será gerado."
+            subtitle="Após confirmar, ausentes veteranos serão registrados como abandono e a coordenação será notificada."
             className="presence-modal"
           >
             <div className="presence-modal-copy">
@@ -597,47 +646,6 @@ const PresencasPage: React.FC = () => {
         </div>
       )}
 
-      {showReportModal && reportData && (
-        <div className="ds-modal-backdrop support-modal-backdrop presence-modal-backdrop">
-          <ModalFrame
-            title="Censo da noite"
-            subtitle={reportData.data}
-            className="presence-modal wide"
-          >
-            <div className="presence-census-result">
-              <strong>Total: {reportData.total} pessoas</strong>
-              <div className="presence-census-grid">
-                {Object.entries(reportData.porQuarto).map(([quarto, count]) => (
-                  <div key={quarto}>
-                    <span>{quarto}</span>
-                    <strong>{count as number}</strong>
-                  </div>
-                ))}
-              </div>
-              <div className="presence-summary-line">
-                <span>Idosos: <strong>{reportData.idosos}</strong></span>
-                <span>Ausentes: <strong>{reportData.ausentes}</strong></span>
-              </div>
-            </div>
-
-            <div className="presence-notification-box">
-              <h4>Status das notificações</h4>
-              <div className={`presence-notification-status ${notifStatus.telegram}`}>
-                Telegram: {renderNotifLabel(notifStatus.telegram)}
-              </div>
-              <div className={`presence-notification-status ${notifStatus.email}`}>
-                Email: {renderNotifLabel(notifStatus.email)}
-              </div>
-            </div>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="ds-button presence-modal-close"
-              disabled={isSending}
-            >{isSending ? "Aguarde..." : "Concluir"}</button>
-          </ModalFrame>
-        </div>
-      )}
 
       {/* TrocaModal — aberto via botão Trocar na linha */}
       {trocaAtivo && (
@@ -669,6 +677,32 @@ const PresencasPage: React.FC = () => {
             setCheckoutAtivo(null);
             fetchAcolhidos();
             showOperationalReceipt('Saída registrada com sucesso.');
+          }}
+        />
+      )}
+
+      {/* CheckinModal — aberto pela busca de nova entrada */}
+      {pessoaParaCheckin && (
+        <CheckinModal
+          pessoa={pessoaParaCheckin}
+          onClose={() => setPessoaParaCheckin(null)}
+          onCheckinSuccess={() => {
+            setPessoaParaCheckin(null);
+            fetchAcolhidos();
+            showOperationalReceipt('Check-in realizado com sucesso.');
+          }}
+        />
+      )}
+
+      {/* CadastroPessoaModal — criação rápida quando pessoa não encontrada */}
+      {openNovoCadastro && (
+        <CadastroPessoaModal
+          open={openNovoCadastro}
+          onClose={() => setOpenNovoCadastro(false)}
+          onSuccess={(pessoaSalva: any) => {
+            setOpenNovoCadastro(false);
+            setPessoaParaCheckin(pessoaSalva);
+            fetchAcolhidos();
           }}
         />
       )}

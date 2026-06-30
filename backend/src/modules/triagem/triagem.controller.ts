@@ -9,6 +9,15 @@ import { AuthRequest } from '../../auth/auth.types';
 export class TriagemController {
   constructor(private readonly triagemService: TriagemService) {}
 
+  @Post('iniciar')
+  @Roles(...ALBERGUE_OPERATION_ROLES)
+  async iniciar(
+    @Body() body: { data_ref?: string },
+    @Req() request: AuthRequest,
+  ) {
+    return this.triagemService.iniciar(request.user, body.data_ref);
+  }
+
   @Post('encerrar')
   @Roles(...ALBERGUE_OPERATION_ROLES)
   async encerrar(

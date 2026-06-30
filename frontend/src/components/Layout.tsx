@@ -127,6 +127,11 @@ const sidebarSections: { title: string; items: SidebarItem[] }[] = [
             to: '/albergue/impacto-social',
             roles: ALBERGUE_READ_ROLES,
           },
+          {
+            label: 'Triagem',
+            to: '/albergue/presencas',
+            roles: ALBERGUE_OPERATION_ROLES,
+          },
         ],
       },
       {

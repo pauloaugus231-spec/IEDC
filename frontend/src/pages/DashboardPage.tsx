@@ -3,9 +3,7 @@ import { apiFetch, useOcupacaoHistorico, useOcupacaoTotal } from '../api';
 import EChartCanvas, { type IEDCChartOption } from '../components/EChartCanvas';
 import { PageHeader } from '../components/DesignSystem';
 import PessoaCasaModal from '../components/PessoaCasaModal';
-import PresenceFloater from '../components/PresenceFloater';
 import { TOOLTIP_STYLE, AXIS_LABEL_STYLE, GRID_LINE_STYLE } from '../styles/echarts-theme-iedc';
-import { clearTriagemCensoStorage, getTriagemCensoStorageState } from '../utils';
 import { useAuth } from '../context/AuthContext';
 import { ALBERGUE_OPERATION_ROLES, ALBERGUE_PERSON_READ_ROLES } from '../utils/alberguePermissions';
 
@@ -33,43 +31,10 @@ const DashboardPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCasa, setSelectedCasa] = useState('');
   const [selectedCasaLabel, setSelectedCasaLabel] = useState('');
-  const [pendentesCount, setPendentesCount] = useState(0);
   
   // Estados para Timeline (Previsão)
   const [checkoutsHoje, setCheckoutsHoje] = useState<number>(0);
-  const [totalAtivosPresenca, setTotalAtivosPresenca] = useState(0);
 
-  // Estados legados (Censo/Floater)
-  const [isTriagemEncerrada, setIsTriagemEncerrada] = useState(false);
-  const [censoData, setCensoData] = useState<any>(null);
-
-  // Carregar estado da triagem do localStorage
-  useEffect(() => {
-    const storageState = getTriagemCensoStorageState();
-
-    if (storageState.shouldClear) {
-      clearTriagemCensoStorage();
-      setIsTriagemEncerrada(false);
-      setCensoData(null);
-      return;
-    }
-
-    if (storageState.mode === 'censo') {
-      setIsTriagemEncerrada(true);
-      const storedCenso = localStorage.getItem('censoData');
-      if (storedCenso) {
-        try {
-          setCensoData(JSON.parse(storedCenso));
-        } catch (e) {
-          console.error('Erro ao parsear censoData:', e);
-        }
-      }
-      return;
-    }
-
-    setIsTriagemEncerrada(false);
-    setCensoData(null);
-  }, []);
 
   // --- HOOKS DE DADOS ---
   const { data: initialOcupacao, loading: initialLoading } = useOcupacaoTotal();
@@ -81,15 +46,7 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchDadosOperacionais = async () => {
       try {
-        // 1. Buscar pendentes de presença (Presença não marcada)
-        if (canOperate) {
-          const ativos = await apiFetch<any[]>('/api/pessoas/ativos').catch(() => []);
-          const ativosList = Array.isArray(ativos) ? ativos : [];
-          setPendentesCount(ativosList.filter((a: any) => !a.presente).length);
-          setTotalAtivosPresenca(ativosList.length);
-        }
-        
-        // 2. Buscar saídas previstas para hoje (estadias que terminam hoje)
+            // Buscar saídas previstas para hoje (estadias que terminam hoje)
         const saidasData = await apiFetch<{ count: number }>('/api/dashboard/saidas-previstas-hoje').catch(() => ({ count: 0 }));
         setCheckoutsHoje(saidasData.count || 0);
 
@@ -367,16 +324,7 @@ const DashboardPage = () => {
 
       {/* MODAL E FLOATER */}
       {modalOpen && <PessoaCasaModal isOpen={modalOpen} onClose={() => setModalOpen(false)} casa={selectedCasa} casaLabel={selectedCasaLabel} />}
-      {canOperate && <PresenceFloater
-        censoData={censoData}
-        isTriagemEncerrada={isTriagemEncerrada}
-        onCensoExpired={() => {
-          setIsTriagemEncerrada(false);
-          setCensoData(null);
-        }}
-        pendentesCount={pendentesCount}
-        totalCount={totalAtivosPresenca}
-      />}
+
       
     </main>
   );

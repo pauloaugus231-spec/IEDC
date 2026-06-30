@@ -9,7 +9,9 @@ import { Bloqueio, TipoBloqueio } from '../../entities/bloqueio.entity';
 import { Resend } from 'resend';
 import { getNomePrincipal } from '../../common/utils/pessoa-nome.util';
 import { TriagemFechamento } from '../../entities/triagem-fechamento.entity';
+import { TriagemAbertura } from '../../entities/triagem-abertura.entity';
 import { DashboardService } from '../dashboard/dashboard.service';
+import { TelegramService } from '../telegram/telegram.service';
 import { AuthUser } from '../../auth/auth.types';
 
 export interface NovoCadastroTriagem {
@@ -66,20 +68,52 @@ export class TriagemService {
     private readonly bloqueioRepository: Repository<Bloqueio>,
     @InjectRepository(TriagemFechamento)
     private readonly triagemFechamentoRepository: Repository<TriagemFechamento>,
+    @InjectRepository(TriagemAbertura)
+    private readonly triagemAberturaRepository: Repository<TriagemAbertura>,
     private readonly dashboardService: DashboardService,
+    private readonly telegramService: TelegramService,
   ) {}
 
   async getStatus(dataRef?: string) {
     const plantao = dataRef || getOperationalPlantaoKey();
-    const fechamento = await this.triagemFechamentoRepository.findOne({
-      where: { data_ref: dateFromKey(plantao) },
-    });
+    const [abertura, fechamento] = await Promise.all([
+      this.triagemAberturaRepository.findOne({ where: { data_ref: dateFromKey(plantao) as unknown as Date } }),
+      this.triagemFechamentoRepository.findOne({ where: { data_ref: dateFromKey(plantao) } }),
+    ]);
 
     return {
       data_ref: plantao,
+      aberta: Boolean(abertura) && !Boolean(fechamento),
       encerrada: Boolean(fechamento),
+      abertura: abertura ? { aberta_em: abertura.aberta_em, aberta_por: abertura.aberta_por } : null,
       fechamento,
     };
+  }
+
+  async iniciar(actor?: AuthUser, dataRef?: string) {
+    const plantao = dataRef || getOperationalPlantaoKey();
+
+    const existente = await this.triagemAberturaRepository.findOne({
+      where: { data_ref: dateFromKey(plantao) as unknown as Date },
+    });
+    if (existente) {
+      return { success: true, alreadyOpen: true, message: 'Triagem já iniciada para este plantão.' };
+    }
+
+    const abertura = this.triagemAberturaRepository.create({
+      data_ref: dateFromKey(plantao) as unknown as Date,
+      aberta_em: new Date(),
+      aberta_por: actor?.email || actor?.sub || 'sistema',
+    });
+    await this.triagemAberturaRepository.save(abertura);
+
+    const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const dataFormatada = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    void this.telegramService.sendMessage(
+      `🌅 *Triagem iniciada*\n\n📅 Plantão de ${dataFormatada} iniciado às ${agora}\n✅ Sistema pronto para receber acolhidos.`,
+    );
+
+    return { success: true, alreadyOpen: false };
   }
 
   async encerrar(ausentesIds: string[], actor?: AuthUser, dataRef?: string, observacoes?: string) {
@@ -269,31 +303,34 @@ export class TriagemService {
       email: false
     };
 
-    // Enviar Telegram
-    const telegramConfig = configs.find(c => c.tipo === 'telegram' && c.ativo);
-    if (telegramConfig) {
+    // Enviar Telegram via TelegramService
+    {
       try {
-        const lgbtInfo = dadosRelatorio.lgbt ? `\n🏳️‍🌈 **LGBT+:** ${dadosRelatorio.lgbt}` : '';
-        
+        const lgbtInfo = dadosRelatorio.lgbt ? `\n🏳️‍🌈 LGBT+: ${dadosRelatorio.lgbt}` : '';
+
+        // Vagas livres por casa
+        const vagasPorCasa = await this.camaRepository
+          .createQueryBuilder('cama')
+          .select('cama.casa', 'casa')
+          .addSelect('COUNT(*)', 'total')
+          .addSelect("SUM(CASE WHEN cama.status = 'DISPONIVEL' THEN 1 ELSE 0 END)", 'livres')
+          .groupBy('cama.casa')
+          .getRawMany<{ casa: string; total: string; livres: string }>();
+
+        const totalLivres = vagasPorCasa.reduce((s, r) => s + Number(r.livres), 0);
+        const vagasTexto = vagasPorCasa
+          .map(r => `${r.casa}: ${r.livres}/${r.total}`)
+          .join(' | ');
+
         // Seção de novos cadastros
         let novosCadastrosTexto = '';
         if (novosCadastros.length > 0 && incluirDadosSensiveis) {
           novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} Novo(s) Cadastro(s) Hoje:*\n\n`;
           novosCadastros.forEach((cadastro, index) => {
             novosCadastrosTexto += `${index + 1}. *${getNomePrincipal(cadastro)}*`;
-            
-            // Adicionar indicador LGBT
-            if (cadastro.lgbt) {
-              novosCadastrosTexto += ` 🏳️‍🌈`;
-            }
-            
+            if (cadastro.lgbt) novosCadastrosTexto += ` 🏳️‍🌈`;
             novosCadastrosTexto += `\n`;
-            
-            // O nome civil permanece disponível apenas como informação cadastral complementar.
-            if (cadastro.nome_social?.trim()) {
-              novosCadastrosTexto += `   • Nome civil: ${cadastro.nome}\n`;
-            }
-            
+            if (cadastro.nome_social?.trim()) novosCadastrosTexto += `   • Nome civil: ${cadastro.nome}\n`;
             novosCadastrosTexto += `   • Nascimento: ${cadastro.dataNascimento} (${cadastro.idade} anos)\n`;
             novosCadastrosTexto += `   • CPF: ${cadastro.cpf || 'Não informado'}\n`;
             novosCadastrosTexto += `   • Raça/Cor: ${cadastro.raca || 'Não informado'}\n`;
@@ -303,29 +340,22 @@ export class TriagemService {
           novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} novo(s) cadastro(s) hoje.* Consulte os detalhes no sistema.`;
         }
 
-        const message = `🌙 *Relatório Final da Triagem*\n\n📊 **Total:** ${dadosRelatorio.total}\n👨 **Masculino:** ${dadosRelatorio.masc}\n👩 **Feminino:** ${dadosRelatorio.fem}\n👴 **Idosos:** ${dadosRelatorio.idosos}${lgbtInfo}\n❌ **Ausentes:** ${dadosRelatorio.ausentes}${novosCadastrosTexto}\n📅 Data: ${dadosRelatorio.data}`;
+        const message =
+          `🌙 *Relatório Final da Triagem*\n\n` +
+          `📊 Total: ${dadosRelatorio.total}\n` +
+          `👨 Masculino: ${dadosRelatorio.masc}\n` +
+          `👩 Feminino: ${dadosRelatorio.fem}\n` +
+          `👴 Idosos: ${dadosRelatorio.idosos}${lgbtInfo}\n` +
+          `❌ Ausentes: ${dadosRelatorio.ausentes}\n` +
+          `🛏️ Vagas livres: ${totalLivres} (${vagasTexto})` +
+          `${novosCadastrosTexto}\n\n📅 Data: ${dadosRelatorio.data}`;
 
-        const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: telegramConfig.destino,
-            text: message,
-            parse_mode: 'Markdown'
-          }),
-        });
-        
-        if (response.ok) {
-          resultadoNotifs.telegram = true;
-          console.log(`✅ Telegram enviado para ${telegramConfig.nome}`);
-        } else {
-          const error = await response.text();
-          resultadoNotifs.telegramError = error;
-          console.error(`❌ Erro Telegram:`, error);
-        }
+        const ok = await this.telegramService.sendMessage(message);
+        resultadoNotifs.telegram = ok;
+        if (!ok) resultadoNotifs.telegramError = 'Falha ao enviar (sem token ou resposta não-ok)';
       } catch (error) {
         resultadoNotifs.telegramError = this.errorMessage(error);
-        console.error(`❌ Erro Telegram:`, error);
+        console.error('❌ Erro Telegram:', error);
       }
     }
 

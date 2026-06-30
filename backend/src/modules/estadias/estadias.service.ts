@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Estadia, StatusEstadia, MotivoSaida, TipoEstadia } from '../../entities/estadia.entity';
 import { CreateCheckinDto } from './dto/create-checkin.dto';
+import { TelegramService } from '../telegram/telegram.service';
 import { Cama, StatusCama, Casa } from '../../entities/cama.entity';
 import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { DashboardService } from '../dashboard/dashboard.service';
@@ -80,6 +81,7 @@ export class EstadiasService {
     private pessoaRepository: Repository<Pessoa>,
     private readonly dashboardService: DashboardService,
     private readonly websocketGateway: DiasCruzGateway,
+    private readonly telegramService: TelegramService,
   ) {}
 
   private async notificarAtualizacaoOcupacao() {
@@ -194,6 +196,16 @@ export class EstadiasService {
     });
 
     await this.notificarAtualizacaoOcupacao();
+    // Notificar coordenação via Telegram (fire-and-forget)
+    void (async () => {
+      try {
+        const p = estadia as any;
+        const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        await this.telegramService.sendMessage(
+          `🏠 *Nova entrada*\n\n👤 ${p?.pessoa ? getNomePrincipal(p.pessoa) : 'Hóspede'}\n⏰ ${agora}`,
+        );
+      } catch { /* silencioso */ }
+    })();
     return estadia;
   }
 
@@ -246,6 +258,16 @@ export class EstadiasService {
     });
 
     await this.notificarAtualizacaoOcupacao();
+    // Notificar coordenação via Telegram (fire-and-forget)
+    void (async () => {
+      try {
+        const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const motivo = estadia.motivo_saida ? ` | Motivo: ${estadia.motivo_saida}` : '';
+        await this.telegramService.sendMessage(
+          `🚪 *Saída registrada*\n\n⏰ ${agora}${motivo}`,
+        );
+      } catch { /* silencioso */ }
+    })();
     return estadia;
   }
 

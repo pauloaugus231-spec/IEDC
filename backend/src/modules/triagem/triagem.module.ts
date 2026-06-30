@@ -8,12 +8,15 @@ import { Ocorrencia } from '../../entities/ocorrencia.entity';
 import { Cama } from '../../entities/cama.entity';
 import { Bloqueio } from '../../entities/bloqueio.entity';
 import { TriagemFechamento } from '../../entities/triagem-fechamento.entity';
+import { TriagemAbertura } from '../../entities/triagem-abertura.entity';
 import { DashboardModule } from '../dashboard/dashboard.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Pessoa, Estadia, Ocorrencia, Cama, Bloqueio, TriagemFechamento]),
+    TypeOrmModule.forFeature([Pessoa, Estadia, Ocorrencia, Cama, Bloqueio, TriagemFechamento, TriagemAbertura]),
     DashboardModule,
+    TelegramModule,
   ],
   controllers: [TriagemController],
   providers: [TriagemService],

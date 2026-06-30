@@ -8,12 +8,14 @@ import { Pessoa } from '../../entities/pessoa.entity';
 import { DashboardModule } from '../dashboard/dashboard.module';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { CheckoutAutomaticoService } from './checkout-automatico.service';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Estadia, Cama, Pessoa]),
     DashboardModule,
     WebSocketModule,
+    TelegramModule,
   ],
   providers: [EstadiasService, CheckoutAutomaticoService],
   controllers: [EstadiasController],
