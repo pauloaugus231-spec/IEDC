@@ -13,6 +13,7 @@ import { Plantao } from '../entities/plantao.entity';
 import { RegraEscala } from '../entities/regra-escala.entity';
 import { Solicitacao } from '../entities/solicitacao.entity';
 import { Turno } from '../entities/turno.entity';
+import { TriagemAbertura } from '../entities/triagem-abertura.entity';
 import { TriagemFechamento } from '../entities/triagem-fechamento.entity';
 import { Usuario } from '../entities/usuario.entity';
 
@@ -55,6 +56,7 @@ export const albergueDatabaseConfig: TypeOrmModuleOptions = {
     Cama,
     OcupacaoDiaria,
     TriagemFechamento,
+    TriagemAbertura,
     Escala,
     Colaborador,
     Turno,
