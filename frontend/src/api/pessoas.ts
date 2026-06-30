@@ -317,6 +317,17 @@ export function usePessoasPaginadas({
   };
 }
 
+// Verificar duplicação por CPF
+export type CheckCpfResult =
+  | { exists: false }
+  | { exists: true; id: string; nome: string; status_cadastro: string };
+
+export async function checkCpf(cpf: string): Promise<CheckCpfResult> {
+  const cpfLimpo = cpf.replace(/\D/g, '');
+  if (cpfLimpo.length !== 11) return { exists: false };
+  return apiFetch<CheckCpfResult>(`/api/pessoas/check-cpf?cpf=${encodeURIComponent(cpfLimpo)}`);
+}
+
 // Buscar pessoas hospedadas por casa
 export async function getPessoasByCasa(casa: string) {
   return apiFetch(`/api/camas/pessoas/${casa}`);

@@ -702,3 +702,45 @@
     flex: 1;
   }
 }
+
+/* CPF duplicado alert */
+.cpf-duplicado-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: #fff8e1;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.cpf-duplicado-icon {
+  color: #d97706;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.cpf-duplicado-msg {
+  color: #78350f;
+  flex: 1;
+  min-width: 0;
+}
+
+.cpf-duplicado-link {
+  background: none;
+  border: none;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  flex-shrink: 0;
+}
+
+.cpf-duplicado-link:hover {
+  color: #92400e;
+}

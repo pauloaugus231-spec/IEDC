@@ -118,6 +118,21 @@ export class PessoasService {
     });
   }
 
+  async checkByCpf(cpf: string): Promise<{ exists: false } | { exists: true; id: string; nome: string; status_cadastro: string }> {
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) return { exists: false };
+
+    const pessoa = await this.pessoaRepository.findOne({
+      where: { cpf: cpfLimpo, ativo: true },
+      select: ['id', 'nome', 'nome_social', 'status_cadastro'],
+    });
+
+    if (!pessoa) return { exists: false };
+
+    const nome = (pessoa.nome_social?.trim() || pessoa.nome || '').trim();
+    return { exists: true, id: pessoa.id, nome, status_cadastro: pessoa.status_cadastro };
+  }
+
   async update(id: string, updatePessoaDto: UpdatePessoaDto): Promise<Pessoa> {
     const pessoa = await this.findOne(id);
 

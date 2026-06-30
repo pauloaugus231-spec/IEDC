@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { apiFetch, withAuthHeaders } from '../api';
+import { checkCpf, type CheckCpfResult } from '../api/pessoas';
 import './CadastroPessoaModal.css';
 
 interface Props {
@@ -22,6 +23,8 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cpfDuplicado, setCpfDuplicado] = useState<CheckCpfResult | null>(null);
+  const [checkingCpf, setCheckingCpf] = useState(false);
 
   // Foto
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
@@ -87,6 +90,24 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
       } finally {
         setLoadingCep(false);
       }
+    }
+  };
+
+  // --- Verificação de CPF duplicado ---
+  const handleCpfBlur = async () => {
+    const cpfLimpo = form.cpf.replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) {
+      setCpfDuplicado(null);
+      return;
+    }
+    setCheckingCpf(true);
+    try {
+      const result = await checkCpf(cpfLimpo);
+      setCpfDuplicado(result);
+    } catch {
+      setCpfDuplicado(null);
+    } finally {
+      setCheckingCpf(false);
     }
   };
 
@@ -203,6 +224,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
       setStep(1);
       setFotoFile(null);
       setFotoPreview(null);
+      setCpfDuplicado(null);
 
       onSuccess(pessoaSalva);
       onClose();
@@ -345,10 +367,32 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                       <input
                         name="cpf"
                         value={form.cpf}
-                        onChange={handleChange}
+                        onChange={e => { handleChange(e); setCpfDuplicado(null); }}
+                        onBlur={handleCpfBlur}
                         placeholder="000.000.000-00"
                       />
+                      {checkingCpf && <span className="field-hint">Verificando CPF...</span>}
                       {errors.cpf && <span className="error-text">{errors.cpf}</span>}
+                      {cpfDuplicado?.exists && (
+                        <div className="cpf-duplicado-alert">
+                          <span className="cpf-duplicado-icon">⚠</span>
+                          <span className="cpf-duplicado-msg">
+                            CPF já cadastrado —{' '}
+                            <strong>{cpfDuplicado.nome}</strong>
+                            {' '}({cpfDuplicado.status_cadastro})
+                          </span>
+                          <button
+                            type="button"
+                            className="cpf-duplicado-link"
+                            onClick={() => {
+                              onClose();
+                              window.location.href = `/albergue/pessoa/${cpfDuplicado.id}`;
+                            }}
+                          >
+                            Ver cadastro →
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="form-group">

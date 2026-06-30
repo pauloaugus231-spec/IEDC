@@ -103,6 +103,14 @@ export class PessoasController {
     return this.pessoasService.search(query);
   }
 
+  @Get('check-cpf')
+  @ApiOperation({ summary: 'Verificar se CPF já está cadastrado (deduplicação)' })
+  @ApiQuery({ name: 'cpf', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'Resultado da verificação de CPF' })
+  checkCpf(@Query('cpf') cpf: string) {
+    return this.pessoasService.checkByCpf(cpf ?? '');
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Buscar pessoa por ID' })
   @ApiResponse({ status: 200, description: 'Pessoa encontrada', type: Pessoa })
