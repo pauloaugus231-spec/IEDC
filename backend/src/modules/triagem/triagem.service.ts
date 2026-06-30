@@ -109,11 +109,15 @@ export class TriagemService {
 
     const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const dataFormatada = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    void this.telegramService.sendMessage(
+    const telegramSent = await this.telegramService.sendMessage(
       `🌅 *Triagem iniciada*\n\n📅 Plantão de ${dataFormatada} iniciado às ${agora}\n✅ Sistema pronto para receber acolhidos.`,
     );
 
-    return { success: true, alreadyOpen: false };
+    return {
+      success: true,
+      alreadyOpen: false,
+      telegramSent,
+    };
   }
 
   async encerrar(ausentesIds: string[], actor?: AuthUser, dataRef?: string, observacoes?: string) {
