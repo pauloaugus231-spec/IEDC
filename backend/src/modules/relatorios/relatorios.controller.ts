@@ -63,7 +63,7 @@ export class RelatoriosController {
   ) {
     const camposArray = campos ? campos.split(',') : ['nome', 'cpf', 'data_nascimento'];
     const filtrosObj = this.parseFiltros(filtros);
-    const lgpdBool = lgpd === 'true' || req.user.role === UsuarioRole.DIRETOR_ALBERGUE;
+    const lgpdBool = lgpd === 'true' || req.user?.role === UsuarioRole.DIRETOR_ALBERGUE;
     return this.relatoriosService.getRelatorioCustom(inicio, fim, camposArray, filtrosObj, lgpdBool);
   }
 
@@ -78,7 +78,7 @@ export class RelatoriosController {
   ) {
     const camposArray = campos ? campos.split(',') : ['nome', 'cpf', 'data_nascimento'];
     const filtrosObj = this.parseFiltros(filtros);
-    const lgpdBool = lgpd === 'true' || req.user.role === UsuarioRole.DIRETOR_ALBERGUE;
+    const lgpdBool = lgpd === 'true' || req.user?.role === UsuarioRole.DIRETOR_ALBERGUE;
     const buffer = await this.relatoriosService.getRelatorioCustomExcel(inicio, fim, camposArray, filtrosObj, lgpdBool);
     return buffer;
   }
@@ -94,7 +94,7 @@ export class RelatoriosController {
   ) {
     const camposArray = campos ? campos.split(',') : ['nome', 'cpf', 'data_nascimento'];
     const filtrosObj = this.parseFiltros(filtros);
-    const lgpdBool = lgpd === 'true' || req.user.role === UsuarioRole.DIRETOR_ALBERGUE;
+    const lgpdBool = lgpd === 'true' || req.user?.role === UsuarioRole.DIRETOR_ALBERGUE;
     const buffer = await this.relatoriosService.getRelatorioCustomPDF(inicio, fim, camposArray, filtrosObj, lgpdBool);
     return buffer;
   }
