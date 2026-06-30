@@ -103,7 +103,7 @@ export class TriagemService {
     const abertura = this.triagemAberturaRepository.create({
       data_ref: dateFromKey(plantao) as unknown as Date,
       aberta_em: new Date(),
-      aberta_por: actor?.email || actor?.sub || 'sistema',
+      aberta_por: actor?.name || actor?.login || 'sistema',
     });
     await this.triagemAberturaRepository.save(abertura);
 
