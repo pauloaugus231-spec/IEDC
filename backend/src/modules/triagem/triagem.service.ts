@@ -109,9 +109,30 @@ export class TriagemService {
   }
 
   /**
+   * Classifica o sexo da pessoa em 'M' ou 'F' de forma tolerante a como o
+   * cadastro foi de fato preenchido — hoje convivem "M"/"F", "Masculino"/
+   * "Feminino" e variações de caixa no mesmo banco, sem enum de validação.
+   * Usa `sexo` como fonte principal e `genero` só como reforço se `sexo`
+   * vier vazio ou não reconhecido. Quem não se encaixa (Outro, Intersexual,
+   * Não binário, Travesti, vazio) retorna null — continua contando no Total
+   * e no marcador LGBT+, mas não entra nas linhas de Homens/Mulheres.
+   */
+  private classificarSexo(pessoa: Pessoa): 'M' | 'F' | null {
+    const sexo = (pessoa.sexo || '').trim().toLowerCase();
+    if (sexo === 'm' || sexo.startsWith('masc')) return 'M';
+    if (sexo === 'f' || sexo.startsWith('femin')) return 'F';
+
+    const genero = (pessoa.genero || '').trim().toLowerCase();
+    if (genero === 'm' || genero.startsWith('masc') || genero.startsWith('homem')) return 'M';
+    if (genero === 'f' || genero.startsWith('femin') || genero.startsWith('mulher')) return 'F';
+
+    return null;
+  }
+
+  /**
    * Monta a contagem demográfica de quem está com estadia ativa agora,
-   * direto do cadastro (genero + idade + marcador lgbt) — não depende de
-   * qual quarto físico a pessoa ocupa.
+   * direto do cadastro (sexo/genero + idade + marcador lgbt) — não depende
+   * de qual quarto físico a pessoa ocupa.
    */
   private async calcularDemografiaAtiva(): Promise<{
     total: number;
@@ -136,10 +157,15 @@ export class TriagemService {
       const pessoa = estadia.pessoa;
       if (!pessoa) continue;
 
-      const idoso = (pessoa.idade ?? 0) >= 60;
-      if (pessoa.genero === 'masculino') {
+      // Idade desconhecida (sem data_nascimento) é tratada como "não idoso"
+      // por padrão, em vez de travar a contagem por causa de um cadastro
+      // incompleto.
+      const idoso = pessoa.idade !== null && pessoa.idade !== undefined && pessoa.idade >= 60;
+      const classe = this.classificarSexo(pessoa);
+
+      if (classe === 'M') {
         if (idoso) homensIdosos++; else homens++;
-      } else if (pessoa.genero === 'feminino') {
+      } else if (classe === 'F') {
         if (idoso) mulheresIdosas++; else mulheres++;
       }
       if (pessoa.lgbt) lgbt++;
