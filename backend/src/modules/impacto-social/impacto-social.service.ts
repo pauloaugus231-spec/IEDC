@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { CORE_DATABASE_CONNECTION } from '../../config/database.config';
+import { ImpactoSocialLegacyMigrationService } from './impacto-social-legacy-migration.service';
 
 type PeriodoInput = {
   periodo?: string;
@@ -302,14 +302,25 @@ function normalizeText(value: unknown, fallback = '') {
 }
 
 @Injectable()
-export class ImpactoSocialService {
-  private estruturaPronta = false;
-  private estruturaPromise: Promise<void> | null = null;
+export class ImpactoSocialService implements OnModuleInit {
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly legacyMigration: ImpactoSocialLegacyMigrationService,
+  ) {}
 
-  constructor(@InjectDataSource(CORE_DATABASE_CONNECTION) private readonly dataSource: DataSource) {}
+  // Ao subir o modulo: copia o que ainda sobrar da tabela legada em Core
+  // (uma unica vez, controlado por albergue_migracoes_legado) e so entao
+  // roda o seed de demonstracao e a normalizacao de dado antigo. A estrutura
+  // da tabela em si vem da migration 1770000017000, nao e mais criada aqui.
+  async onModuleInit() {
+    await this.legacyMigration.migrateIfNeeded();
+    if (process.env.ENABLE_DEMO_SEED === 'true') {
+      await this.seedRespostasPlanilha();
+    }
+    await this.normalizeSituacaoTerritorialLegada();
+  }
 
   async getDashboardAlbergue(input: PeriodoInput = {}) {
-    await this.ensureEstrutura();
     const periodo = getPeriodoFiltro(input);
     const params = [periodo.inicio, periodo.fim];
     const wherePeriodo = 'data_referencia BETWEEN $1::date AND $2::date';
@@ -410,8 +421,6 @@ export class ImpactoSocialService {
   }
 
   async createRespostaAlbergue(body: RespostaAlbergueInput) {
-    await this.ensureEstrutura();
-
     const dataReferencia = normalizeText(body.dataReferencia || body.data_referencia || formatDate(new Date()));
     const situacaoTerritorial = normalizeText(body.situacaoTerritorial, 'Não informado');
     const tempoSemMoradia = normalizeText(body.tempoSemMoradia, 'Prefiro não responder');
@@ -511,71 +520,6 @@ export class ImpactoSocialService {
     );
 
     return this.mapResposta(row);
-  }
-
-  private async ensureEstrutura() {
-    if (this.estruturaPronta) {
-      return;
-    }
-
-    if (!this.estruturaPromise) {
-      this.estruturaPromise = this.ensureEstruturaInterna()
-        .then(() => {
-          this.estruturaPronta = true;
-        })
-        .finally(() => {
-          this.estruturaPromise = null;
-        });
-    }
-
-    return this.estruturaPromise;
-  }
-
-  private async ensureEstruturaInterna() {
-    await this.dataSource.query(`
-      CREATE TABLE IF NOT EXISTS impacto_albergue_respostas (
-        id uuid PRIMARY KEY,
-        source_key varchar(120) UNIQUE NOT NULL,
-        origem varchar(40) NOT NULL DEFAULT 'sistema',
-        data_referencia date NOT NULL,
-        situacao_territorial varchar(160) NOT NULL DEFAULT 'Ñ informado',
-        tempo_sem_moradia varchar(160) NOT NULL DEFAULT 'Prefiro não responder',
-        fatores_sem_moradia text[] NOT NULL DEFAULT ARRAY[]::text[],
-        fatores_sem_moradia_outro text NULL,
-        ajuda_principal text[] NOT NULL DEFAULT ARRAY[]::text[],
-        ajuda_principal_outro text NULL,
-        respeito_usuarios varchar(60) NOT NULL DEFAULT 'Prefiro não responder',
-        comunicacao_equipe varchar(60) NOT NULL DEFAULT 'Não se aplica',
-        proximo_passo_ajuda varchar(60) NOT NULL DEFAULT 'Ainda não',
-        proximos_passos text[] NOT NULL DEFAULT ARRAY[]::text[],
-        proximo_passo_outro text NULL,
-        participou_oficina varchar(80) NOT NULL DEFAULT 'Não',
-        relato_representa text NULL,
-        melhoria_sugerida text NULL,
-        demandas_equipe text[] NOT NULL DEFAULT ARRAY[]::text[],
-        demanda_outro text NULL,
-        acao_equipe text[] NOT NULL DEFAULT ARRAY[]::text[],
-        preenchido_por varchar(160) NULL,
-        perfil_preenchedor varchar(80) NULL,
-        created_at timestamp NOT NULL DEFAULT NOW(),
-        updated_at timestamp NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    await this.dataSource.query(`
-      CREATE INDEX IF NOT EXISTS idx_impacto_albergue_data ON impacto_albergue_respostas(data_referencia);
-      CREATE INDEX IF NOT EXISTS idx_impacto_albergue_origem ON impacto_albergue_respostas(origem);
-    `);
-
-    await this.dataSource.query(`
-      ALTER TABLE impacto_albergue_respostas
-      ADD COLUMN IF NOT EXISTS fatores_sem_moradia_outro text NULL
-    `);
-
-    if (process.env.ENABLE_DEMO_SEED === 'true') {
-      await this.seedRespostasPlanilha();
-    }
-    await this.normalizeSituacaoTerritorialLegada();
   }
 
   private async seedRespostasPlanilha() {
