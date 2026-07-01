@@ -11,7 +11,7 @@ export class TriagemAbertura {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   aberta_em!: Date;
 
-  @Column({ length: 100, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   aberta_por?: string | null;
 
   @CreateDateColumn()

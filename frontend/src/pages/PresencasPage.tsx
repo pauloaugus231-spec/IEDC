@@ -286,7 +286,7 @@ const PresencasPage: React.FC = () => {
   const handleIniciarTriagem = async () => {
     setIsOpening(true);
     try {
-      await apiFetch('/api/triagem/iniciar', {
+      const result = await apiFetch<{ success: boolean; telegramSent?: boolean }>('/api/triagem/iniciar', {
         method: 'POST',
         body: JSON.stringify({}),
         headers: { 'Content-Type': 'application/json' },
@@ -294,7 +294,12 @@ const PresencasPage: React.FC = () => {
       setTriagemAberta(true);
       setTriagemEncerrada(false);
       await fetchAcolhidos();
-      showOperationalReceipt('Triagem iniciada! Coordenação notificada.');
+      showOperationalReceipt(
+        result.telegramSent
+          ? 'Triagem iniciada. Coordenação notificada.'
+          : 'Triagem iniciada, mas a notificação por Telegram não foi enviada.',
+        result.telegramSent ? 'success' : 'info',
+      );
     } catch (e) {
       console.error('Erro ao iniciar triagem:', e);
       showOperationalReceipt('Erro ao iniciar triagem.', 'info');
