@@ -9,6 +9,7 @@ import { DashboardModule } from '../dashboard/dashboard.module';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { CheckoutAutomaticoService } from './checkout-automatico.service';
 import { TelegramModule } from '../telegram/telegram.module';
+import { TriagemModule } from '../triagem/triagem.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TelegramModule } from '../telegram/telegram.module';
     DashboardModule,
     WebSocketModule,
     TelegramModule,
+    TriagemModule,
   ],
   providers: [EstadiasService, CheckoutAutomaticoService],
   controllers: [EstadiasController],

@@ -53,7 +53,7 @@ interface TriagemStatusResponse {
 
 const QUARTOS: Quarto[] = ["Masculino", "Feminino", "Idosos", "LGBT+"];
 
-function showOperationalReceipt(message: string, type: "success" | "info" = "success") {
+function showOperationalReceipt(message: string, type: "success" | "info" | "error" = "success") {
   window.showToast?.(message, type);
 }
 
@@ -238,64 +238,42 @@ const PresencasPage: React.FC = () => {
 
   const handleConfirmEncerrar = async () => {
     setIsClosing(true);
-    
+
     const plantaoAtual = getOperationalPlantaoKey();
-    
+
     const ausentesIds = acolhidos
       .filter(a => !a.presente && a.data_entrada && a.data_entrada < plantaoAtual)
       .map(a => a.id);
-    
-    if (ausentesIds.length > 0) {
-      try {
-        await apiFetch('/api/triagem/encerrar', {
-          method: 'POST',
-          body: JSON.stringify({ ausentes: ausentesIds, data_ref: plantaoAtual }),
-          headers: { 'Content-Type': 'application/json' },
-        });
-      } catch (e) {
-        console.error('Erro ao registrar abandonos:', e);
-      }
+
+    // Sempre tenta encerrar, com ausente ou sem — o fechamento oficial é a fonte de verdade
+    // de que a triagem foi fechada, e é ele que dispara o relatório automático no backend.
+    // (Antes só chamava aqui quando havia ausente, e em dias sem abandono a triagem
+    // nunca ficava oficialmente encerrada.)
+    //
+    // Se essa chamada falhar, a UI não pode fingir sucesso: quem decide se a triagem
+    // encerrou é o backend. fetchTriagemStatus() logo abaixo consulta o estado real
+    // e é o que efetivamente atualiza triagemEncerrada/triagemAberta — nunca setamos
+    // esses dois otimisticamente aqui.
+    let encerramentoFalhou = false;
+    try {
+      await apiFetch('/api/triagem/encerrar', {
+        method: 'POST',
+        body: JSON.stringify({ ausentes: ausentesIds, data_ref: plantaoAtual }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (e) {
+      encerramentoFalhou = true;
+      console.error('Erro ao encerrar triagem:', e);
     }
-    
-    const ocupacaoFinal = acolhidos.filter(a => a.presente || a.data_entrada === plantaoAtual);
-    const total = ocupacaoFinal.length;
-    const porQuarto = QUARTOS.reduce((acc, q) => {
-      acc[q] = ocupacaoFinal.filter(a => a.quarto === q).length;
-      return acc;
-    }, {} as Record<Quarto, number>);
-    const idosos = ocupacaoFinal.filter(a => a.idoso).length;
-    const ausentes = ausentesIds.length;
-    
-    const censoPayload = {
-      total,
-      porQuarto,
-      idosos,
-      ausentes,
-      data: new Date().toLocaleDateString('pt-BR'),
-      pendentesNoEncerramento: totalPendentes
-    };
-    
+
     setShowConfirmModal(false);
-
-    // Enviar notificação (fire-and-forget)
-    apiFetch('/api/triagem/notificar-encerramento', {
-      method: 'POST',
-      body: JSON.stringify({
-        total,
-        masc: porQuarto['Masculino'],
-        fem: porQuarto['Feminino'],
-        idosos,
-        ausentes,
-        lgbt: porQuarto['LGBT+'] || 0,
-        data: censoPayload.data,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(e => console.error('Erro ao notificar encerramento:', e));
-
     setIsClosing(false);
-    setTriagemEncerrada(true);
-    setTriagemAberta(false);
     await fetchTriagemStatus(plantaoAtual);
+
+    if (encerramentoFalhou) {
+      showOperationalReceipt('Falha ao encerrar a triagem. Nada foi confirmado — tente novamente.', 'error');
+      return;
+    }
 
     localStorage.setItem('triagemEncerrada', 'true');
     localStorage.setItem('lastTriagemDate', plantaoAtual);

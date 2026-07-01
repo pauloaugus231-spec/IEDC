@@ -90,6 +90,64 @@ export class TriagemService {
     };
   }
 
+  /**
+   * Fonte de verdade para "a triagem está aberta agora?" — não depende de horário
+   * nem de reset automático de dia. Olha só o que o operador fez: pega a abertura
+   * mais recente e verifica se já existe um fechamento correspondente a ela.
+   * Sem abertura nenhuma, ou abertura mais recente já fechada → não está aberta.
+   */
+  async isAbertaAgora(): Promise<boolean> {
+    const ultimaAbertura = await this.triagemAberturaRepository.findOne({
+      order: { aberta_em: 'DESC' },
+    });
+    if (!ultimaAbertura) return false;
+
+    const fechamento = await this.triagemFechamentoRepository.findOne({
+      where: { data_ref: ultimaAbertura.data_ref },
+    });
+    return !fechamento;
+  }
+
+  /**
+   * Monta a contagem demográfica de quem está com estadia ativa agora,
+   * direto do cadastro (genero + idade + marcador lgbt) — não depende de
+   * qual quarto físico a pessoa ocupa.
+   */
+  private async calcularDemografiaAtiva(): Promise<{
+    total: number;
+    homens: number;
+    mulheres: number;
+    homensIdosos: number;
+    mulheresIdosas: number;
+    lgbt: number;
+  }> {
+    const estadiasAtivas = await this.estadiaRepository.find({
+      where: { status: StatusEstadia.ATIVA },
+      relations: ['pessoa'],
+    });
+
+    let homens = 0;
+    let mulheres = 0;
+    let homensIdosos = 0;
+    let mulheresIdosas = 0;
+    let lgbt = 0;
+
+    for (const estadia of estadiasAtivas) {
+      const pessoa = estadia.pessoa;
+      if (!pessoa) continue;
+
+      const idoso = (pessoa.idade ?? 0) >= 60;
+      if (pessoa.genero === 'masculino') {
+        if (idoso) homensIdosos++; else homens++;
+      } else if (pessoa.genero === 'feminino') {
+        if (idoso) mulheresIdosas++; else mulheres++;
+      }
+      if (pessoa.lgbt) lgbt++;
+    }
+
+    return { total: estadiasAtivas.length, homens, mulheres, homensIdosos, mulheresIdosas, lgbt };
+  }
+
   async iniciar(actor?: AuthUser, dataRef?: string) {
     const plantao = dataRef || getOperationalPlantaoKey();
 
@@ -110,7 +168,11 @@ export class TriagemService {
     const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const dataFormatada = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     void this.telegramService.sendMessage(
-      `🌅 *Triagem iniciada*\n\n📅 Plantão de ${dataFormatada} iniciado às ${agora}\n✅ Sistema pronto para receber acolhidos.`,
+      this.telegramService.formatarMensagem(
+        'Triagem iniciada',
+        [`Plantão de ${dataFormatada}`, 'Sistema pronto para receber acolhidos.'],
+        `Horário: ${agora}`,
+      ),
     );
 
     return { success: true, alreadyOpen: false };
@@ -230,6 +292,10 @@ export class TriagemService {
 
     const snapshot = await this.dashboardService.gerarSnapshotDiario(plantao, 'triagem');
 
+    // Relatório de encerramento (Telegram + e-mail) sai automaticamente daqui —
+    // não depende mais de uma segunda chamada do frontend com números calculados na tela.
+    const notificacao = await this.enviarRelatorioEncerramento(plantao, ausentesIds.length);
+
     return {
       success: erros === 0,
       message: `Processamento concluído: ${sucessos} checkout(s) efetuado(s), ${erros} erro(s)`,
@@ -237,6 +303,7 @@ export class TriagemService {
       detalhes: resultados,
       fechamento,
       snapshot,
+      notificacao,
     };
   }
 
@@ -276,17 +343,22 @@ export class TriagemService {
     return this.triagemFechamentoRepository.save(fechamento);
   }
 
-  async notificarEncerramento(dadosRelatorio: {
-    total: number;
-    masc: number;
-    fem: number;
-    idosos: number;
-    ausentes: number;
-    lgbt?: number;
-    data: string;
-  }) {
-    // Buscar novos cadastros do dia
-    const novosCadastros = await this.getNovosCadastrosHoje();
+  /**
+   * Monta e envia o relatório de encerramento (Telegram + e-mail) com os números
+   * calculados direto do banco: demografia, vagas livres e novos cadastros do dia.
+   * Chamado automaticamente pelo encerrar() — não depende mais de números vindos da tela.
+   */
+  private async enviarRelatorioEncerramento(plantao: string, ausentes: number) {
+    // Ambos derivados do plantão que está sendo fechado — não de "agora". Isso importa
+    // sobretudo no reenvio manual (reenviarRelatorioEncerramento), que pode ser chamado
+    // bem depois da meia-noite ou pra um data_ref retroativo: usar new Date() aqui faria
+    // o relatório mostrar novos cadastros e rodapé do dia errado.
+    const [demografia, novosCadastros] = await Promise.all([
+      this.calcularDemografiaAtiva(),
+      this.getNovosCadastrosHoje(plantao),
+    ]);
+
+    const dataFormatada = dateFromKey(plantao).toLocaleDateString('pt-BR');
 
     const configs = [
       ...(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_GROUP_COORDENACAO
@@ -306,8 +378,6 @@ export class TriagemService {
     // Enviar Telegram via TelegramService
     {
       try {
-        const lgbtInfo = dadosRelatorio.lgbt ? `\n🏳️‍🌈 LGBT+: ${dadosRelatorio.lgbt}` : '';
-
         // Vagas livres por casa
         const vagasPorCasa = await this.camaRepository
           .createQueryBuilder('cama')
@@ -319,36 +389,42 @@ export class TriagemService {
 
         const totalLivres = vagasPorCasa.reduce((s, r) => s + Number(r.livres), 0);
         const vagasTexto = vagasPorCasa
-          .map(r => `${r.casa}: ${r.livres}/${r.total}`)
-          .join(' | ');
+          .map(r => `${this.telegramService.escapeMarkdown(r.casa)}: ${r.livres}/${r.total}`)
+          .join(' · ');
 
         // Seção de novos cadastros
-        let novosCadastrosTexto = '';
+        let novosCadastrosBloco: string | undefined;
         if (novosCadastros.length > 0 && incluirDadosSensiveis) {
-          novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} Novo(s) Cadastro(s) Hoje:*\n\n`;
-          novosCadastros.forEach((cadastro, index) => {
-            novosCadastrosTexto += `${index + 1}. *${getNomePrincipal(cadastro)}*`;
-            if (cadastro.lgbt) novosCadastrosTexto += ` 🏳️‍🌈`;
-            novosCadastrosTexto += `\n`;
-            if (cadastro.nome_social?.trim()) novosCadastrosTexto += `   • Nome civil: ${cadastro.nome}\n`;
-            novosCadastrosTexto += `   • Nascimento: ${cadastro.dataNascimento} (${cadastro.idade} anos)\n`;
-            novosCadastrosTexto += `   • CPF: ${cadastro.cpf || 'Não informado'}\n`;
-            novosCadastrosTexto += `   • Raça/Cor: ${cadastro.raca || 'Não informado'}\n`;
-            novosCadastrosTexto += `   • Gênero: ${cadastro.genero}\n\n`;
+          const blocosPessoas = novosCadastros.map((cadastro, index) => {
+            const nomePrincipal = this.telegramService.escapeMarkdown(getNomePrincipal(cadastro));
+            const linhasPessoa = [`${index + 1}. *${nomePrincipal}*${cadastro.lgbt ? ' (LGBT+)' : ''}`];
+            if (cadastro.nome_social?.trim()) linhasPessoa.push(`   Nome civil: ${this.telegramService.escapeMarkdown(cadastro.nome)}`);
+            linhasPessoa.push(`   Nascimento: ${cadastro.dataNascimento} (${cadastro.idade} anos)`);
+            linhasPessoa.push(`   CPF: ${cadastro.cpf || 'Não informado'}`);
+            linhasPessoa.push(`   Raça/Cor: ${this.telegramService.escapeMarkdown(cadastro.raca || 'Não informado')}`);
+            linhasPessoa.push(`   Gênero: ${this.telegramService.escapeMarkdown(cadastro.genero)}`);
+            return linhasPessoa.join('\n');
           });
+          novosCadastrosBloco = `Novos cadastros (${novosCadastros.length}):\n\n${blocosPessoas.join('\n\n')}`;
         } else if (novosCadastros.length > 0) {
-          novosCadastrosTexto = `\n\n✨ *${novosCadastros.length} novo(s) cadastro(s) hoje.* Consulte os detalhes no sistema.`;
+          novosCadastrosBloco = `Novos cadastros: ${novosCadastros.length} — consulte os detalhes no sistema.`;
         }
 
-        const message =
-          `🌙 *Relatório Final da Triagem*\n\n` +
-          `📊 Total: ${dadosRelatorio.total}\n` +
-          `👨 Masculino: ${dadosRelatorio.masc}\n` +
-          `👩 Feminino: ${dadosRelatorio.fem}\n` +
-          `👴 Idosos: ${dadosRelatorio.idosos}${lgbtInfo}\n` +
-          `❌ Ausentes: ${dadosRelatorio.ausentes}\n` +
-          `🛏️ Vagas livres: ${totalLivres} (${vagasTexto})` +
-          `${novosCadastrosTexto}\n\n📅 Data: ${dadosRelatorio.data}`;
+        const linhas: Array<string | undefined> = [
+          `Total: ${demografia.total}`,
+          `Homens: ${demografia.homens} · Mulheres: ${demografia.mulheres}`,
+          `Homens idosos: ${demografia.homensIdosos} · Mulheres idosas: ${demografia.mulheresIdosas}`,
+          `LGBT+: ${demografia.lgbt}`,
+          `Ausentes: ${ausentes}`,
+          `Vagas livres: ${totalLivres} (${vagasTexto})`,
+        ];
+        if (novosCadastrosBloco) linhas.push('', novosCadastrosBloco);
+
+        const message = this.telegramService.formatarMensagem(
+          'Relatório final da triagem',
+          linhas,
+          `Plantão: ${dataFormatada}`,
+        );
 
         const ok = await this.telegramService.sendMessage(message);
         resultadoNotifs.telegram = ok;
@@ -365,11 +441,6 @@ export class TriagemService {
     if (emailConfig && emailFrom) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const lgbtRow = dadosRelatorio.lgbt ? `
-          <tr>
-            <td style="padding: 12px; border: 1px solid #D1D5DB;">LGBT+</td>
-            <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${dadosRelatorio.lgbt}</td>
-          </tr>` : '';
 
         // Seção de novos cadastros para email
         let novosCadastrosHtml = '';
@@ -418,7 +489,7 @@ export class TriagemService {
 
         const html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #1F2937; text-align: center;">🌙 Relatório Final da Triagem</h1>
+            <h1 style="color: #1F2937; text-align: center;">Relatório Final da Triagem</h1>
             <div style="background-color: #F9FAFB; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <table style="width: 100%; border-collapse: collapse;">
                 <tr style="background-color: #E5E7EB;">
@@ -427,29 +498,37 @@ export class TriagemService {
                 </tr>
                 <tr>
                   <td style="padding: 12px; border: 1px solid #D1D5DB;">Total de Pessoas</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB; font-weight: bold;">${dadosRelatorio.total}</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB; font-weight: bold;">${demografia.total}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Masculino</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${dadosRelatorio.masc}</td>
+                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Homens</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${demografia.homens}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Feminino</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${dadosRelatorio.fem}</td>
+                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Mulheres</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${demografia.mulheres}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Idosos</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${dadosRelatorio.idosos}</td>
-                </tr>${lgbtRow}
+                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Homens idosos</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${demografia.homensIdosos}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px; border: 1px solid #D1D5DB;">Mulheres idosas</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${demografia.mulheresIdosas}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px; border: 1px solid #D1D5DB;">LGBT+</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB;">${demografia.lgbt}</td>
+                </tr>
                 <tr style="background-color: #FEF3C7;">
                   <td style="padding: 12px; border: 1px solid #D1D5DB; font-weight: bold;">Ausentes</td>
-                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB; font-weight: bold; color: #DC2626;">${dadosRelatorio.ausentes}</td>
+                  <td style="padding: 12px; text-align: right; border: 1px solid #D1D5DB; font-weight: bold; color: #DC2626;">${ausentes}</td>
                 </tr>
               </table>
             </div>
             ${novosCadastrosHtml}
             <p style="text-align: center; color: #6B7280; margin-top: 20px;">
-              📅 Data do relatório: <strong>${dadosRelatorio.data}</strong>
+              Data do relatório: <strong>${dataFormatada}</strong>
             </p>
             <p style="text-align: center; color: #6B7280; font-size: 12px; margin-top: 30px;">
               Este é um relatório automático gerado pelo sistema de triagem.
@@ -460,10 +539,10 @@ export class TriagemService {
         await resend.emails.send({
           from: emailFrom,
           to: emailConfig.destino,
-          subject: '🌙 Relatório Final da Triagem - ' + dadosRelatorio.data,
+          subject: 'Relatório Final da Triagem - ' + dataFormatada,
           html,
         });
-        
+
         resultadoNotifs.email = true;
         console.log(`✅ Email enviado para ${emailConfig.nome}`);
       } catch (error) {
@@ -482,20 +561,41 @@ export class TriagemService {
   }
 
   /**
+   * Reenvio manual do relatório de encerramento — recalcula tudo do banco de novo,
+   * não recebe número nenhum de fora. Útil se o envio automático falhar.
+   */
+  async reenviarRelatorioEncerramento(dataRef?: string) {
+    const plantao = dataRef || getOperationalPlantaoKey();
+    const fechamento = await this.triagemFechamentoRepository.findOne({
+      where: { data_ref: dateFromKey(plantao) },
+    });
+    const ausentes = fechamento?.total_ausentes ?? 0;
+    return this.enviarRelatorioEncerramento(plantao, ausentes);
+  }
+
+
+  /**
    * Busca pessoas cadastradas hoje
    * Retorna dados formatados para o relatório de triagem
    */
-  async getNovosCadastrosHoje(): Promise<NovoCadastroTriagem[]> {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    
-    const amanha = new Date(hoje);
-    amanha.setDate(amanha.getDate() + 1);
+  /**
+   * Novos cadastros de um dia. Sem argumento, é "hoje" (uso do endpoint de dashboard,
+   * que sempre quer o dia corrente). Com dataRef, busca o dia daquele plantão — usado
+   * pelo relatório de encerramento, inclusive no reenvio manual retroativo, pra não
+   * misturar cadastro de outro dia com o plantão que está sendo reportado.
+   */
+  async getNovosCadastrosHoje(dataRef?: string): Promise<NovoCadastroTriagem[]> {
+    const inicio = dataRef
+      ? dateFromKey(dataRef)
+      : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+
+    const fim = new Date(inicio);
+    fim.setDate(fim.getDate() + 1);
 
     const novasPessoas = await this.pessoaRepository
       .createQueryBuilder('pessoa')
-      .where('pessoa.created_at >= :hoje', { hoje })
-      .andWhere('pessoa.created_at < :amanha', { amanha })
+      .where('pessoa.created_at >= :inicio', { inicio })
+      .andWhere('pessoa.created_at < :fim', { fim })
       .andWhere('pessoa.ativo = true')
       .orderBy('pessoa.created_at', 'DESC')
       .getMany();

@@ -34,15 +34,10 @@ export class TriagemController {
 
   @Post('notificar-encerramento')
   @Roles(...ALBERGUE_OPERATION_ROLES)
-  async notificarEncerramento(@Body() dadosRelatorio: {
-    total: number;
-    masc: number;
-    fem: number;
-    idosos: number;
-    ausentes: number;
-    data: string;
-  }) {
-    return this.triagemService.notificarEncerramento(dadosRelatorio);
+  async notificarEncerramento(@Body() body: { data_ref?: string }) {
+    // Reenvio manual — o relatório automático já sai sozinho dentro de /triagem/encerrar.
+    // Recalcula tudo do banco de novo, não usa número nenhum vindo do corpo da requisição.
+    return this.triagemService.reenviarRelatorioEncerramento(body?.data_ref);
   }
 
   @Get('novos-cadastros-hoje')

@@ -20,5 +20,6 @@ import { TelegramModule } from '../telegram/telegram.module';
   ],
   controllers: [TriagemController],
   providers: [TriagemService],
+  exports: [TriagemService],
 })
 export class TriagemModule {}

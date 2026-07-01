@@ -9,6 +9,7 @@ import { Pessoa, StatusCadastro } from '../../entities/pessoa.entity';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { DiasCruzGateway } from '../websocket/websocket.gateway';
 import { getNomePrincipal } from '../../common/utils/pessoa-nome.util';
+import { TriagemService } from '../triagem/triagem.service';
 
 const DIAS_ESTADIA_NOVA = 30;
 const DIAS_ATE_LIMITE_NOVA = DIAS_ESTADIA_NOVA - 1;
@@ -82,6 +83,7 @@ export class EstadiasService {
     private readonly dashboardService: DashboardService,
     private readonly websocketGateway: DiasCruzGateway,
     private readonly telegramService: TelegramService,
+    private readonly triagemService: TriagemService,
   ) {}
 
   private async notificarAtualizacaoOcupacao() {
@@ -89,11 +91,20 @@ export class EstadiasService {
     this.websocketGateway.server.emit('atualizar_ocupacao', ocupacao);
   }
 
+  /** "Cadastro novo" pro alerta de check-in = pessoa criada hoje, mesmo critério do relatório de encerramento. */
+  private isCriadoHoje(dataCriacao: Date): boolean {
+    const hoje = new Date();
+    const criado = new Date(dataCriacao);
+    return criado.getFullYear() === hoje.getFullYear()
+      && criado.getMonth() === hoje.getMonth()
+      && criado.getDate() === hoje.getDate();
+  }
+
   async checkin(createCheckinDto: CreateCheckinDto): Promise<Estadia> {
     const { pessoa_id, cama_id, funcionario, tipo_estadia = TipoEstadia.COMPLETA } = createCheckinDto;
 
     // Usar transação para garantir a atomicidade da operação
-    const estadia = await this.estadiaRepository.manager.transaction(async transactionalEntityManager => {
+    const { estadia, pessoa: pessoaCheckin, cama: camaCheckin } = await this.estadiaRepository.manager.transaction(async transactionalEntityManager => {
       // 1. Verificar se a pessoa existe e se não está ativa
       const pessoa = await transactionalEntityManager.findOne(Pessoa, { where: { id: pessoa_id } });
       if (!pessoa) {
@@ -192,17 +203,28 @@ export class EstadiasService {
 
       const estadia = await transactionalEntityManager.save(novaEstadia);
 
-      return estadia;
+      return { estadia, pessoa, cama };
     });
 
     await this.notificarAtualizacaoOcupacao();
-    // Notificar coordenação via Telegram (fire-and-forget)
+    // Notificar coordenação via Telegram só se a triagem já estiver encerrada hoje —
+    // durante a triagem aberta, a movimentação some no relatório final (não é viável
+    // mandar uma mensagem por pessoa no meio do plantão).
     void (async () => {
       try {
-        const p = estadia as any;
+        if (await this.triagemService.isAbertaAgora()) return;
         const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const criadoHoje = this.isCriadoHoje(pessoaCheckin.created_at);
         await this.telegramService.sendMessage(
-          `🏠 *Nova entrada*\n\n👤 ${p?.pessoa ? getNomePrincipal(p.pessoa) : 'Hóspede'}\n⏰ ${agora}`,
+          this.telegramService.formatarMensagem(
+            'Nova entrada',
+            [
+              `Hóspede: ${this.telegramService.escapeMarkdown(getNomePrincipal(pessoaCheckin))}`,
+              `Cama: ${this.telegramService.escapeMarkdown(camaCheckin.casa)} · nº ${camaCheckin.numero}`,
+              criadoHoje ? 'Cadastro novo' : undefined,
+            ],
+            `Horário: ${agora}`,
+          ),
         );
       } catch { /* silencioso */ }
     })();
@@ -216,7 +238,7 @@ export class EstadiasService {
     motivo_saida?: MotivoSaida,
     data_checkout_override?: Date,
   ): Promise<Estadia> {
-    const estadia = await this.estadiaRepository.manager.transaction(async transactionalEntityManager => {
+    const { estadia, pessoa: pessoaCheckout, cama: camaCheckout } = await this.estadiaRepository.manager.transaction(async transactionalEntityManager => {
       // 1. Encontrar a estadia ativa para a pessoa
       const estadiaAtiva = await transactionalEntityManager.findOne(Estadia, {
         where: { pessoa_id, status: StatusEstadia.ATIVA },
@@ -239,8 +261,9 @@ export class EstadiasService {
       await transactionalEntityManager.save(estadiaAtiva);
 
       // 3. Liberar a cama
+      let cama: Cama | null = null;
       if (estadiaAtiva.cama_id) {
-        const cama = await transactionalEntityManager.findOne(Cama, { where: { id: estadiaAtiva.cama_id } });
+        cama = await transactionalEntityManager.findOne(Cama, { where: { id: estadiaAtiva.cama_id } });
         if (cama) {
           cama.status = StatusCama.DISPONIVEL;
           await transactionalEntityManager.save(cama);
@@ -254,17 +277,26 @@ export class EstadiasService {
         await transactionalEntityManager.save(pessoa);
       }
 
-      return estadiaAtiva;
+      return { estadia: estadiaAtiva, pessoa, cama };
     });
 
     await this.notificarAtualizacaoOcupacao();
-    // Notificar coordenação via Telegram (fire-and-forget)
+    // Notificar coordenação via Telegram só se a triagem já estiver encerrada hoje —
+    // durante a triagem aberta, a movimentação some no relatório final.
     void (async () => {
       try {
+        if (await this.triagemService.isAbertaAgora()) return;
         const agora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const motivo = estadia.motivo_saida ? ` | Motivo: ${estadia.motivo_saida}` : '';
         await this.telegramService.sendMessage(
-          `🚪 *Saída registrada*\n\n⏰ ${agora}${motivo}`,
+          this.telegramService.formatarMensagem(
+            'Saída registrada',
+            [
+              `Hóspede: ${this.telegramService.escapeMarkdown(pessoaCheckout ? getNomePrincipal(pessoaCheckout) : 'Não identificado')}`,
+              camaCheckout ? `Cama: ${this.telegramService.escapeMarkdown(camaCheckout.casa)} · nº ${camaCheckout.numero}` : undefined,
+              estadia.motivo_saida ? `Motivo: ${this.telegramService.escapeMarkdown(estadia.motivo_saida)}` : undefined,
+            ],
+            `Horário: ${agora}`,
+          ),
         );
       } catch { /* silencioso */ }
     })();
