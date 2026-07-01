@@ -161,7 +161,7 @@ export class TriagemService {
     const abertura = this.triagemAberturaRepository.create({
       data_ref: dateFromKey(plantao) as unknown as Date,
       aberta_em: new Date(),
-      aberta_por: actor?.name || actor?.login || 'sistema',
+      aberta_por: actor?.displayName || actor?.name || actor?.login || 'sistema',
     });
     await this.triagemAberturaRepository.save(abertura);
 
@@ -170,7 +170,11 @@ export class TriagemService {
     const telegramSent = await this.telegramService.sendMessage(
       this.telegramService.formatarMensagem(
         'Triagem iniciada',
-        [`Plantão de ${dataFormatada}`, 'Sistema pronto para receber acolhidos.'],
+        [
+          `Plantão de ${dataFormatada}`,
+          'Sistema pronto para receber acolhidos.',
+          `Aberta por: ${this.telegramService.escapeMarkdown(abertura.aberta_por)}`,
+        ],
         `Horário: ${agora}`,
       ),
     );
@@ -294,7 +298,7 @@ export class TriagemService {
 
     // Relatório de encerramento (Telegram + e-mail) sai automaticamente daqui —
     // não depende mais de uma segunda chamada do frontend com números calculados na tela.
-    const notificacao = await this.enviarRelatorioEncerramento(plantao, ausentesIds.length);
+    const notificacao = await this.enviarRelatorioEncerramento(plantao, ausentesIds.length, fechamento.fechada_por);
 
     return {
       success: erros === 0,
@@ -329,7 +333,7 @@ export class TriagemService {
     const fechamento = this.triagemFechamentoRepository.create({
       data_ref: dateFromKey(input.dataRef),
       fechada_em: new Date(),
-      fechada_por: input.actor?.displayName || input.actor?.login || 'sistema',
+      fechada_por: input.actor?.displayName || input.actor?.name || input.actor?.login || 'sistema',
       total_presentes: totalPresentes,
       total_ausentes: input.ausentesIds.length,
       por_quarto: porQuarto,
@@ -348,7 +352,7 @@ export class TriagemService {
    * calculados direto do banco: demografia, vagas livres e novos cadastros do dia.
    * Chamado automaticamente pelo encerrar() — não depende mais de números vindos da tela.
    */
-  private async enviarRelatorioEncerramento(plantao: string, ausentes: number) {
+  private async enviarRelatorioEncerramento(plantao: string, ausentes: number, fechadaPor: string) {
     // Ambos derivados do plantão que está sendo fechado — não de "agora". Isso importa
     // sobretudo no reenvio manual (reenviarRelatorioEncerramento), que pode ser chamado
     // bem depois da meia-noite ou pra um data_ref retroativo: usar new Date() aqui faria
@@ -417,6 +421,7 @@ export class TriagemService {
           `LGBT+: ${demografia.lgbt}`,
           `Ausentes: ${ausentes}`,
           `Vagas livres: ${totalLivres} (${vagasTexto})`,
+          `Encerrada por: ${this.telegramService.escapeMarkdown(fechadaPor)}`,
         ];
         if (novosCadastrosBloco) linhas.push('', novosCadastrosBloco);
 
@@ -570,7 +575,8 @@ export class TriagemService {
       where: { data_ref: dateFromKey(plantao) },
     });
     const ausentes = fechamento?.total_ausentes ?? 0;
-    return this.enviarRelatorioEncerramento(plantao, ausentes);
+    const fechadaPor = fechamento?.fechada_por ?? 'sistema';
+    return this.enviarRelatorioEncerramento(plantao, ausentes, fechadaPor);
   }
 
 
