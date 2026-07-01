@@ -57,6 +57,23 @@ function showOperationalReceipt(message: string, type: "success" | "info" | "err
   window.showToast?.(message, type);
 }
 
+// Iniciais para o avatar do resultado de busca (ex.: "Maria Silva" -> "MS").
+function getIniciaisNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+// Mesmo padrão de mascaramento de CPF usado em SearchPage.tsx — mantém
+// consistência visual e evita expor o documento completo na busca rápida.
+function maskCpfNova(cpf?: string | null): string {
+  if (!cpf) return "CPF não informado";
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length < 5) return cpf;
+  return `${digits.slice(0, 3)}.***.***-${digits.slice(-2)}`;
+}
+
 const PresencasPage: React.FC = () => {
   const [acolhidos, setAcolhidos] = useState<Acolhido[]>([]);
   const [filterRoom, setFilterRoom] = useState<string>("");
@@ -80,6 +97,7 @@ const PresencasPage: React.FC = () => {
   const [pessoaParaCheckin, setPessoaParaCheckin] = useState<any | null>(null);
   const [openNovoCadastro, setOpenNovoCadastro] = useState<boolean>(false);
   const searchNovaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const novaEntradaRef = useRef<HTMLDivElement>(null);
 
   const fetchTriagemStatus = async (plantaoAtual = getOperationalPlantaoKey()) => {
     try {
@@ -323,6 +341,19 @@ const PresencasPage: React.FC = () => {
     }, 380);
   }, []);
 
+  // Fecha o painel flutuante de resultados ao clicar fora dele — hoje só
+  // fechava selecionando alguém, o que deixava o painel "grudado" na tela.
+  useEffect(() => {
+    if (searchNovaResults === null) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (novaEntradaRef.current && !novaEntradaRef.current.contains(event.target as Node)) {
+        setSearchNovaResults(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [searchNovaResults]);
+
   const progressPercent = totalAtivos > 0 ? Math.round((totalPresentes / totalAtivos) * 100) : 0;
   const progressStyle = { "--presence-progress": `${progressPercent}%` } as CSSProperties;
 
@@ -393,7 +424,7 @@ const PresencasPage: React.FC = () => {
 
       {/* Nova entrada — busca de pessoa existente */}
       {triagemAberta && !triagemEncerrada && (
-        <section className="presence-nova-entrada" aria-label="Nova entrada">
+        <section className="presence-nova-entrada" aria-label="Nova entrada" ref={novaEntradaRef}>
           <div className="presence-nova-entrada-search">
             <input
               type="text"
@@ -401,7 +432,7 @@ const PresencasPage: React.FC = () => {
               value={searchNova}
               onChange={e => handleSearchNova(e.target.value)}
             />
-            {searchingNova && <span className="presence-nova-searching">Buscando...</span>}
+            {searchingNova && <span className="presence-nova-spinner" aria-hidden="true" />}
           </div>
           {searchNovaResults !== null && (
             <div className="presence-nova-results">
@@ -432,7 +463,11 @@ const PresencasPage: React.FC = () => {
                         }
                       }}
                     >
-                      <span className="presence-nova-nome">{nome}</span>
+                      <span className="presence-nova-avatar">{getIniciaisNome(nome)}</span>
+                      <span className="presence-nova-info">
+                        <span className="presence-nova-nome">{nome}</span>
+                        <span className="presence-nova-meta">{maskCpfNova(p.cpf)}</span>
+                      </span>
                       {temEstadiaAtiva
                         ? <span className="presence-nova-badge already">Já hospedado</span>
                         : <span className="presence-nova-badge action">Iniciar estadia →</span>

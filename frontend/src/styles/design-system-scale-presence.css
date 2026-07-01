@@ -1050,3 +1050,179 @@
     font-size: 11px;
   }
 }
+
+/* ============================================================
+   Nova entrada — busca de cadastro existente (Presença / Triagem)
+   Painel flutuante premium, no mesmo vocabulario visual das demais
+   secoes da pagina (cartao branco, sombra suave, badges em capsula).
+   ============================================================ */
+
+.presence-nova-entrada {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.presence-nova-entrada-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--iedc-line);
+  border-radius: var(--iedc-radius-md);
+  background: var(--iedc-surface);
+  box-shadow: var(--iedc-shadow-xs);
+  padding: 4px 14px;
+  transition:
+    border-color var(--iedc-motion-fast) var(--iedc-ease),
+    box-shadow var(--iedc-motion-fast) var(--iedc-ease);
+}
+
+.presence-nova-entrada-search:focus-within {
+  border-color: var(--iedc-blue-600);
+  box-shadow: var(--iedc-focus);
+}
+
+.presence-nova-entrada-search input {
+  flex: 1;
+  min-height: 42px;
+  border: none;
+  background: transparent;
+  color: var(--iedc-text);
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 0;
+}
+
+.presence-nova-entrada-search input:focus {
+  outline: none;
+}
+
+.presence-nova-entrada-search input::placeholder {
+  color: var(--iedc-subtle);
+}
+
+.presence-nova-spinner {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-left: 10px;
+  border: 2px solid var(--iedc-line);
+  border-top-color: var(--iedc-blue-700);
+  border-radius: 50%;
+  animation: presenceNovaSpin 0.7s linear infinite;
+}
+
+@keyframes presenceNovaSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.presence-nova-results {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--iedc-line);
+  border-radius: var(--iedc-radius-lg);
+  background: var(--iedc-surface);
+  box-shadow: var(--iedc-shadow-md);
+  animation: scaleFadeIn var(--iedc-motion-fast) var(--iedc-ease);
+}
+
+.presence-nova-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 20px;
+  color: var(--iedc-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.presence-nova-result-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  border-bottom: 1px solid var(--iedc-line-soft);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  padding: 12px 14px;
+  text-align: left;
+  transition: background-color var(--iedc-motion-fast) var(--iedc-ease);
+}
+
+.presence-nova-result-item:last-child {
+  border-bottom: none;
+}
+
+.presence-nova-result-item:hover:not(:disabled) {
+  background: var(--iedc-blue-050);
+}
+
+.presence-nova-result-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.presence-nova-avatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--iedc-blue-050);
+  color: var(--iedc-blue-900);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.presence-nova-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.presence-nova-nome {
+  overflow: hidden;
+  color: var(--iedc-text);
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presence-nova-meta {
+  color: var(--iedc-subtle);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.presence-nova-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.presence-nova-badge.action {
+  background: var(--iedc-green-100);
+  color: var(--iedc-green-700);
+}
+
+.presence-nova-badge.already {
+  background: #eef2f7;
+  color: var(--iedc-muted);
+}
+
