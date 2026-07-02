@@ -23,8 +23,6 @@ interface ReportRow {
   pessoa_genero?: string | null;
   cor?: string | null;
   pessoa_cor?: string | null;
-  raca?: string | null;
-  pessoa_raca?: string | null;
   lgbt?: boolean | null;
   pessoa_lgbt?: boolean | null;
 }
@@ -109,7 +107,7 @@ const ReportsPage = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      let url = '/api/relatorios/custom?campos=nome,nome_social,cpf,data_nascimento,nis,cor,sexo,genero,raca,lgbt';
+      let url = '/api/relatorios/custom?campos=nome,nome_social,cpf,data_nascimento,nis,cor,sexo,genero,lgbt';
       
       if (filtrosAvancados.dataInicio && filtrosAvancados.dataFim) {
         url += `&inicio=${filtrosAvancados.dataInicio}&fim=${filtrosAvancados.dataFim}`;
@@ -185,7 +183,7 @@ const ReportsPage = () => {
     return rawData.filter(item => {
       if (drillDown.tipo === 'cor') {
         // Usa a mesma normalização para filtrar por cor
-        const corOriginal = item.cor || item.pessoa_cor || item.raca || item.pessoa_raca;
+        const corOriginal = item.cor || item.pessoa_cor;
         const corNormalizada = normalizarCor(corOriginal);
         return corNormalizada === drillDown.valor;
       }
@@ -211,7 +209,7 @@ const ReportsPage = () => {
     
     filteredData.forEach(d => {
       // Prioriza 'cor', depois 'raca', depois campos com prefixo 'pessoa_'
-      const corOriginal = d.cor || d.pessoa_cor || d.raca || d.pessoa_raca;
+      const corOriginal = d.cor || d.pessoa_cor;
       const corNormalizada = normalizarCor(corOriginal);
       contagem[corNormalizada] = (contagem[corNormalizada] || 0) + 1;
     });
@@ -377,7 +375,7 @@ const ReportsPage = () => {
       mascararNome(getNomeRelatorio(row)),
       mascararCPF(row.cpf || row.pessoa_cpf),
       row.genero || row.pessoa_genero || '-',
-      row.cor || row.pessoa_cor || row.raca || '-',
+      row.cor || row.pessoa_cor || '-',
     ]);
 
     autoTable(doc, {
@@ -398,7 +396,7 @@ const ReportsPage = () => {
       CPF: mascararCPF(row.cpf || row.pessoa_cpf),
       NIS: row.nis || row.pessoa_nis || '-',
       Gênero: row.genero || row.pessoa_genero || 'Não informado',
-      'Cor/Raça': row.cor || row.pessoa_cor || row.raca || '-',
+      'Cor/Raça': row.cor || row.pessoa_cor || '-',
       LGBT: (row.lgbt || row.pessoa_lgbt) ? 'Sim' : 'Não',
     }));
 
@@ -610,7 +608,7 @@ const ReportsPage = () => {
                           {d.genero || d.pessoa_genero || 'Não informado'}
                         </span>
                       </td>
-                      <td>{d.cor || d.pessoa_cor || d.raca || '-'}</td>
+                      <td>{d.cor || d.pessoa_cor || '-'}</td>
                     </tr>
                   ))
               ) : (

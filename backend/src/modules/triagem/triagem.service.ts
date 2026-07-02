@@ -659,22 +659,12 @@ export class TriagemService {
         'prefiro_nao_dizer': 'Prefiro não dizer'
       };
 
-      // Mapear raça/cor para exibição
-      const racaMap: { [key: string]: string } = {
-        'branca': 'Branca',
-        'preta': 'Preta',
-        'parda': 'Parda',
-        'amarela': 'Amarela',
-        'indigena': 'Indígena',
-        'nao_declarada': 'Não declarada'
-      };
-
       return {
         nome: pessoa.nome,
         dataNascimento,
         idade,
         cpf: pessoa.cpf ?? null,
-        raca: pessoa.raca ? racaMap[pessoa.raca] : null,
+        raca: pessoa.cor ?? null,
         genero: pessoa.genero ? (generoMap[pessoa.genero] || pessoa.genero) : 'Não informado',
         lgbt: pessoa.lgbt,
         nome_social: pessoa.nome_social ?? null

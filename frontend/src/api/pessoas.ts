@@ -27,7 +27,6 @@ export interface PessoaApi {
   sexo?: string | null;
   genero?: string | null;
   cor?: string | null;
-  raca?: string | null;
   sexualidade?: string | null;
   endereco?: string | null;
   cidade?: string | null;

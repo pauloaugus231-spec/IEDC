@@ -21,7 +21,7 @@ const TAB_CONFIG: Array<{ id: EditTab; label: string; description: string; field
     id: 'identidade',
     label: 'Identidade e vaga',
     description: 'Perfil declarado e quarto de referência',
-    fields: ['sexo', 'genero', 'cor', 'raca', 'sexualidade', 'tipo_vaga', 'lgbt', 'escolaridade'],
+    fields: ['sexo', 'genero', 'cor', 'sexualidade', 'tipo_vaga', 'lgbt', 'escolaridade'],
   },
   {
     id: 'contatos',
@@ -50,7 +50,6 @@ interface PessoaForm {
   sexo?: string | null;
   genero?: string | null;
   cor?: string | null;
-  raca?: string | null;
   sexualidade?: string | null;
   endereco?: string | null;
   cidade?: string | null;
@@ -82,7 +81,6 @@ const EDITABLE_FIELDS = [
   'sexo',
   'genero',
   'cor',
-  'raca',
   'sexualidade',
   'endereco',
   'cidade',
@@ -456,7 +454,6 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
                       <option value="">Selecione...</option>
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
-                      <option value="Intersexual">Intersexual</option>
                     </SelectField>
                     <SelectField label="Gênero" name="genero" onChange={handleChange} value={form.genero || ''}>
                       <option value="">Selecione...</option>
@@ -466,6 +463,7 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
                       <option value="Mulher transgênero">Mulher transgênero</option>
                       <option value="Travesti">Travesti</option>
                       <option value="Não binário">Não binário</option>
+                      <option value="Intersexual">Intersexual</option>
                       <option value="Outro">Outro</option>
                     </SelectField>
                     <SelectField label="Cor/raça" name="cor" onChange={handleChange} value={form.cor || ''}>
@@ -476,7 +474,6 @@ const EditarPessoaModal: React.FC<EditarPessoaModalProps> = ({ pessoa, onClose, 
                       <option value="Amarela">Amarela</option>
                       <option value="Indígena">Indígena</option>
                     </SelectField>
-                    <TextField label="Raça complementar" name="raca" onChange={handleChange} value={form.raca || ''} />
                     <SelectField label="Sexualidade" name="sexualidade" onChange={handleChange} value={form.sexualidade || ''}>
                       <option value="">Selecione...</option>
                       <option value="Heterossexual">Heterossexual</option>

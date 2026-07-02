@@ -31,7 +31,6 @@ export class RelatoriosAlbergueService {
       'sexo',
       'genero',
       'cor',
-      'raca',
       'sexualidade',
       'lgbt',
       'status_cadastro',

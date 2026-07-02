@@ -13,7 +13,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
   // --- Estado Unificado do Formulário ---
   const [form, setForm] = useState({
     nome: '', nomeSocial: '', cpf: '', rg: '', nis: '', dataNascimento: '',
-    sexo: '', genero: '', cor: '', raca: '', sexualidade: '', escolaridade: '',
+    sexo: '', genero: '', cor: '', sexualidade: '', escolaridade: '',
     telefone: '', endereco: '', cep: '', cidade: '', uf: '', naturalidade: '',
     nomeMae: '', nomePai: '', contatoEmergencia: '', telefoneEmergencia: '',
     alergias: '', condicoesCronicas: '', medicamentos: '', observacoes: ''
@@ -173,7 +173,6 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
         sexo: form.sexo,
         genero: form.genero || undefined,
         cor: form.cor || undefined,
-        raca: form.raca || undefined,
         sexualidade: form.sexualidade || undefined,
         escolaridade: form.escolaridade || undefined,
         telefone: form.telefone || undefined,
@@ -216,7 +215,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
       // Reset form
       setForm({
         nome: '', nomeSocial: '', cpf: '', rg: '', nis: '', dataNascimento: '',
-        sexo: '', genero: '', cor: '', raca: '', sexualidade: '', escolaridade: '',
+        sexo: '', genero: '', cor: '', sexualidade: '', escolaridade: '',
         telefone: '', endereco: '', cep: '', cidade: '', uf: '', naturalidade: '',
         nomeMae: '', nomePai: '', contatoEmergencia: '', telefoneEmergencia: '',
         alergias: '', condicoesCronicas: '', medicamentos: '', observacoes: ''
@@ -428,7 +427,6 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                         <option value="">Selecione...</option>
                         <option value="Masculino">Masculino</option>
                         <option value="Feminino">Feminino</option>
-                        <option value="Intersexual">Intersexual</option>
                       </select>
                       {errors.sexo && <span className="error-text">{errors.sexo}</span>}
                     </div>
@@ -443,6 +441,7 @@ const CadastroPessoaModal = ({ open, onClose, onSuccess }: Props) => {
                         <option value="Mulher transgênero">Mulher transgênero</option>
                         <option value="Travesti">Travesti</option>
                         <option value="Não binário">Não binário</option>
+                        <option value="Intersexual">Intersexual</option>
                       </select>
                     </div>
 

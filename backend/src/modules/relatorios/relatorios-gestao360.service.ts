@@ -320,15 +320,15 @@ export class RelatoriosGestao360Service {
     return this.map360Rows(await this.albergueDataSource.query(
       `
         SELECT
-          ${racaCorSql('COALESCE(p.cor, p.raca)')} AS label,
+          ${racaCorSql('p.cor')} AS label,
           COUNT(DISTINCT p.id)::int AS value,
           'Albergue' AS area,
-          ${racaCorSql('COALESCE(p.cor, p.raca)')} AS category
+          ${racaCorSql('p.cor')} AS category
         FROM pessoas p
         JOIN estadias e ON e.pessoa_id = p.id
         WHERE e.data_checkin::date < $2::date
           AND COALESCE(e.data_checkout::date, $2::date) >= $1::date
-        GROUP BY ${racaCorSql('COALESCE(p.cor, p.raca)')}
+        GROUP BY ${racaCorSql('p.cor')}
         ORDER BY value DESC, label
       `,
       [period.inicio, period.fim],
@@ -376,14 +376,14 @@ export class RelatoriosGestao360Service {
     return this.map360Rows(await this.albergueDataSource.query(
       `
         SELECT
-          ${racaCorSql('COALESCE(p.cor, p.raca)')} AS label,
+          ${racaCorSql('p.cor')} AS label,
           COUNT(*)::int AS value,
           'Albergue' AS area,
-          ${racaCorSql('COALESCE(p.cor, p.raca)')} AS category
+          ${racaCorSql('p.cor')} AS category
         FROM estadias e
         JOIN pessoas p ON p.id = e.pessoa_id
         WHERE e.data_checkin >= $1::date AND e.data_checkin < $2::date
-        GROUP BY ${racaCorSql('COALESCE(p.cor, p.raca)')}
+        GROUP BY ${racaCorSql('p.cor')}
         ORDER BY value DESC, label
       `,
       [period.inicio, period.fim],
